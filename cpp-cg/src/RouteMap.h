@@ -1,3 +1,7 @@
-#pragma once
+#ifndef ROUTE_MAP_H
+#define ROUTE_MAP_H
 
-class RouteMap {};
+void drawRoute(int x0, int y0, int x1, int y1);
+void drawAirportNode(int xc, int yc, int radius);
+
+#endif
