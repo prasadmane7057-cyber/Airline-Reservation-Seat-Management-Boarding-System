@@ -1,0 +1,32 @@
+// StaffMember.java
+// PSOOP Practical 4 - Inheritance (child class)
+// Owner: Varad (base version) - Prasad adds more fields/validation as support work.
+// Extends Person, so it inherits name, age, gender, contactNumber automatically.
+ 
+public class StaffMember extends Person {
+    private String employeeId;
+    private String designation; // e.g. "Ground Staff", "Pilot", "Cabin Crew"
+ 
+    public StaffMember(String name, int age, String gender, String contactNumber,
+                        String employeeId, String designation) {
+        super(name, age, gender, contactNumber); // calls Person's constructor
+        this.employeeId = employeeId;
+        this.designation = designation;
+    }
+ 
+    public String getEmployeeId() {
+        return employeeId;
+    }
+ 
+    public String getDesignation() {
+        return designation;
+    }
+ 
+    // Overriding displayDetails() to add staff-specific info
+    @Override
+    public void displayDetails() {
+        super.displayDetails(); // reuse Person's version first
+        System.out.println("Employee ID  : " + employeeId);
+        System.out.println("Designation  : " + designation);
+    }
+}
