@@ -1,7 +1,7 @@
 #include <GL/freeglut.h>
 #include "RouteMap.h"
 
-// This is the "display callback" — you write it, but never call it yourself
+// This is the "display callback" ï¿½ you write it, but never call it yourself
 void display() {
     glClear(GL_COLOR_BUFFER_BIT);
     glPointSize(2.0f);
@@ -28,6 +28,6 @@ int main(int argc, char** argv) {
     init();
     glutDisplayFunc(display);   // <-- THIS line is "registering" display as the callback
                                  //     it tells OpenGL "call this function whenever you redraw"
-    glutMainLoop();              // hands control to OpenGL — it runs forever, calling display() as needed
+    glutMainLoop();              // hands control to OpenGL ï¿½ it runs forever, calling display() as needed
     return 0;
 }
