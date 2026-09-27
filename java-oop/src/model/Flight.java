@@ -1,48 +1,53 @@
 package model;
 
-// PSOOP Practical 3 - Class, Object, Methods, Constructors
+/**
+ * Class: Flight
+ * Contains flight route, departure, arrival, aircraft, and pricing
+ */
 public class Flight {
     private String flightNumber;
-    private String origin;
-    private String destination;
-    private String departureTime; // simple string form, e.g. "2026-09-10 14:30"
-    private int totalSeats;
-    private String aircraftType;
+    private Airport source;
+    private Airport destination;
+    private String departureTime;
+    private String arrivalTime;
+    private String aircraft;
+    private double baseFare;
 
-    public Flight() {
-        this("UNSET", "N/A", "N/A", "N/A", 180, "N/A");
-    }
-
-    public Flight(String flightNumber, String origin, String destination,
-                  String departureTime, int totalSeats, String aircraftType) {
+    public Flight(String flightNumber, Airport source, Airport destination, 
+                  String departureTime, String arrivalTime, String aircraft, double baseFare) {
         this.flightNumber = flightNumber;
-        this.origin = origin;
+        this.source = source;
         this.destination = destination;
         this.departureTime = departureTime;
-        this.totalSeats = totalSeats;
-        this.aircraftType = aircraftType;
+        this.arrivalTime = arrivalTime;
+        this.aircraft = aircraft;
+        this.baseFare = baseFare;
     }
 
     public String getFlightNumber() { return flightNumber; }
-    public String getOrigin() { return origin; }
-    public String getDestination() { return destination; }
-    public String getDepartureTime() { return departureTime; }
-    public int getTotalSeats() { return totalSeats; }
-    public String getAircraftType() { return aircraftType; }
+    public void setFlightNumber(String flightNumber) { this.flightNumber = flightNumber; }
 
+    public Airport getSource() { return source; }
+    public void setSource(Airport source) { this.source = source; }
+
+    public Airport getDestination() { return destination; }
+    public void setDestination(Airport destination) { this.destination = destination; }
+
+    public String getDepartureTime() { return departureTime; }
     public void setDepartureTime(String departureTime) { this.departureTime = departureTime; }
+
+    public String getArrivalTime() { return arrivalTime; }
+    public void setArrivalTime(String arrivalTime) { this.arrivalTime = arrivalTime; }
+
+    public String getAircraft() { return aircraft; }
+    public void setAircraft(String aircraft) { this.aircraft = aircraft; }
+
+    public double getBaseFare() { return baseFare; }
+    public void setBaseFare(double baseFare) { this.baseFare = baseFare; }
 
     @Override
     public String toString() {
-        return String.format("Flight %s | %s -> %s | Departs: %s | Seats: %d | %s",
-                flightNumber, origin, destination, departureTime, totalSeats, aircraftType);
-    }
-
-    public static void main(String[] args) {
-        System.out.println("=== Flight Demo ===");
-        Flight f1 = new Flight("AI202", "Mumbai", "Delhi", "2026-09-10 14:30", 180, "Airbus A320");
-        Flight f2 = new Flight("6E1407", "Pune", "Bengaluru", "2026-09-11 07:15", 186, "Airbus A320neo");
-        System.out.println(f1);
-        System.out.println(f2);
+        return flightNumber + " (" + (source != null ? source.getAirportCode() : "N/A") + " -> " + 
+               (destination != null ? destination.getAirportCode() : "N/A") + ") [" + aircraft + "]";
     }
 }

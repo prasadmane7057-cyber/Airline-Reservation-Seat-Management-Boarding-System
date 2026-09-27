@@ -1,10 +1,9 @@
 package model;
 
 public class FirstClass extends SeatClass {
-
     @Override
     public double getFare() {
-        return 20000;
+        return 20000.0;
     }
 
     @Override

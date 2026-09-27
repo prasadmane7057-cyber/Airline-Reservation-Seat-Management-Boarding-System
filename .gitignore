@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+*/node_modules/
+package-lock.json
+
+# Build outputs & binaries
+*.class
+*.exe
+*.obj
+*.o
+out/
+bin/
+dist/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

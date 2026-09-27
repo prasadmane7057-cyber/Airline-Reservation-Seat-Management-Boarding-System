@@ -1,34 +1,21 @@
-
 package model;
 
-import java.util.Random;
- 
-public class Pnr {
-    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final int LENGTH = 6;
-    private static final Random random = new Random();
- 
-    // Generates a new PNR, e.g. "K3F9AZ"
+import java.security.SecureRandom;
+
+/**
+ * Class: PNR
+ * Generates unique 6-character uppercase alphanumeric booking references
+ * Demonstrates: static methods, final constants, StringBuilder
+ */
+public class PNR {
+    private static final String CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final SecureRandom RANDOM = new SecureRandom();
+
     public static String generatePNR() {
-        StringBuilder pnr = new StringBuilder();
-        for (int i = 0; i < LENGTH; i++) {
-            int index = random.nextInt(CHARACTERS.length());
-            pnr.append(CHARACTERS.charAt(index));
+        StringBuilder sb = new StringBuilder(6);
+        for (int i = 0; i < 6; i++) {
+            sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
         }
-        return pnr.toString();
-    }
- 
-    // Checks a PNR is exactly 6 characters, all letters/digits
-    public static boolean isValidPNR(String pnr) {
-        if (pnr == null || pnr.length() != LENGTH) {
-            return false;
-        }
-        for (char c : pnr.toCharArray()) {
-            if (!Character.isLetterOrDigit(c)) {
-                return false;
-            }
-        }
-        return true;
+        return sb.toString();
     }
 }
- 

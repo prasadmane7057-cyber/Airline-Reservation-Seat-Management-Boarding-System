@@ -1,50 +1,50 @@
 package model;
 
-// PSOOP Practical 3 - Class, Object, Methods, Constructors, Lambda
-// Core airline domain model: Passenger
-public class Passenger {
-    private String pnr;
-    private String name;
-    private int age;
-    private char gender;
-    private String contact;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Class: Passenger (Extends Person)
+ * Demonstrates: Inheritance, Method Overriding, ArrayList
+ */
+public class Passenger extends Person {
+    private String preferredClass;
     private int seatNo;
-    private String travelClass;
+    private List<Booking> bookings;
 
-    // Default constructor
-    public Passenger() {
-        this("UNASSIGNED", "Unknown", 0, 'O', "0000000000", 0, "Economy");
+    public Passenger(String id, String name, String email, String phone, String preferredClass) {
+        super(id, name, email, phone);
+        this.preferredClass = preferredClass;
+        this.seatNo = 1;
+        this.bookings = new ArrayList<>();
     }
 
-    // Parameterized constructor
-    public Passenger(String pnr, String name, int age, char gender,
-                      String contact, int seatNo, String travelClass) {
-        this.pnr = pnr;
-        this.name = name;
-        this.age = age;
-        this.gender = gender;
-        this.contact = contact;
+    public Passenger(String pnr, String name, int age, char gender, String contact, int seatNo, String travelClass) {
+        super(pnr, name, age, gender, contact);
+        this.preferredClass = travelClass;
         this.seatNo = seatNo;
-        this.travelClass = travelClass;
+        this.bookings = new ArrayList<>();
     }
 
-    // Getters
-    public String getPnr() { return pnr; }
-    public String getName() { return name; }
-    public int getAge() { return age; }
-    public char getGender() { return gender; }
-    public String getContact() { return contact; }
-    public int getSeatNo() { return seatNo; }
-    public String getTravelClass() { return travelClass; }
+    public String getPnr() { return getId(); }
+    public String getTravelClass() { return preferredClass; }
+    public String getPreferredClass() { return preferredClass; }
+    public void setPreferredClass(String preferredClass) { this.preferredClass = preferredClass; }
 
-    // Setters
+    public int getSeatNo() { return seatNo; }
     public void setSeatNo(int seatNo) { this.seatNo = seatNo; }
-    public void setTravelClass(String travelClass) { this.travelClass = travelClass; }
-    public void setContact(String contact) { this.contact = contact; }
+
+    public List<Booking> getBookings() { return bookings; }
+    public void addBooking(Booking booking) { this.bookings.add(booking); }
+
+    @Override
+    public String getRoleDescription() {
+        return "Passenger (Class: " + preferredClass + ", Seat: " + seatNo + ", Total Bookings: " + bookings.size() + ")";
+    }
 
     @Override
     public String toString() {
-        return String.format("PNR:%s | %-15s | Age:%-3d | Seat:%-3d | %s",
-                pnr, name, age, seatNo, travelClass);
+        return String.format("Passenger [PNR=%s, Name=%-15s, Age=%2d, Gender=%c, Contact=%s, Seat=%2d, Class=%s]",
+                id, name, age, gender, phone, seatNo, preferredClass);
     }
 }

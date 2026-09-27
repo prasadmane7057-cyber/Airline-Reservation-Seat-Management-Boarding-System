@@ -1,6 +1,8 @@
 #include "Bresenham.h"
 #include <cmath>
 #include <iostream>
+#include <vector>
+#include <utility>
 
 using namespace std;
 
@@ -59,7 +61,9 @@ vector<pair<int, int>> bresenhamCircle(int xc, int yc, int r) {
 
 // ---------- demo/test function called from main.cpp ----------
 void runBresenhamDemo() {
-    cout << "=== CGL Practical 2: Bresenham Line & Circle ===\n\n";
+    cout << "========================================================\n";
+    cout << " CGL PRACTICAL 2: Bresenham Line & Circle Demonstration \n";
+    cout << "========================================================\n\n";
 
     // Route segment between two airport coordinates (e.g. Mumbai -> Delhi, scaled to screen space)
     cout << "--- Route line from (50,50) to (200,120) ---\n";
@@ -81,4 +85,9 @@ void runBresenhamDemo() {
     }
     cout << "\n\n";
     cout << "Pass these point lists to your OpenGL renderer (RouteMap.cpp) as GL_POINTS.\n";
+}
+
+int main() {
+    runBresenhamDemo();
+    return 0;
 }
