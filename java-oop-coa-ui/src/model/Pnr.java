@@ -1,11 +1,9 @@
-// PNR.java
-// PSOOP Practical 3 (part)
-// Owner: Varad
-// Generates and validates a 6-character alphanumeric PNR (Passenger Name Record) code.
- 
+
+package model;
+
 import java.util.Random;
  
-public class PNR {
+public class Pnr {
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int LENGTH = 6;
     private static final Random random = new Random();

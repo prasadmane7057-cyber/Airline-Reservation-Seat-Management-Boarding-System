@@ -1,3 +1,5 @@
+package model;
+
 // BookingDemo.java
 // NOT a required deliverable file - just a quick test harness so you can
 // run something and see Booking/PNR/Person/StaffMember actually working
@@ -10,12 +12,13 @@ public class BookingDemo {
         Booking b2 = new Booking("Neha Verma", "AI-303", "14C", "2026-09-11");
         System.out.println(b1);
         System.out.println(b2);
-        System.out.println("Is PNR valid? " + PNR.isValidPNR(b1.getPnr()));
+        System.out.println("Is PNR valid? " + Pnr.isValidPNR(b1.getPnr()));
  
         System.out.println("\n=== Testing Inheritance: Person -> StaffMember ===");
-        StaffMember staff = new StaffMember("Anita Rao", 29, "Female", "9876543210",
-                                             "EMP1001", "Cabin Crew");
-        staff.displayDetails();
+        StaffMember staff = new StaffMember("P1001", "Anita Rao", 29,
+                             "9876543210", "anita@example.com",
+                             "EMP1001", "Cabin Crew", "Flight Attendant");
+        staff.displayStaff();
     }
 }
  
