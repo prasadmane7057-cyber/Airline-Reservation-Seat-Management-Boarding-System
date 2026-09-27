@@ -1,14 +1,24 @@
 package model;
+public class Economy implements BookingClass {
 
-public class Economy extends SeatClass {
-
-    @Override
-    public double getFare() {
-        return 5000;
+    
+    public double getFare(double baseFare) {
+        return baseFare;
     }
 
-    @Override
+
+    
     public int getPriority() {
-        return 1;
+        return 3;
+    }
+
+    
+    public String getBenefits() {
+        return "Standard seating, 1 checked bag (15kg), meal available for purchase";
+    }
+
+    
+    public String getClassName() {
+        return "Economy";
     }
 }
