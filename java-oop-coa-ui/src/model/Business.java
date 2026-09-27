@@ -1,14 +1,26 @@
 package model;
 
-public class Business extends SeatClass {
+public class Business implements BookingClass {
 
-    @Override
-    public double getFare() {
-        return 10000;
+
+    
+    public double getFare(double baseFare) {
+        return baseFare * 1.5;
     }
 
-    @Override
+
+    
     public int getPriority() {
         return 2;
+    }
+
+    
+    public String getBenefits() {
+        return "Priority boarding, 2 checked bags (25kg each), lounge access, free meal";
+    }
+
+    
+    public String getClassName() {
+        return "Business";
     }
 }
