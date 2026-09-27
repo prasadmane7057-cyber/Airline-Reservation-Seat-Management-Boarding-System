@@ -1,3 +1,13 @@
 package model;
+public interface BookingClass {
 
-public abstract class BookingClass {}
+    double getFare(double baseFare);
+
+    int getPriority();
+
+
+    String getBenefits();
+
+
+    String getClassName();
+}
