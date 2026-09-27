@@ -18,4 +18,13 @@ std::vector<std::pair<int, int>> bresenhamCircle(int xc, int yc, int r);
 // Demo/test entry point, called from main.cpp
 void runBresenhamDemo();
 
+
+std::vector<std::pair<int, int>> bresenhamLine(
+    int x0, int y0, int x1, int y1
+);
+
+std::vector<std::pair<int, int>> bresenhamCircle(
+    int xc, int yc, int radius
+);
+
 #endif

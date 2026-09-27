@@ -1,0 +1,17 @@
+// FirstClass.java
+public class FirstClass implements BookingClass {
+    @Override
+    public double calculateFare(double baseFare) {
+        return baseFare * 2.5; // 150% markup over economy
+    }
+
+    @Override
+    public int getBaggageAllowanceKg() {
+        return 40;
+    }
+
+    @Override
+    public String getClassName() {
+        return "First Class";
+    }
+}
