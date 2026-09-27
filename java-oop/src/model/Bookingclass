@@ -18,3 +18,4 @@ public interface BookingClass {
     // Display name for this class, e.g. "Economy", "Business", "First Class"
     String getClassName();
 }
+
