@@ -2,10 +2,11 @@
 #include <cstdio>
 #include <algorithm>
 
-// ---- Provided by PlaneGlyph.cpp (compiled and linked together) ----
+// ---- Provided by PlaneGlyph.cpp and Seats.cpp (compiled and linked together) ----
 extern const float PLANE_WORLD_WIDTH;    // 1000 - world X extent of the aircraft glyph
 extern const float PLANE_WORLD_HEIGHT;   // 600  - world Y extent of the aircraft glyph
-void drawPlaneGlyph();                   // draws fuselage + wings + tail + engines + doors, NO seats
+void drawPlaneGlyph();                   // draws fuselage + wings + tail + engines + doors
+void drawSeats();                        // draws cockpit, business, economy, crew seats & aisles
 
 // ---------------------------------------------------------------
 // Window size. The extra 100px of height above the aircraft's own
@@ -186,6 +187,7 @@ void display() {
     glTranslatef(-currentCamX, -currentCamY, 0.0f);
 
     drawPlaneGlyph();
+    drawSeats();
     drawPlaceholderSeatPanel(FIRST_ZONE);
     drawPlaceholderSeatPanel(BUSINESS_ZONE);
     drawPlaceholderSeatPanel(ECONOMY_ZONE);
@@ -251,13 +253,6 @@ float computeZoomToFit(float blockWidth, float blockHeight) {
 
 // ---------------------------------------------------------------
 // GLUT keyboard callback.
-//
-// CHANGE: key mapping is now 1 = First, 2 = Business, 3 = Economy
-// (front-to-back, matching the cabin layout) instead of the old
-// 1 = Business, 2 = Economy. This is a deliberate remap, not an
-// addition at the end - flag it to your teammates/examiner since
-// anyone used to the old "1 = Business" binding will need to know
-// it moved to '2'.
 // ---------------------------------------------------------------
 void keyboard(unsigned char key, int x, int y) {
     SeatClassZone zone;
@@ -275,6 +270,8 @@ void keyboard(unsigned char key, int x, int y) {
         targetCamY = (minY + maxY) / 2.0f;
         targetZoom = computeZoomToFit(maxX - minX, maxY - minY);
         currentModeLabel = zoneToString(zone);
+        printf("[CG-TRANSFORM] Key '%c' Pressed -> Focused on %s | Target Cam: (%.1f, %.1f) | Target Zoom: %.2fx | glScissor Active\n",
+               key, currentModeLabel, targetCamX, targetCamY, targetZoom);
         return;
     }
 
@@ -284,8 +281,10 @@ void keyboard(unsigned char key, int x, int y) {
             targetCamY = CONTENT_CENTER_Y;
             targetZoom = 1.0f;
             currentModeLabel = "Full Aircraft View";
+            printf("[CG-TRANSFORM] Key '0' Pressed -> Reset to Full Aircraft View (1.0x Zoom)\n");
             break;
         case 27:   // ESC
+            printf("[CG-TRANSFORM] ESC Pressed -> Exiting Plane Glyph + Seat Transform Visualizer.\n");
             exit(0);
             break;
     }
@@ -295,18 +294,32 @@ void reshape(int w, int h) {
     glViewport(0, 0, w, h);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    // Fixed logical coordinate space regardless of actual window
-    // pixel size - keeps the aircraft/text layout consistent even
-    // if the window is resized.
     gluOrtho2D(0, PLANE_WORLD_WIDTH, 0, PLANE_WORLD_HEIGHT + TEXT_BAND_HEIGHT);
     glMatrixMode(GL_MODELVIEW);
 }
 
 int main(int argc, char** argv) {
+    printf("====================================================================\n");
+    printf("  AIRLINE CG: AIRCRAFT GLYPH + REAL SEAT MATRIX + 2D CAMERA ZOOM    \n");
+    printf("====================================================================\n");
+    printf("[CG-INIT] Initializing FreeGLUT Window (1000x700)...\n");
+    printf("[CG-INIT] Plane Glyph: Fuselage, Swept Wings, Jet Engines, Stabilizer, 6 Doors\n");
+    printf("[CG-INIT] Cabin Seats: Pilot Seats (Blue), Business (Purple), Economy (Green), Crew (Orange)\n");
+    printf("[CG-INIT] 2D Transformation Pipeline: glScalef() + glTranslatef()\n");
+    printf("[CG-INIT] Viewport Clipping: glScissor() bounding box\n");
+    printf("--------------------------------------------------------------------\n");
+    printf("Controls:\n");
+    printf("  [1] Zoom to First Class Cabin\n");
+    printf("  [2] Zoom to Business Class Cabin\n");
+    printf("  [3] Zoom to Economy Class Cabin\n");
+    printf("  [0] Reset to Full Aircraft Overview\n");
+    printf("  [ESC] Close Window and Exit\n");
+    printf("====================================================================\n");
+
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-    glutCreateWindow("Airline Seat Map - Plane Glyph + Transform/Clip Demo");
+    glutCreateWindow("Airline Seat Map - Plane Glyph + Real Seats + Transform/Clip Engine");
 
     glClearColor(0.08f, 0.08f, 0.10f, 1.0f);
     reshape(WINDOW_WIDTH, WINDOW_HEIGHT);

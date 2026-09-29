@@ -87,7 +87,11 @@ void runBresenhamDemo() {
     cout << "Pass these point lists to your OpenGL renderer (RouteMap.cpp) as GL_POINTS.\n";
 }
 
+#ifdef STANDALONE_BRESENHAM
 int main() {
     runBresenhamDemo();
     return 0;
 }
+#endif
+
+

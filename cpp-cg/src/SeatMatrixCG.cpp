@@ -237,7 +237,6 @@ int main(int argc, char** argv) {
     glutMouseFunc(mouseClick);
 
     // Run GLUT Main Event Loop
-    // glutMainLoop(); // Uncomment when running with OpenGL FreeGLUT installed
-    std::cout << "OpenGL Seat Visualization initialized successfully." << std::endl;
+    glutMainLoop(); // Keeps the interactive OpenGL window open
     return 0;
 }
