@@ -1,3 +1,4 @@
+package coa;
 public class FareCalculator {
     public static double calculateFare(double baseFare, int passengerCount, String cabinClass) {
         double multiplier = switch (cabinClass.toLowerCase()) {
