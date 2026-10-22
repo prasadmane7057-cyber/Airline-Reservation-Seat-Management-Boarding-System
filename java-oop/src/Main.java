@@ -1,6 +1,9 @@
 import model.*;
+import util.BookingFileManager;
 import util.StringUtils;
 import util.ValidationUtils;
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -13,18 +16,23 @@ import java.util.function.Predicate;
  * 1. Java Fundamentals: Control statements, loops, arrays & validation
  * 2. String, StringBuilder & StringBuffer operations
  * 3. Encapsulation & Class/Object architecture
- * 4. Hierarchical & Multilevel Inheritance (Person -> Passenger, Person -> StaffMember -> Pilot)
- * 5. Abstract Classes (Person, SeatClass) & Interfaces (IBoardable)
- * 6. Dynamic Polymorphism & Method Overriding
- * 7. Keywords Demonstration (static, final, super, this)
- * 8. Lambda Expressions, Predicates, Comparators & Stream API
- * 9. MySQL Database Singleton JDBC Connection Architecture
+ * 4. Compile-Time Polymorphism: Method Overloading & Constructor Overloading
+ * 5. Hierarchical & Multilevel Inheritance (Person -> Passenger, Person -> StaffMember -> Pilot)
+ * 6. Abstract Classes (Person, SeatClass) & Multiple Inheritance via Interfaces (IBoardable, ISafetyCertified)
+ * 7. Dynamic Polymorphism & Method Overriding
+ * 8. Keywords Demonstration (static, final, super, this)
+ * 9. Lambda Expressions, Predicates, Comparators & Stream API
+ * 10. MySQL Database Singleton JDBC Connection Architecture
  */
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         System.out.println("=======================================================================");
         System.out.println("   AIRLINE RESERVATION SYSTEM - JAVA OOP ACADEMIC COMPONENT");
         System.out.println("=======================================================================\n");
+
+        java.nio.file.Path bookingFile = Paths.get("java-oop", "bookings.csv");
+        List<Booking> savedBookings = BookingFileManager.loadBookings(bookingFile);
+        System.out.println("   Loaded saved bookings: " + savedBookings.size());
 
         // 1. FUNDAMENTALS: Validation, Control Statements, Looping & Arrays (CO1)
         System.out.println("--- 1. JAVA FUNDAMENTALS (Validation, Loops, Arrays) ---");
@@ -54,6 +62,19 @@ public class Main {
         System.out.println("   Created Flight: " + ai101);
         System.out.println("   Created Flight: " + ai202);
 
+        // 3B. COMPILE-TIME POLYMORPHISM: METHOD & CONSTRUCTOR OVERLOADING (CO2)
+        System.out.println("\n--- 3B. COMPILE-TIME POLYMORPHISM (Method & Constructor Overloading) ---");
+        System.out.println("   [Constructor Overloading in Booking]");
+        Booking simpleBooking = new Booking("Priya Nair", "AI101", "14C", "2026-10-18");
+        savedBookings.add(simpleBooking);
+        System.out.println("      Quick Demo Constructor -> PNR: " + simpleBooking.getPnr() + ", Seat: " + simpleBooking.getSeatNumber());
+
+        System.out.println("   [Method Overloading in Flight: calculateFare()]");
+        System.out.println("      1. Standard Base Fare:                             Rs. " + ai101.calculateFare());
+        System.out.println("      2. Overloaded (Business Class):                    Rs. " + ai101.calculateFare("Business"));
+        System.out.println("      3. Overloaded (Business + 20kg Baggage):           Rs. " + ai101.calculateFare("Business", 20.0));
+        System.out.println("      4. Overloaded (Business + 20kg Baggage + FLYAI10): Rs. " + ai101.calculateFare("Business", 20.0, "FLYAI10"));
+
         // 4. INHERITANCE & RUNTIME POLYMORPHISM (CO2)
         System.out.println("\n--- 4. INHERITANCE & DYNAMIC POLYMORPHISM (Person Hierarchy) ---");
         Person pax1 = new Passenger("PNR001", "Aarav Sharma", 29, 'M', "9876543210", 12, "Business");
@@ -77,15 +98,34 @@ public class Main {
         System.out.println("   Business Class -> Fare: Rs. " + businessTier.getFare() + " | Priority: " + businessTier.getPriority());
         System.out.println("   First Class    -> Fare: Rs. " + firstTier.getFare() + " | Priority: " + firstTier.getPriority());
 
-        // 6. INTERFACE IMPLEMENTATION: IBoardable (CO2)
-        System.out.println("\n--- 6. INTERFACE IMPLEMENTATION: IBoardable ---");
+        // 6. MULTIPLE INHERITANCE VIA INTERFACES: IBoardable & ISafetyCertified (CO2)
+        System.out.println("\n--- 6. MULTIPLE INHERITANCE VIA INTERFACES (IBoardable & ISafetyCertified) ---");
+
+        // A. Booking implementing IBoardable
         Seat seat1 = new Seat("1A", "First Class", "AVAILABLE");
         Booking b1 = new Booking("B101", (Passenger) pax2, ai101, seat1, 20000.00, "CONFIRMED");
-        System.out.println("   Booking Reference: " + b1.getPnr());
-        System.out.println("   Can Passenger Board? " + b1.canBoard());
-        System.out.println("   Boarding Zone: " + b1.getBoardingZone());
+        savedBookings.add(b1);
+        System.out.println("   [Passenger Booking -> IBoardable]");
+        System.out.println("      Booking Reference:    " + b1.getPnr());
+        System.out.println("      Can Passenger Board?  " + b1.canBoard());
+        System.out.println("      Boarding Zone:        " + b1.getBoardingZone());
         b1.confirmBoarding();
-        System.out.println("   Status After Boarding: " + b1.getStatus());
+        System.out.println("      Status After Board:   " + b1.getStatus());
+
+        // B. Pilot demonstrating MULTIPLE INHERITANCE (IBoardable + ISafetyCertified)
+        Pilot chiefPilot = (Pilot) pilot1;
+        System.out.println("\n   [Pilot -> Multiple Inheritance: IBoardable + ISafetyCertified]");
+
+        // Interface Reference 1: ISafetyCertified
+        ISafetyCertified safetyRef = chiefPilot;
+        System.out.println("      [ISafetyCertified] Safety Clearance Valid? " + safetyRef.verifySafetyClearance());
+        System.out.println("      [ISafetyCertified] Certification Level:    " + safetyRef.getSafetyCertificationLevel());
+
+        // Interface Reference 2: IBoardable
+        IBoardable crewBoardingRef = chiefPilot;
+        System.out.println("      [IBoardable]       Can Crew Board Deck?    " + crewBoardingRef.canBoard());
+        System.out.println("      [IBoardable]       Crew Boarding Zone:     " + crewBoardingRef.getBoardingZone());
+        crewBoardingRef.confirmBoarding();
 
         // 7. LAMBDA EXPRESSIONS & STREAM API (CO2)
         System.out.println("\n--- 7. LAMBDA EXPRESSIONS & STREAMS (Filters & Comparators) ---");
@@ -105,6 +145,9 @@ public class Main {
         System.out.println("\n--- 8. DATABASE JDBC INTEGRATION ---");
         System.out.println("   Testing JDBC connection to MySQL Database...");
         DBConnection.getConnection();
+
+        BookingFileManager.saveBookings(bookingFile, savedBookings);
+        System.out.println("   Saved bookings to " + bookingFile + " (" + savedBookings.size() + ").");
 
         System.out.println("\n=======================================================================");
         System.out.println("   JAVA OOP DEMONSTRATION COMPLETED SUCCESSFULLY");

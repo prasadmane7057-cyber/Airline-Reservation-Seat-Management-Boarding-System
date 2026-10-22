@@ -2,7 +2,8 @@ package model;
 
 /**
  * Class: Flight
- * Contains flight route, departure, arrival, aircraft, and pricing
+ * Contains flight route, departure, arrival, aircraft, and pricing.
+ * Demonstrates: Compile-Time Polymorphism via Method Overloading (calculateFare).
  */
 public class Flight {
     private String flightNumber;
@@ -44,6 +45,49 @@ public class Flight {
 
     public double getBaseFare() { return baseFare; }
     public void setBaseFare(double baseFare) { this.baseFare = baseFare; }
+
+    // =========================================================================
+    // COMPILE-TIME POLYMORPHISM: METHOD OVERLOADING (Static Binding)
+    // =========================================================================
+
+    /**
+     * 1. Base fare calculation (no arguments)
+     */
+    public double calculateFare() {
+        return this.baseFare;
+    }
+
+    /**
+     * 2. Overloaded: Fare based on travel class
+     */
+    public double calculateFare(String travelClass) {
+        if (travelClass == null) return this.baseFare;
+        if ("First Class".equalsIgnoreCase(travelClass)) return baseFare * 2.5;
+        if ("Business".equalsIgnoreCase(travelClass)) return baseFare * 1.8;
+        return baseFare; // Economy default
+    }
+
+    /**
+     * 3. Overloaded: Fare based on travel class + extra baggage weight (kg)
+     */
+    public double calculateFare(String travelClass, double baggageKg) {
+        double fare = calculateFare(travelClass);
+        if (baggageKg > 15.0) {
+            fare += (baggageKg - 15.0) * 500.0; // Rs. 500 per kg above 15kg allowance
+        }
+        return fare;
+    }
+
+    /**
+     * 4. Overloaded: Fare based on travel class + extra baggage + promo discount code
+     */
+    public double calculateFare(String travelClass, double baggageKg, String promoCode) {
+        double fare = calculateFare(travelClass, baggageKg);
+        if (promoCode != null && "FLYAI10".equalsIgnoreCase(promoCode.trim())) {
+            fare *= 0.90; // 10% instant discount
+        }
+        return fare;
+    }
 
     @Override
     public String toString() {

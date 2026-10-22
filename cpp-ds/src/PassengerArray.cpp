@@ -4,7 +4,7 @@ using namespace std;
 
 PassengerArray::PassengerArray() : passengerCount(0) {}
 
-int PassengerArray::findIndexByPNR(const string &pnr) {
+int PassengerArray::findIndexByPNR(const string &pnr) const {
     for (int i = 0; i < passengerCount; i++) {
         if (passengers[i].pnr == pnr) return i;
     }
@@ -38,7 +38,13 @@ void PassengerArray::displayAll() {
         cout << left << p.pnr << "   | " << p.name;
         for (size_t s = p.name.length(); s < 16; s++) cout << " ";
         cout << "| " << p.age << "  | " << p.gender << "      | " << p.contact
-             << "  | " << p.seatNo << "   | " << p.travelClass << "\n";
+             << "  | ";
+        if (p.seatRow >= 0 && p.seatColumn >= 0) {
+            cout << p.seatRow + 1 << char('A' + p.seatColumn);
+        } else {
+            cout << p.seatNo;
+        }
+        cout << "   | " << p.travelClass << "\n";
     }
     cout << "-------------------------------------------------------------------------\n";
     cout << "Total passengers: " << passengerCount << "\n\n";
@@ -75,6 +81,13 @@ bool PassengerArray::deletePassenger(const string &pnr) {
     }
     passengerCount--;
     cout << "PNR " << pnr << " deleted.\n";
+    return true;
+}
+
+bool PassengerArray::getPassengerByPNR(const string &pnr, Passenger &passenger) const {
+    int idx = findIndexByPNR(pnr);
+    if (idx == -1) return false;
+    passenger = passengers[idx];
     return true;
 }
 
