@@ -31,6 +31,15 @@ The backend uses its in-memory demo database when MySQL is unavailable. It inclu
 
 Demo sign-in: `passenger@airline.com` / `pass123` or `admin@airline.com` / `admin123`.
 
+## Publish with GitHub Pages
+
+The repository's `main` branch deploys the static Vue frontend to GitHub Pages using `.github/workflows/deploy-pages.yml`. The workflow builds the app with the repository URL as its base path and includes a `404.html` fallback for Vue Router routes.
+
+Once the first Pages workflow run succeeds, the site is available at:
+`https://prasadmane7057-cyber.github.io/Airline-Reservation-Seat-Management-Boarding-System/`
+
+GitHub Pages hosts only the frontend. To enable API-backed booking, authentication, and administration on the public site, deploy `airline-backend` and its database to a public backend host, then set the repository Actions variable `VITE_API_URL` to that backend's `/api` URL. Do not use localhost as the public API URL.
+
 ## Build and lint
 
 ```sh

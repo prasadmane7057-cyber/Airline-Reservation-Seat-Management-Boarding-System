@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
@@ -6,6 +7,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: process.env.GITHUB_ACTIONS ? '/Airline-Reservation-Seat-Management-Boarding-System/' : '/',
   plugins: [
     vue(),
     vueDevTools(),
