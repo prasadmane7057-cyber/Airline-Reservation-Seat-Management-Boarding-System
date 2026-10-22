@@ -55,10 +55,15 @@ async function getFlights(req, res, next) {
       }
 
       // Sorting
+      const fareColumn = travelClass === 'Business'
+        ? 'f.business_fare'
+        : travelClass === 'First Class'
+          ? 'f.first_class_fare'
+          : 'f.economy_fare';
       if (sortBy === 'price_asc') {
-        query += ` ORDER BY f.economy_fare ASC`;
+        query += ` ORDER BY ${fareColumn} ASC`;
       } else if (sortBy === 'price_desc') {
-        query += ` ORDER BY f.economy_fare DESC`;
+        query += ` ORDER BY ${fareColumn} DESC`;
       } else if (sortBy === 'departure') {
         query += ` ORDER BY f.departure_time ASC`;
       } else {
@@ -125,10 +130,16 @@ async function getFlights(req, res, next) {
         });
       }
 
+      const getFare = flight => {
+        if (travelClass === 'Business') return flight.business_fare;
+        if (travelClass === 'First Class') return flight.first_class_fare;
+        return flight.economy_fare;
+      };
+
       if (sortBy === 'price_asc') {
-        results.sort((a, b) => a.economy_fare - b.economy_fare);
+        results.sort((a, b) => getFare(a) - getFare(b));
       } else if (sortBy === 'price_desc') {
-        results.sort((a, b) => b.economy_fare - a.economy_fare);
+        results.sort((a, b) => getFare(b) - getFare(a));
       } else {
         results.sort((a, b) => new Date(a.departure_time) - new Date(b.departure_time));
       }

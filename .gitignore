@@ -3,6 +3,13 @@ node_modules/
 */node_modules/
 package-lock.json
 
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
 # Build outputs & binaries
 *.class
 *.exe

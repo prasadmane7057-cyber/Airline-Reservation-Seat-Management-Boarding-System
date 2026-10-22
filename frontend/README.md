@@ -1,44 +1,39 @@
-# .
+# SkyWings Airline Reservation Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+The Vue 3 application is the browser interface for the integrated airline reservation project. Its home page includes flight search and a project-module overview; the rest of the app covers passenger booking and airline administration.
 
-## Recommended IDE Setup
+## Browser workflows
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- Search and filter flights by route, date, class, and fare.
+- Register or sign in, select seats, enter passenger details, and make a payment.
+- Review, retrieve, and cancel bookings; access booking confirmations and boarding passes.
+- Check in passengers and manage flights, airports, passengers, bookings, and boarding operations through the admin screens.
 
-## Recommended Browser Setup
+The home page also maps the companion source modules: Java airline domain and persistence examples, C++ passenger/seat/waitlist structures, assembly and COA calculations, computer-graphics route and seat-map demos, and the Express/MySQL data layer. Those standalone academic demos are described in the frontend; they are not executed by the browser.
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## Run locally
 
-## Customize configuration
+Open two terminals from the project root:
 
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
+```powershell
+Set-Location .\airline-backend
 npm run dev
 ```
 
-### Compile and Minify for Production
+```powershell
+Set-Location .\frontend
+npm run dev
+```
+
+Open **http://localhost:5173**. The API health check is at **http://localhost:5000/api/health**. The frontend uses `http://localhost:5000/api` by default; set `VITE_API_URL` in a local frontend `.env` file to use another API URL.
+
+The backend uses its in-memory demo database when MySQL is unavailable. It includes seven airport choices and upcoming demo flights; bookings and other changes in this mode reset when the backend restarts. For persistent storage, configure MySQL and initialize it using [`../database/README.md`](../database/README.md).
+
+Demo sign-in: `passenger@airline.com` / `pass123` or `admin@airline.com` / `admin123`.
+
+## Build and lint
 
 ```sh
 npm run build
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
 npm run lint
 ```

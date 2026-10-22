@@ -54,12 +54,12 @@ INSERT INTO aircraft (id, model, registration_number, total_seats, first_class_s
 -- 5. SEED FLIGHTS
 -- -------------------------------------------------------
 INSERT INTO flights (id, flight_number, airline, aircraft_id, from_airport_id, to_airport_id, departure_time, arrival_time, duration, economy_fare, business_fare, first_class_fare, total_seats, available_seats, status) VALUES
-(1, 'AI101', 'SkyWings Airlines', 1, 1, 2, '2026-10-15 06:00:00', '2026-10-15 08:15:00', '2h 15m', 4500.00, 11500.00, 21000.00, 116, 114, 'SCHEDULED'),
-(2, 'AI202', 'SkyWings Airlines', 2, 2, 3, '2026-10-15 09:30:00', '2026-10-15 12:15:00', '2h 45m', 5200.00, 13000.00, 24000.00, 116, 115, 'SCHEDULED'),
-(3, 'AI303', 'SkyWings Airlines', 1, 5, 4, '2026-10-15 14:00:00', '2026-10-15 15:20:00', '1h 20m', 3800.00, 9500.00, 18000.00, 116, 115, 'SCHEDULED'),
-(4, 'AI404', 'SkyWings Airlines', 3, 1, 3, '2026-10-16 17:45:00', '2026-10-16 19:30:00', '1h 45m', 4800.00, 12200.00, 22500.00, 116, 115, 'SCHEDULED'),
-(5, 'AI505', 'SkyWings Airlines', 2, 3, 2, '2026-10-16 20:15:00', '2026-10-16 23:00:00', '2h 45m', 5400.00, 13500.00, 25000.00, 116, 116, 'SCHEDULED'),
-(6, 'AI606', 'SkyWings Airlines', 1, 4, 1, '2026-10-17 11:00:00', '2026-10-17 12:30:00', '1h 30m', 4100.00, 10500.00, 19500.00, 116, 116, 'SCHEDULED');
+(1, 'AI101', 'SkyWings Airlines', 1, 1, 2, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '06:00:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '08:15:00'), '2h 15m', 4500.00, 11500.00, 21000.00, 116, 114, 'SCHEDULED'),
+(2, 'AI202', 'SkyWings Airlines', 2, 2, 3, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '09:30:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '12:15:00'), '2h 45m', 5200.00, 13000.00, 24000.00, 116, 115, 'SCHEDULED'),
+(3, 'AI303', 'SkyWings Airlines', 1, 5, 4, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '14:00:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '15:20:00'), '1h 20m', 3800.00, 9500.00, 18000.00, 116, 115, 'SCHEDULED'),
+(4, 'AI404', 'SkyWings Airlines', 3, 1, 3, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '17:45:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '19:30:00'), '1h 45m', 4800.00, 12200.00, 22500.00, 116, 115, 'SCHEDULED'),
+(5, 'AI505', 'SkyWings Airlines', 2, 3, 2, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '20:15:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '23:00:00'), '2h 45m', 5400.00, 13500.00, 25000.00, 116, 116, 'SCHEDULED'),
+(6, 'AI606', 'SkyWings Airlines', 1, 4, 1, TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '11:00:00'), TIMESTAMP(DATE_ADD(CURDATE(), INTERVAL 1 DAY), '12:30:00'), '1h 30m', 4100.00, 10500.00, 19500.00, 116, 116, 'SCHEDULED');
 
 -- -------------------------------------------------------
 -- 6. SEED SEATS (For Flight AI101, AI202, AI303, AI404)

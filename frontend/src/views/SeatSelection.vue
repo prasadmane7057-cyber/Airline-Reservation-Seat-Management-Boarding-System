@@ -44,6 +44,10 @@
                 <span class="legend-box blocked"></span>
                 <span>Blocked</span>
               </div>
+              <div class="legend-item">
+                <span class="legend-box class-unavailable"></span>
+                <span>Other cabin</span>
+              </div>
             </div>
 
             <!-- Loading Spinner -->
@@ -70,7 +74,7 @@
                     v-for="seat in row.leftCol" 
                     :key="seat.id"
                     :class="getSeatClass(seat)"
-                    :disabled="seat.is_occupied || seat.is_blocked"
+                    :disabled="seat.is_occupied || seat.is_blocked || seat.seat_class !== travelClass"
                     @click="handleSeatClick(seat)"
                     class="seat-btn"
                     :title="getSeatTooltip(seat)"
@@ -86,7 +90,7 @@
                     v-for="seat in row.rightCol" 
                     :key="seat.id"
                     :class="getSeatClass(seat)"
-                    :disabled="seat.is_occupied || seat.is_blocked"
+                    :disabled="seat.is_occupied || seat.is_blocked || seat.seat_class !== travelClass"
                     @click="handleSeatClick(seat)"
                     class="seat-btn"
                     :title="getSeatTooltip(seat)"
@@ -112,7 +116,7 @@
                     v-for="seat in row.leftCol" 
                     :key="seat.id"
                     :class="getSeatClass(seat)"
-                    :disabled="seat.is_occupied || seat.is_blocked"
+                    :disabled="seat.is_occupied || seat.is_blocked || seat.seat_class !== travelClass"
                     @click="handleSeatClick(seat)"
                     class="seat-btn"
                     :title="getSeatTooltip(seat)"
@@ -307,10 +311,14 @@ onMounted(async () => {
   seatStore.setMaxSelectable(maxPassengers.value);
   seatStore.setTravelClass(travelClass.value);
 
-  if (!flight.value) {
-    await flightStore.fetchFlightDetails(flightId);
+  try {
+    if (!flight.value) {
+      await flightStore.fetchFlightDetails(flightId);
+    }
+    await seatStore.fetchSeats(flightId);
+  } catch (err) {
+    errorMessage.value = err.message || 'Could not load the aircraft seat map. Please try again.';
   }
-  await seatStore.fetchSeats(flightId);
 });
 
 function getSeatClass(seat) {
@@ -318,12 +326,14 @@ function getSeatClass(seat) {
   if (isSelected) return 'selected';
   if (seat.is_occupied) return 'occupied';
   if (seat.is_blocked) return 'blocked';
+  if (seat.seat_class !== travelClass.value) return 'class-unavailable';
   return 'available';
 }
 
 function getSeatTooltip(seat) {
   if (seat.is_occupied) return `Seat ${seat.seat_number} (Occupied)`;
   if (seat.is_blocked) return `Seat ${seat.seat_number} (Blocked)`;
+  if (seat.seat_class !== travelClass.value) return `Seat ${seat.seat_number} (${seat.seat_class}; select ${travelClass.value} to book this class)`;
   return `Seat ${seat.seat_number} - ${seat.seat_class} (Available)`;
 }
 
@@ -421,6 +431,11 @@ function proceedToPassengerDetails() {
 .legend-box.blocked {
   background: #fee2e2;
   border: 1.5px solid #fca5a5;
+}
+
+.legend-box.class-unavailable {
+  background: #e2e8f0;
+  border: 1.5px solid #cbd5e1;
 }
 
 .cabin-section-header {

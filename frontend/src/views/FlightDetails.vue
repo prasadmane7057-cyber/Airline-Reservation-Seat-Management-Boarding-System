@@ -6,6 +6,12 @@
         <p>Loading flight itinerary & aircraft details...</p>
       </div>
 
+      <div v-else-if="errorMessage" class="card text-center py-48">
+        <h2>Flight details unavailable</h2>
+        <p class="page-subtitle">{{ errorMessage }}</p>
+        <router-link to="/flights" class="btn btn-primary">Back to flight search</router-link>
+      </div>
+
       <div v-else-if="flight" class="details-container">
         <!-- Back Navigation -->
         <div class="details-top-bar">
@@ -159,6 +165,7 @@ const bookingStore = useBookingStore();
 
 const flight = ref(null);
 const loading = ref(true);
+const errorMessage = ref('');
 const selectedClass = ref(route.query.travelClass || 'Economy');
 const passengerCount = ref(parseInt(route.query.passengers, 10) || 1);
 
@@ -170,7 +177,7 @@ onMounted(async () => {
       bookingStore.initBooking(flight.value, selectedClass.value, passengerCount.value);
     }
   } catch (err) {
-    console.error(err);
+    errorMessage.value = err.message || 'Could not load this flight. Please try again.';
   } finally {
     loading.value = false;
   }

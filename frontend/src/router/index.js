@@ -81,7 +81,7 @@ const router = createRouter({
 });
 
 // Navigation Guards
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   const authStore = useAuthStore();
 
   // Set Page Title
@@ -91,20 +91,20 @@ router.beforeEach((to, from, next) => {
 
   // Check Guest Only routes (e.g. Login / Register)
   if (to.meta.guestOnly && authStore.isAuthenticated) {
-    return next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard');
+    return authStore.isAdmin ? '/admin/dashboard' : '/dashboard';
   }
 
   // Check Auth Requirements
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return next({ path: '/login', query: { redirect: to.fullPath } });
+    return { path: '/login', query: { redirect: to.fullPath } };
   }
 
   // Check Admin Requirements
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    return next('/dashboard');
+    return '/dashboard';
   }
 
-  next();
+  return true;
 });
 
 export default router;

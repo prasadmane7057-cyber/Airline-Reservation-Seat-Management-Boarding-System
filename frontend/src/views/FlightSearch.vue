@@ -8,8 +8,8 @@
             <label class="form-label">From</label>
             <select v-model="filters.from" class="form-select">
               <option value="">All Origins</option>
-              <option v-for="apt in flightStore.airports" :key="apt.id" :value="apt.airport_code">
-                {{ apt.city }} ({{ apt.airport_code }})
+              <option v-for="apt in flightStore.airports" :key="apt.id" :value="apt.airport_code" :disabled="apt.airport_code === filters.to">
+                {{ apt.city }} ({{ apt.airport_code }}) — {{ apt.airport_name }}
               </option>
             </select>
           </div>
@@ -18,8 +18,8 @@
             <label class="form-label">To</label>
             <select v-model="filters.to" class="form-select">
               <option value="">All Destinations</option>
-              <option v-for="apt in flightStore.airports" :key="apt.id" :value="apt.airport_code">
-                {{ apt.city }} ({{ apt.airport_code }})
+              <option v-for="apt in flightStore.airports" :key="apt.id" :value="apt.airport_code" :disabled="apt.airport_code === filters.from">
+                {{ apt.city }} ({{ apt.airport_code }}) — {{ apt.airport_name }}
               </option>
             </select>
           </div>
@@ -100,6 +100,10 @@
               Available Flights 
               <span class="count-tag">({{ flights.length }})</span>
             </h2>
+            <p v-if="flightStore.error" class="api-error" role="alert">
+              Flight search failed: {{ flightStore.error }}
+              <button type="button" class="retry-link" @click="executeSearch">Try again</button>
+            </p>
           </div>
 
           <div v-if="flightStore.loading" class="loading-state card">
@@ -238,15 +242,19 @@ onMounted(async () => {
 });
 
 async function executeSearch() {
-  await flightStore.searchFlights({
-    from: filters.value.from,
-    to: filters.value.to,
-    date: filters.value.date,
-    travelClass: filters.value.travelClass,
-    sortBy: filters.value.sortBy,
-    status: filters.value.status,
-    maxPrice: maxPriceFilter.value
-  });
+  try {
+    await flightStore.searchFlights({
+      from: filters.value.from,
+      to: filters.value.to,
+      date: filters.value.date,
+      travelClass: filters.value.travelClass,
+      sortBy: filters.value.sortBy,
+      status: filters.value.status,
+      maxPrice: maxPriceFilter.value
+    });
+  } catch {
+    // The store exposes the request error for the visible retry message.
+  }
 }
 
 function resetFilters() {
@@ -365,6 +373,23 @@ function formatDate(dateTimeStr) {
 
 .results-header {
   margin-bottom: 16px;
+}
+
+.api-error {
+  margin-top: 10px;
+  color: #991b1b;
+  font-size: 0.875rem;
+}
+
+.retry-link {
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-blue);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .results-count {

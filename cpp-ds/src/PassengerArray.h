@@ -15,13 +15,15 @@ struct Passenger {
     std::string contact;
     int seatNo;
     std::string travelClass;
+    int seatRow = -1;
+    int seatColumn = -1;
 };
 
 class PassengerArray {
 private:
     Passenger passengers[MAX_PASSENGERS];
     int passengerCount;
-    int findIndexByPNR(const std::string &pnr);
+    int findIndexByPNR(const std::string &pnr) const;
 
 public:
     PassengerArray();
@@ -29,6 +31,7 @@ public:
     void displayAll();
     bool updatePassenger(const std::string &pnr, const std::string &field, const std::string &newValue);
     bool deletePassenger(const std::string &pnr);
+    bool getPassengerByPNR(const std::string &pnr, Passenger &passenger) const;
     void searchPassenger(const std::string &key);
     int getCount() const;
 };

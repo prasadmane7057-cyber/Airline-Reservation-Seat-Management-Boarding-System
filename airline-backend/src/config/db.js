@@ -10,6 +10,15 @@ dotenv.config();
 let pool = null;
 let isConnectedToMySQL = false;
 
+function flightDate(daysFromToday, time) {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromToday);
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+  return `${localDate}T${time}:00`;
+}
+
 // Initialize MySQL pool
 try {
   pool = mysql.createPool({
@@ -107,8 +116,8 @@ const memoryDB = {
       aircraft_id: 1,
       from_airport_id: 1,
       to_airport_id: 2,
-      departure_time: '2026-10-15T06:00:00',
-      arrival_time: '2026-10-15T08:15:00',
+      departure_time: flightDate(1, '06:00'),
+      arrival_time: flightDate(1, '08:15'),
       duration: '2h 15m',
       economy_fare: 4500.00,
       business_fare: 11500.00,
@@ -124,8 +133,8 @@ const memoryDB = {
       aircraft_id: 2,
       from_airport_id: 2,
       to_airport_id: 3,
-      departure_time: '2026-10-15T09:30:00',
-      arrival_time: '2026-10-15T12:15:00',
+      departure_time: flightDate(1, '09:30'),
+      arrival_time: flightDate(1, '12:15'),
       duration: '2h 45m',
       economy_fare: 5200.00,
       business_fare: 13000.00,
@@ -141,8 +150,8 @@ const memoryDB = {
       aircraft_id: 1,
       from_airport_id: 5,
       to_airport_id: 4,
-      departure_time: '2026-10-15T14:00:00',
-      arrival_time: '2026-10-15T15:20:00',
+      departure_time: flightDate(1, '14:00'),
+      arrival_time: flightDate(1, '15:20'),
       duration: '1h 20m',
       economy_fare: 3800.00,
       business_fare: 9500.00,
@@ -158,8 +167,8 @@ const memoryDB = {
       aircraft_id: 3,
       from_airport_id: 1,
       to_airport_id: 3,
-      departure_time: '2026-10-16T17:45:00',
-      arrival_time: '2026-10-16T19:30:00',
+      departure_time: flightDate(1, '17:45'),
+      arrival_time: flightDate(1, '19:30'),
       duration: '1h 45m',
       economy_fare: 4800.00,
       business_fare: 12200.00,
@@ -175,8 +184,8 @@ const memoryDB = {
       aircraft_id: 2,
       from_airport_id: 3,
       to_airport_id: 2,
-      departure_time: '2026-10-16T20:15:00',
-      arrival_time: '2026-10-16T23:00:00',
+      departure_time: flightDate(1, '20:15'),
+      arrival_time: flightDate(1, '23:00'),
       duration: '2h 45m',
       economy_fare: 5400.00,
       business_fare: 13500.00,
@@ -192,8 +201,8 @@ const memoryDB = {
       aircraft_id: 1,
       from_airport_id: 4,
       to_airport_id: 1,
-      departure_time: '2026-10-17T11:00:00',
-      arrival_time: '2026-10-17T12:30:00',
+      departure_time: flightDate(1, '11:00'),
+      arrival_time: flightDate(1, '12:30'),
       duration: '1h 30m',
       economy_fare: 4100.00,
       business_fare: 10500.00,

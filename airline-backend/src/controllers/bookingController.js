@@ -82,6 +82,14 @@ async function createBooking(req, res, next) {
           });
         }
 
+        if (seatRows.some(seat => seat.seat_class !== travelClass)) {
+          await connection.rollback();
+          return res.status(400).json({
+            success: false,
+            message: `Selected seats must be in the ${travelClass} cabin.`
+          });
+        }
+
         // 3. Calculate authoritative fare
         let baseFareUnit = flight.economy_fare;
         if (travelClass === 'Business') baseFareUnit = flight.business_fare;
@@ -198,6 +206,20 @@ async function createBooking(req, res, next) {
 
       // Check seats in memory DB
       const flightSeats = memoryDB.seats.filter(s => s.flight_id === flightId && selectedSeatNumbers.includes(s.seat_number));
+      if (flightSeats.length !== selectedSeatNumbers.length) {
+        return res.status(400).json({
+          success: false,
+          message: 'One or more selected seats do not exist on this flight.'
+        });
+      }
+
+      if (flightSeats.some(seat => seat.seat_class !== travelClass)) {
+        return res.status(400).json({
+          success: false,
+          message: `Selected seats must be in the ${travelClass} cabin.`
+        });
+      }
+
       const occupied = flightSeats.filter(s => s.is_occupied || s.is_blocked);
       if (occupied.length > 0) {
         const occNumbers = occupied.map(s => s.seat_number).join(', ');
