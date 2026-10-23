@@ -28,6 +28,9 @@ javac -d "java-oop/out" $bookingJavaFiles
 if ($LASTEXITCODE -ne 0) { throw "Failed to compile Java OOP booking persistence module." }
 java -cp "java-oop/out" util.BookingFileManager
 if ($LASTEXITCODE -ne 0) { throw "Java booking file persistence checks failed." }
+Write-Host "`n--- [JAVA] Booking Service and Exception Handling Demo ---" -ForegroundColor Green
+java -cp "java-oop/out" model.BookingService
+if ($LASTEXITCODE -ne 0) { throw "Java booking service exception demo failed." }
 
 # ------------------------------------------------------------------------------
 # 2. C++ DATA STRUCTURES SUITE
@@ -36,18 +39,25 @@ Write-Host "`n==================================================================
 Write-Host " >>> [SUBJECT 2/4] C++ DATA STRUCTURES (ARRAYS, 2D MATRIX, QUEUES & LINKED LISTS)" -ForegroundColor Yellow
 Write-Host "================================================================================" -ForegroundColor Yellow
 
-Write-Host "`n--- [DS 1/3] Passenger Array, Seat Matrix & FIFO Waitlist Promotion ---" -ForegroundColor Green
+Write-Host "`n--- [DS 1/4] Passenger Array, Seat Matrix & FIFO Waitlist Promotion ---" -ForegroundColor Green
 g++ -std=c++17 cpp-ds/src/main.cpp cpp-ds/src/PassengerArray.cpp cpp-ds/src/SeatMap2D.cpp cpp-ds/src/Waitlist.cpp -o cpp-ds/ds_demo.exe
 .\cpp-ds\ds_demo.exe
 
-Write-Host "`n--- [DS 2/3] Singly Linked List (Chronological Booking Audit Trail) ---" -ForegroundColor Green
+Write-Host "`n--- [DS 2/4] Singly Linked List (Chronological Booking Audit Trail) ---" -ForegroundColor Green
 g++ -std=c++17 cpp-ds/src/LinkedList.cpp -o cpp-ds/linked_list.exe
 .\cpp-ds\linked_list.exe
 
-Write-Host "`n--- [DS 3/3] Doubly Linked List (Manifest Merging with Two-Pointer Technique) ---" -ForegroundColor Green
+Write-Host "`n--- [DS 3/4] Doubly Linked List (Manifest Merging with Two-Pointer Technique) ---" -ForegroundColor Green
 g++ -std=c++17 cpp-ds/src/ManifestMergeDLL.cpp -o cpp-ds/manifest_dll.exe
 $manifestInput = "2`nPNR101`nPrasad`n1A`nAI101`nFirstClass`nCONFIRMED`nPNR102`nRahul`n5B`nAI101`nBusiness`nCONFIRMED`n2`nPNR103`nVarad`n2A`nAI101`nFirstClass`nCONFIRMED`nPNR104`nSiddhi`n4C`nAI101`nBusiness`nCONFIRMED`n"
 $manifestInput | .\cpp-ds\manifest_dll.exe
+if ($LASTEXITCODE -ne 0) { throw "Manifest merge demonstration failed." }
+
+Write-Host "`n--- [DS 4/4] Circular Boarding Queue (FIFO and Wrap-Around) ---" -ForegroundColor Green
+g++ -std=c++17 cpp-ds/src/BoardingQueueCircular.cpp -o cpp-ds/boarding_queue_circular.exe
+if ($LASTEXITCODE -ne 0) { throw "Failed to build the circular boarding queue demo." }
+.\cpp-ds\boarding_queue_circular.exe
+if ($LASTEXITCODE -ne 0) { throw "Circular boarding queue demo failed." }
 
 # ------------------------------------------------------------------------------
 # 3. 64-BIT NASM ASSEMBLY & PROCESSOR-LEVEL COA SIMULATION
@@ -56,13 +66,13 @@ Write-Host "`n==================================================================
 Write-Host " >>> [SUBJECT 3/4] 64-BIT NASM ASSEMBLY & COMPUTER ORGANIZATION (COA)" -ForegroundColor Yellow
 Write-Host "================================================================================" -ForegroundColor Yellow
 
-Write-Host "`n--- [COA 1/4] Real x86-64 NASM Binary: Fare Calculation Engine ---" -ForegroundColor Green
+Write-Host "`n--- [COA 1/5] Real x86-64 NASM Binary: Fare Calculation Engine ---" -ForegroundColor Green
 "5000`n3`n900`n500`n180`n120`n" | .\coa-nasm\out\model\fare_win.exe
 
-Write-Host "`n--- [COA 2/4] Real x86-64 NASM Binary: Fuel & Weight Consumption Engine ---" -ForegroundColor Green
+Write-Host "`n--- [COA 2/5] Real x86-64 NASM Binary: Fuel & Weight Consumption Engine ---" -ForegroundColor Green
 "1400`n2500`n3000`n500`n" | .\coa-nasm\out\model\fuel_win.exe
 
-Write-Host "`n--- [COA 3/4] 64-bit Hex to Decimal / Packed BCD Conversion ---" -ForegroundColor Green
+Write-Host "`n--- [COA 3/5] 64-bit Hex to Decimal / Packed BCD Conversion ---" -ForegroundColor Green
 $nasm = Get-Command nasm -ErrorAction SilentlyContinue
 if ($null -eq $nasm) {
     Write-Warning "Skipping HexToBCD.asm: NASM is not installed. Install NASM and add it to PATH to run this demo."
@@ -83,9 +93,26 @@ if ($null -eq $nasm) {
     "0xFFFFFFFFFFFFFFFF`n" | .\coa-nasm\out\model\HexToBCD.exe
 }
 
-Write-Host "`n--- [COA 4/4] Hardware CPU Register & ALU Simulation (RAX, RBX, RCX, RDX, R8-R13) ---" -ForegroundColor Green
+Write-Host "`n--- [COA 4/5] Hardware CPU Register & ALU Simulation (RAX, RBX, RCX, RDX, R8-R13) ---" -ForegroundColor Green
 g++ -std=c++17 assembly-component/fare_calc_sim.cpp -o assembly-component/fare_calc_sim.exe
+if ($LASTEXITCODE -ne 0) { throw "Failed to build the CPU register and ALU simulation." }
 .\assembly-component\fare_calc_sim.exe
+if ($LASTEXITCODE -ne 0) { throw "CPU register and ALU simulation failed." }
+
+Write-Host "`n--- [COA 5/5] NASM Add-and-Shift 64-bit Multiplication Demo (WSL/Linux) ---" -ForegroundColor Green
+$wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
+if ($null -eq $wsl) { throw "MulAddShift.asm requires WSL because it uses Linux x86-64 syscalls." }
+$projectWindowsPath = (Resolve-Path ".").Path.Replace('\', '/')
+$wslProjectPath = (& $wsl.Source -d Debian -- wslpath -a $projectWindowsPath).Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($wslProjectPath)) {
+    throw "Could not resolve the project path inside the Debian WSL distribution."
+}
+$mulAddShiftBuild = "cd '$wslProjectPath/coa-nasm/out/model' && nasm -f elf64 MulAddShift.asm -o MulAddShift.o && ld MulAddShift.o -o MulAddShift"
+& $wsl.Source -d Debian -- bash -lc $mulAddShiftBuild
+if ($LASTEXITCODE -ne 0) { throw "Failed to assemble or link MulAddShift.asm in WSL." }
+$mulAddShiftRun = "cd '$wslProjectPath/coa-nasm/out/model' && { printf '5000\n'; sleep 0.2; printf '3\n'; } | ./MulAddShift"
+& $wsl.Source -d Debian -- bash -lc $mulAddShiftRun
+if ($LASTEXITCODE -ne 0) { throw "MulAddShift.asm execution failed." }
 
 # ------------------------------------------------------------------------------
 # 4. COMPUTER GRAPHICS & VISUALIZATION (CGL / OPENGL / FREEGLUT)
@@ -111,15 +138,17 @@ C:\msys64\mingw64\bin\g++.exe -o cpp-cg/bin/RouteMapVisualizer.exe cpp-cg/src/ma
 Write-Host "[BUILD SUCCESS] RouteMapVisualizer.exe ready at cpp-cg/bin/RouteMapVisualizer.exe" -ForegroundColor Gray
 
 Write-Host "`n--- [CG 4/5] Compiling Master Plane Glyph + Real Seats + 2D Zoom/Transform/Clip Engine ---" -ForegroundColor Green
-C:\msys64\mingw64\bin\g++.exe -o cpp-cg/bin/SeatMapCombined.exe cpp-cg/src/PlaneGlyph.cpp cpp-cg/src/Seats.cpp cpp-cg/src/SeatMapTransform.cpp -lfreeglut -lopengl32 -lglu32
-Write-Host "[BUILD SUCCESS] SeatMapCombined.exe ready at cpp-cg/bin/SeatMapCombined.exe" -ForegroundColor Gray
+$seatMapExecutable = "cpp-cg/bin/SeatMapCombined-$PID.exe"
+C:\msys64\mingw64\bin\g++.exe -DSCANLINE_FILL_NO_MAIN -o $seatMapExecutable cpp-cg/src/PlaneGlyph.cpp cpp-cg/src/Seats.cpp cpp-cg/src/SeatMapTransform.cpp cpp-cg/src/ScanlineFill.cpp -lfreeglut -lopengl32 -lglu32
+if ($LASTEXITCODE -ne 0) { throw "Failed to build the aircraft seat map with scan-line polygon fill." }
+Write-Host "[BUILD SUCCESS] $seatMapExecutable ready with scan-line polygon fill." -ForegroundColor Gray
 
 Write-Host "`n--- [CG 5/5] Compiling Standalone Interactive Cabin Seat Matrix Selector ---" -ForegroundColor Green
 C:\msys64\mingw64\bin\g++.exe -o cpp-cg/bin/SeatMatrixCG.exe cpp-cg/src/SeatMatrixCG.cpp -lfreeglut -lopengl32 -lglu32
 Write-Host "[BUILD SUCCESS] SeatMatrixCG.exe ready at cpp-cg/bin/SeatMatrixCG.exe" -ForegroundColor Gray
 
 Write-Host "`n[CG-LAUNCH] Launching Integrated Aircraft Seat Map & 2D Transformation Engine..." -ForegroundColor Cyan
-Start-Process -FilePath ".\cpp-cg\bin\SeatMapCombined.exe"
+Start-Process -FilePath $seatMapExecutable
 Start-Sleep -Milliseconds 800
 
 Write-Host "`n================================================================================" -ForegroundColor Cyan
