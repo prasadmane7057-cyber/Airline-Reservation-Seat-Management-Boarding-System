@@ -17,7 +17,7 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: '*', // Supports all origins in local dev / production
+  origin: process.env.FRONTEND_ORIGIN || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));

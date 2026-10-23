@@ -38,7 +38,7 @@ The repository's `main` branch deploys the static Vue frontend to GitHub Pages u
 Once the first Pages workflow run succeeds, the site is available at:
 `https://prasadmane7057-cyber.github.io/Airline-Reservation-Seat-Management-Boarding-System/`
 
-GitHub Pages hosts only the frontend. To enable API-backed registration, login, booking, and administration on the public site, deploy `airline-backend` to a public Node.js host. Configure a persistent private disk for CSV-backed accounts, or configure MySQL for production. Set the repository Actions variable `VITE_API_URL` to the backend's public `/api` URL and redeploy the frontend. Do not use localhost as the public API URL.
+GitHub Pages hosts only the frontend. The repository includes a Render Blueprint at [`../render.yaml`](../render.yaml) for deploying the API with a persistent private disk for CSV-backed accounts. In Render, create a Blueprint Instance from this repository and review the plan and disk charges before deploying. After deployment, copy the service URL and set the GitHub repository Actions variable `VITE_API_URL` to that URL followed by `/api` (for example, `https://skywings-api.onrender.com/api`). Run the **Deploy frontend to GitHub Pages** workflow to rebuild the site with the API URL. The backend's `/api/health` endpoint should return a successful response before you configure the frontend. Do not use localhost as the public API URL.
 
 ## Build and lint
 
