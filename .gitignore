@@ -9,6 +9,7 @@ package-lock.json
 !.env.example
 *.pem
 *.key
+/airline-backend/data/users.csv
 
 # Build outputs & binaries
 *.class

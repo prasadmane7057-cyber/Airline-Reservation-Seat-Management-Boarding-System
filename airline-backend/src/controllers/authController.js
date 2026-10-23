@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool, memoryDB, isConnectedToMySQL } = require('../config/db');
 const { JWT_SECRET } = require('../middleware/auth');
+const { initializeUserCsvStore, saveUser } = require('../utils/csvUserStore');
 
 /**
  * Register a new passenger account
@@ -86,7 +87,7 @@ async function register(req, res, next) {
         }
       });
     } else {
-      // Memory DB fallback
+      await initializeUserCsvStore(memoryDB);
       const exists = memoryDB.users.some(u => u.email === normalizedEmail);
       if (exists) {
         return res.status(400).json({
@@ -95,7 +96,10 @@ async function register(req, res, next) {
         });
       }
 
-      const newId = memoryDB.users.length + 1;
+      const newId = memoryDB.users.reduce(
+        (maxId, user) => Math.max(maxId, Number(user.id) || 0),
+        0
+      ) + 1;
       const newUser = {
         id: newId,
         name: name.trim(),
@@ -106,6 +110,13 @@ async function register(req, res, next) {
         status: 'ACTIVE',
         created_at: new Date()
       };
+      if (!await saveUser(newUser)) {
+        return res.status(400).json({
+          success: false,
+          message: 'An account with this email address already exists.'
+        });
+      }
+
       memoryDB.users.push(newUser);
       memoryDB.passengers.push({
         id: memoryDB.passengers.length + 1,

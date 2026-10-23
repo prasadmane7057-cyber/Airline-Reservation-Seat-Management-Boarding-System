@@ -27,7 +27,7 @@ npm run dev
 
 Open **http://localhost:5173**. The API health check is at **http://localhost:5000/api/health**. The frontend uses `http://localhost:5000/api` by default; set `VITE_API_URL` in a local frontend `.env` file to use another API URL.
 
-The backend uses its in-memory demo database when MySQL is unavailable. It includes seven airport choices and upcoming demo flights; bookings and other changes in this mode reset when the backend restarts. For persistent storage, configure MySQL and initialize it using [`../database/README.md`](../database/README.md).
+The backend uses its in-memory demo database for airline operations when MySQL is unavailable. In that fallback mode, new account registrations are persisted in a private `airline-backend/data/users.csv` file (or the path set with `CSV_USERS_PATH`); passwords are stored only as bcrypt hashes. Keep this file private and out of version control. A deployed CSV-backed service needs a persistent disk, and CSV storage is intended for a single backend instance; use MySQL for multi-instance production deployments. With MySQL configured, user accounts are stored in MySQL instead. For MySQL setup, initialize it using [`../database/README.md`](../database/README.md).
 
 Demo sign-in: `passenger@airline.com` / `pass123` or `admin@airline.com` / `admin123`.
 
@@ -38,7 +38,7 @@ The repository's `main` branch deploys the static Vue frontend to GitHub Pages u
 Once the first Pages workflow run succeeds, the site is available at:
 `https://prasadmane7057-cyber.github.io/Airline-Reservation-Seat-Management-Boarding-System/`
 
-GitHub Pages hosts only the frontend. To enable API-backed booking, authentication, and administration on the public site, deploy `airline-backend` and its database to a public backend host, then set the repository Actions variable `VITE_API_URL` to that backend's `/api` URL. Do not use localhost as the public API URL.
+GitHub Pages hosts only the frontend. To enable API-backed registration, login, booking, and administration on the public site, deploy `airline-backend` to a public Node.js host. Configure a persistent private disk for CSV-backed accounts, or configure MySQL for production. Set the repository Actions variable `VITE_API_URL` to the backend's public `/api` URL and redeploy the frontend. Do not use localhost as the public API URL.
 
 ## Build and lint
 

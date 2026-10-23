@@ -400,13 +400,14 @@ async function checkMySQLConnection() {
   }
 }
 
-// Check initial connection
-checkMySQLConnection();
+// Check initial connection before the server chooses its account store.
+const initialConnectionCheck = checkMySQLConnection();
 
 module.exports = {
   pool,
   memoryDB,
   isConnectedToMySQL: () => isConnectedToMySQL,
+  initialConnectionCheck,
   generateSeatLayoutForFlight,
   checkMySQLConnection
 };
