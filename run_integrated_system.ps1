@@ -114,6 +114,11 @@ Write-Host "`n--- [CG 4/5] Compiling Master Plane Glyph + Real Seats + 2D Zoom/T
 C:\msys64\mingw64\bin\g++.exe -o cpp-cg/bin/SeatMapCombined.exe cpp-cg/src/PlaneGlyph.cpp cpp-cg/src/Seats.cpp cpp-cg/src/SeatMapTransform.cpp -lfreeglut -lopengl32 -lglu32
 Write-Host "[BUILD SUCCESS] SeatMapCombined.exe ready at cpp-cg/bin/SeatMapCombined.exe" -ForegroundColor Gray
 
+Write-Host "`n--- [CG 4.5/5] Compiling Scan-line Polygon Fill Utility for Irregular Fuselage Shading ---" -ForegroundColor Green
+C:\msys64\mingw64\bin\g++.exe -c -o cpp-cg/bin/ScanlineFill.o cpp-cg/src/ScanlineFill.cpp
+if ($LASTEXITCODE -ne 0) { throw "Failed to compile the scan-line polygon fill utility." }
+Write-Host "[BUILD SUCCESS] ScanlineFill.o ready at cpp-cg/bin/ScanlineFill.o" -ForegroundColor Gray
+
 Write-Host "`n--- [CG 5/5] Compiling Standalone Interactive Cabin Seat Matrix Selector ---" -ForegroundColor Green
 C:\msys64\mingw64\bin\g++.exe -o cpp-cg/bin/SeatMatrixCG.exe cpp-cg/src/SeatMatrixCG.cpp -lfreeglut -lopengl32 -lglu32
 Write-Host "[BUILD SUCCESS] SeatMatrixCG.exe ready at cpp-cg/bin/SeatMatrixCG.exe" -ForegroundColor Gray

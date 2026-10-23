@@ -62,6 +62,24 @@ public class Main {
         System.out.println("   Created Flight: " + ai101);
         System.out.println("   Created Flight: " + ai202);
 
+        // 3A. BOOKING FLOW EXCEPTION HANDLING (custom checked exceptions)
+        System.out.println("\n--- 3A. BOOKING FLOW EXCEPTION HANDLING (Seat + PNR validation) ---");
+        BookingService bookingService = new BookingService();
+        try {
+            bookingService.bookSeat("PNR1001", "12A");
+            System.out.println("   [BookingService] Seat 12A booked for PNR1001.");
+            bookingService.bookSeat("PNR1002", "12A");
+        } catch (SeatAlreadyBookedException ex) {
+            System.out.println("   [BookingService] Conflicted seat handled: " + ex.getMessage());
+        }
+
+        try {
+            System.out.println("   [BookingService] Seat for PNR1001 -> " + bookingService.lookupSeat("PNR1001"));
+            System.out.println("   [BookingService] Seat for missing PNR9999 -> " + bookingService.lookupSeat("PNR9999"));
+        } catch (InvalidPNRException ex) {
+            System.out.println("   [BookingService] Missing PNR handled: " + ex.getMessage());
+        }
+
         // 3B. COMPILE-TIME POLYMORPHISM: METHOD & CONSTRUCTOR OVERLOADING (CO2)
         System.out.println("\n--- 3B. COMPILE-TIME POLYMORPHISM (Method & Constructor Overloading) ---");
         System.out.println("   [Constructor Overloading in Booking]");
