@@ -1,0 +1,466 @@
+package airline.ui;
+
+import airline.model.Booking;
+import airline.model.BookingClass;
+import airline.model.Business;
+import airline.model.Economy;
+import airline.model.FirstClass;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * SeatSelectionFrame.java
+ * PSOOP Review 4 - Swing seat-selection screen.
+ * Owner: Varad
+ * CO3 (2310262L.CO.3): Apply critical thinking and programming skills for problem solving.
+ *
+ * What it shows
+ *   - JFrame with BorderLayout (header / seat map / side panel / status bar)
+ *   - GridBagLayout for the seat map, with an aisle between seats C and D
+ *   - One JButton per seat. Clicking an AVAILABLE seat selects it, clicking
+ *     it again un-selects it. BOOKED and BLOCKED seats cannot be clicked.
+ *   - "Confirm Booking" creates real airline.model.Booking objects (each with
+ *     its own PNR) and the fare comes from the BookingClass implementations
+ *     (FirstClass / Business / Economy) - the same classes the rest of the
+ *     project uses.
+ *
+ * Seat colours follow docs/colour-state-spec:
+ *   AVAILABLE green, SELECTED blue, BOOKED red, BLOCKED grey.
+ *
+ * Cabin layout (class order front to back): First rows 1-2, Business rows 3-5,
+ * Economy rows 6-12.
+ */
+@SuppressWarnings("serial")
+public class SeatSelectionFrame extends JFrame {
+
+    // ---------- Seat states (names match the strings used by SeatMap2D / Seat) ----------
+    public enum SeatState { AVAILABLE, SELECTED, BOOKED, BLOCKED }
+
+    // ---------- Colours (from the colour-state spec) ----------
+    private static final Color COLOR_AVAILABLE = Color.decode("#2ECC71");
+    private static final Color COLOR_SELECTED  = Color.decode("#3498DB");
+    private static final Color COLOR_BOOKED    = Color.decode("#E74C3C");
+    private static final Color COLOR_BLOCKED   = Color.decode("#95A5A6");
+
+    // ---------- Cabin layout ----------
+    private static final int TOTAL_ROWS = 12;
+    private static final int LAST_FIRST_ROW = 2;
+    private static final int LAST_BUSINESS_ROW = 5;
+    private static final String[] COLUMNS = {"A", "B", "C", "D", "E", "F"};
+    private static final double BASE_FARE = 5000.0;
+
+    // One object per class - all three are used through the BookingClass interface
+    private final BookingClass firstClass = new FirstClass();
+    private final BookingClass businessClass = new Business();
+    private final BookingClass economyClass = new Economy();
+
+    // ---------- Data ----------
+    private final Map<String, SeatButton> seats = new LinkedHashMap<String, SeatButton>();
+    private final List<Booking> bookings = new ArrayList<Booking>();
+
+    // ---------- Widgets ----------
+    JTextField nameField = new JTextField(14);
+    JTextField flightField = new JTextField("AI-202", 14);
+    private final JLabel selectedLabel = new JLabel("Selected seats: none");
+    private final JLabel fareLabel = new JLabel("Total fare: Rs. 0.00");
+    private final JLabel statusLabel = new JLabel("Click a green seat to select it.");
+    private final JTextArea logArea = new JTextArea(8, 22);
+
+    // =====================================================================
+    // One seat = one button
+    // =====================================================================
+    @SuppressWarnings("serial")
+    public class SeatButton extends JButton {
+        private final String seatId;
+        private final int row;
+        private SeatState state;
+
+        SeatButton(String seatId, int row, SeatState initial) {
+            super(seatId);
+            this.seatId = seatId;
+            this.row = row;
+            setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+            setForeground(Color.WHITE);
+            setFocusPainted(false);
+            setOpaque(true);
+            setBorder(BorderFactory.createLineBorder(new Color(0, 0, 0, 60)));
+            setPreferredSize(new Dimension(52, 34));
+            setMargin(new Insets(0, 0, 0, 0));
+            setState(initial);
+            addActionListener(e -> onSeatClicked(this));
+        }
+
+        public String getSeatId()    { return seatId; }
+        public int getRow()          { return row; }
+        public SeatState getState()  { return state; }
+
+        public void setState(SeatState newState) {
+            this.state = newState;
+            switch (newState) {
+                case AVAILABLE: setBackground(COLOR_AVAILABLE); break;
+                case SELECTED:  setBackground(COLOR_SELECTED);  break;
+                case BOOKED:    setBackground(COLOR_BOOKED);    break;
+                default:        setBackground(COLOR_BLOCKED);   break;
+            }
+            setToolTipText(seatId + " - " + newState + " (" + classForRow(row).getClassName() + ")");
+        }
+    }
+
+    // =====================================================================
+    // Construction
+    // =====================================================================
+    public SeatSelectionFrame() {
+        super("Seat Selection - Airline Reservation System");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout(8, 8));
+        ((JPanel) getContentPane()).setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+        add(buildHeader(), BorderLayout.NORTH);
+        add(new JScrollPane(buildSeatMap()), BorderLayout.CENTER);
+        add(buildSidePanel(), BorderLayout.EAST);
+        add(buildStatusBar(), BorderLayout.SOUTH);
+
+        pack();
+        setLocationRelativeTo(null);
+    }
+
+    // ---------- NORTH: title + legend ----------
+    private JPanel buildHeader() {
+        JPanel header = new JPanel(new BorderLayout());
+        JLabel title = new JLabel("Flight seat map  -  click a seat to select it");
+        title.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        header.add(title, BorderLayout.NORTH);
+
+        JPanel legend = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
+        legend.add(legendItem("Available", COLOR_AVAILABLE));
+        legend.add(legendItem("Selected", COLOR_SELECTED));
+        legend.add(legendItem("Booked", COLOR_BOOKED));
+        legend.add(legendItem("Blocked", COLOR_BLOCKED));
+        header.add(legend, BorderLayout.SOUTH);
+        return header;
+    }
+
+    private JPanel legendItem(String text, Color color) {
+        JPanel item = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        JLabel swatch = new JLabel("      ");
+        swatch.setOpaque(true);
+        swatch.setBackground(color);
+        swatch.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
+        item.add(swatch);
+        item.add(new JLabel(text));
+        return item;
+    }
+
+    // ---------- CENTER: the seat grid ----------
+    private JPanel buildSeatMap() {
+        JPanel map = new JPanel(new GridBagLayout());
+        map.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.insets = new Insets(2, 2, 2, 2);
+        gc.fill = GridBagConstraints.NONE;
+
+        int gridRow = 0;
+
+        // column letters (A B C _ D E F)
+        for (int c = 0; c < COLUMNS.length; c++) {
+            gc.gridx = gridColumn(c);
+            gc.gridy = gridRow;
+            JLabel head = new JLabel(COLUMNS[c], SwingConstants.CENTER);
+            head.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+            map.add(head, gc);
+        }
+        // empty column that forms the aisle between seats C and D
+        gc.gridx = 4;
+        gc.gridy = gridRow;
+        map.add(Box.createHorizontalStrut(26), gc);
+        gridRow++;
+
+        for (int row = 1; row <= TOTAL_ROWS; row++) {
+
+            // zone banner at the first row of each cabin
+            if (row == 1 || row == LAST_FIRST_ROW + 1 || row == LAST_BUSINESS_ROW + 1) {
+                gc.gridx = 0;
+                gc.gridy = gridRow++;
+                gc.gridwidth = COLUMNS.length + 2;   // row label + 6 seats + aisle
+                gc.fill = GridBagConstraints.HORIZONTAL;
+                JLabel banner = new JLabel(zoneBanner(row), SwingConstants.CENTER);
+                banner.setOpaque(true);
+                banner.setBackground(new Color(0xE8EEF4));
+                banner.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
+                banner.setBorder(BorderFactory.createEmptyBorder(3, 0, 3, 0));
+                map.add(banner, gc);
+                gc.gridwidth = 1;
+                gc.fill = GridBagConstraints.NONE;
+            }
+
+            // row number on the left
+            gc.gridx = 0;
+            gc.gridy = gridRow;
+            map.add(new JLabel(String.valueOf(row), SwingConstants.RIGHT), gc);
+
+            // seats A..F
+            for (int c = 0; c < COLUMNS.length; c++) {
+                String id = row + COLUMNS[c];
+                SeatButton seat = new SeatButton(id, row, initialStateFor(id));
+                seats.put(id, seat);
+                gc.gridx = gridColumn(c);
+                gc.gridy = gridRow;
+                map.add(seat, gc);
+            }
+            gridRow++;
+        }
+        return map;
+    }
+
+    // grid x position of seat column c: A,B,C -> 1,2,3 ; aisle = 4 ; D,E,F -> 5,6,7
+    private int gridColumn(int c) {
+        return (c < 3) ? c + 1 : c + 2;
+    }
+
+    private String zoneBanner(int row) {
+        if (row <= LAST_FIRST_ROW)    return "FIRST CLASS (rows 1-2)";
+        if (row <= LAST_BUSINESS_ROW) return "BUSINESS CLASS (rows 3-5)";
+        return "ECONOMY CLASS (rows 6-12)";
+    }
+
+    // A few seats start as BOOKED / BLOCKED so the demo shows all four states
+    private SeatState initialStateFor(String seatId) {
+        Set<String> booked = new HashSet<String>();
+        booked.add("1A"); booked.add("3C"); booked.add("4D"); booked.add("6B");
+        booked.add("7E"); booked.add("9A"); booked.add("9B"); booked.add("11F");
+        Set<String> blocked = new HashSet<String>();
+        blocked.add("12A"); blocked.add("12F"); blocked.add("5F");
+        if (booked.contains(seatId))  return SeatState.BOOKED;
+        if (blocked.contains(seatId)) return SeatState.BLOCKED;
+        return SeatState.AVAILABLE;
+    }
+
+    // ---------- EAST: passenger details, summary, buttons, log ----------
+    private JPanel buildSidePanel() {
+        JPanel side = new JPanel();
+        side.setLayout(new BoxLayout(side, BoxLayout.Y_AXIS));
+        side.setBorder(BorderFactory.createTitledBorder("Booking details"));
+
+        side.add(labelled("Passenger name:", nameField));
+        side.add(labelled("Flight number:", flightField));
+        side.add(Box.createVerticalStrut(8));
+        side.add(new JLabel("Date: " + LocalDate.now()));
+        side.add(Box.createVerticalStrut(8));
+        side.add(selectedLabel);
+        side.add(Box.createVerticalStrut(4));
+        fareLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        side.add(fareLabel);
+        side.add(Box.createVerticalStrut(10));
+
+        JButton confirm = new JButton("Confirm Booking");
+        confirm.addActionListener(e -> confirmBooking());
+        JButton clear = new JButton("Clear Selection");
+        clear.addActionListener(e -> clearSelection());
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        buttons.add(confirm);
+        buttons.add(clear);
+        buttons.setAlignmentX(LEFT_ALIGNMENT);
+        side.add(buttons);
+
+        side.add(Box.createVerticalStrut(10));
+        JLabel logTitle = new JLabel("Bookings made:");
+        logTitle.setAlignmentX(LEFT_ALIGNMENT);
+        side.add(logTitle);
+        logArea.setEditable(false);
+        logArea.setLineWrap(true);
+        logArea.setWrapStyleWord(true);
+        JScrollPane logScroll = new JScrollPane(logArea);
+        logScroll.setAlignmentX(LEFT_ALIGNMENT);
+        side.add(logScroll);
+        return side;
+    }
+
+    private JPanel labelled(String text, JTextField field) {
+        JPanel p = new JPanel(new BorderLayout(4, 2));
+        p.add(new JLabel(text), BorderLayout.NORTH);
+        p.add(field, BorderLayout.CENTER);
+        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        p.setAlignmentX(LEFT_ALIGNMENT);
+        return p;
+    }
+
+    // ---------- SOUTH: status bar ----------
+    private JPanel buildStatusBar() {
+        JPanel bar = new JPanel(new BorderLayout());
+        bar.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Color.LIGHT_GRAY));
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(4, 4, 2, 4));
+        bar.add(statusLabel, BorderLayout.CENTER);
+        return bar;
+    }
+
+    // =====================================================================
+    // Behaviour
+    // =====================================================================
+
+    // Which BookingClass applies to a given row
+    private BookingClass classForRow(int row) {
+        if (row <= LAST_FIRST_ROW)    return firstClass;
+        if (row <= LAST_BUSINESS_ROW) return businessClass;
+        return economyClass;
+    }
+
+    private void onSeatClicked(SeatButton seat) {
+        switch (seat.getState()) {
+            case AVAILABLE:
+                seat.setState(SeatState.SELECTED);
+                setStatus("Seat " + seat.getSeatId() + " selected ("
+                        + classForRow(seat.getRow()).getClassName() + ").");
+                break;
+            case SELECTED:
+                seat.setState(SeatState.AVAILABLE);
+                setStatus("Seat " + seat.getSeatId() + " released.");
+                break;
+            case BOOKED:
+                setStatus("Seat " + seat.getSeatId() + " is already booked - choose another seat.");
+                break;
+            default:
+                setStatus("Seat " + seat.getSeatId() + " is blocked and cannot be booked.");
+                break;
+        }
+        updateSummary();
+    }
+
+    private List<SeatButton> selectedSeats() {
+        List<SeatButton> list = new ArrayList<SeatButton>();
+        for (SeatButton s : seats.values()) {          // LinkedHashMap keeps seat-map order
+            if (s.getState() == SeatState.SELECTED) {
+                list.add(s);
+            }
+        }
+        return list;
+    }
+
+    private void updateSummary() {
+        List<SeatButton> sel = selectedSeats();
+        if (sel.isEmpty()) {
+            selectedLabel.setText("Selected seats: none");
+            fareLabel.setText("Total fare: Rs. 0.00");
+            return;
+        }
+        StringBuilder ids = new StringBuilder();
+        double total = 0;
+        for (SeatButton s : sel) {
+            if (ids.length() > 0) ids.append(", ");
+            ids.append(s.getSeatId());
+            total += classForRow(s.getRow()).calculateFare(BASE_FARE);
+        }
+        selectedLabel.setText("<html>Selected seats: " + ids + " (" + sel.size() + ")</html>");
+        fareLabel.setText(String.format("Total fare: Rs. %,.2f", total));
+    }
+
+    private void clearSelection() {
+        for (SeatButton s : selectedSeats()) {
+            s.setState(SeatState.AVAILABLE);
+        }
+        updateSummary();
+        setStatus("Selection cleared.");
+    }
+
+    /** Creates one Booking per selected seat and marks those seats BOOKED. */
+    public void confirmBooking() {
+        List<SeatButton> sel = selectedSeats();
+        String name = nameField.getText().trim();
+        String flight = flightField.getText().trim();
+
+        if (sel.isEmpty()) {
+            setStatus("Please select at least one seat first.");
+            return;
+        }
+        if (name.isEmpty()) {
+            setStatus("Please enter the passenger name.");
+            nameField.requestFocusInWindow();
+            return;
+        }
+        if (flight.isEmpty()) {
+            setStatus("Please enter the flight number.");
+            flightField.requestFocusInWindow();
+            return;
+        }
+
+        StringBuilder summary = new StringBuilder();
+        double total = 0;
+        for (SeatButton s : sel) {
+            Booking b = new Booking(name, flight, s.getSeatId(), LocalDate.now().toString());
+            while (pnrAlreadyUsed(b.getPnr())) {         // PNRs must be unique
+                b = new Booking(name, flight, s.getSeatId(), LocalDate.now().toString());
+            }
+            bookings.add(b);
+            s.setState(SeatState.BOOKED);
+
+            BookingClass bc = classForRow(s.getRow());
+            double fare = bc.calculateFare(BASE_FARE);
+            total += fare;
+            summary.append("Seat ").append(s.getSeatId())
+                   .append(" (").append(bc.getClassName()).append(")  PNR: ").append(b.getPnr())
+                   .append(String.format("  Rs. %,.2f%n", fare));
+            logArea.append(b.getPnr() + "  " + s.getSeatId() + "  " + name + "\n");
+        }
+        summary.append(String.format("%nTotal: Rs. %,.2f", total));
+
+        nameField.setText("");
+        updateSummary();
+        setStatus(sel.size() + " seat(s) booked for " + name + ".");
+        JOptionPane.showMessageDialog(this, summary.toString(),
+                "Booking confirmed", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private boolean pnrAlreadyUsed(String pnr) {
+        for (Booking existing : bookings) {
+            if (existing.getPnr().equals(pnr)) return true;
+        }
+        return false;
+    }
+
+    private void setStatus(String text) {
+        statusLabel.setText(text);
+    }
+
+    // ---------- Accessors (useful for integration and testing) ----------
+    public List<Booking> getBookings()        { return new ArrayList<Booking>(bookings); }
+    public SeatButton getSeatButton(String id) { return seats.get(id); }
+
+    // =====================================================================
+    // Entry point
+    // =====================================================================
+    public static void main(String[] args) {
+        // The cross-platform look and feel shows the seat colours on every OS
+        try {
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Exception ignored) {
+        }
+        SwingUtilities.invokeLater(() -> new SeatSelectionFrame().setVisible(true));
+    }
+}
