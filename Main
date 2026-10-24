@@ -1,0 +1,25 @@
+package airline;
+ 
+import airline.ui.SeatSelectionFrame;
+ 
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+ 
+/**
+ * Main.java - starts the Swing seat-selection screen.
+ * Owner: Varad
+ *
+ * Run from the PSOOP folder:
+ *   javac airline/model/*.java airline/ui/*.java airline/Main.java
+ *   java airline.Main
+ */
+public class Main {
+    public static void main(String[] args) {
+        try {
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Exception ignored) {
+        }
+        SwingUtilities.invokeLater(() -> new SeatSelectionFrame().setVisible(true));
+    }
+}
+ 
