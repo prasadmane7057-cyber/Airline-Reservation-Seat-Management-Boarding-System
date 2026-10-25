@@ -12,6 +12,11 @@ out/
 bin/
 dist/
 java-oop/lib/*.jar
+!coa-nasm/out/
+coa-nasm/out/*
+!coa-nasm/out/model/
+coa-nasm/out/model/*
+!coa-nasm/out/model/*.asm
 
 # IDE & OS
 .vscode/*
