@@ -13,3 +13,5 @@ public class PolymorphismDemo {
         System.out.println("First Class    -> Fare: Rs. " + firstClass.getFare() + ", Boarding Priority: " + firstClass.getPriority());
     }
 }
+
+
