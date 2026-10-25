@@ -1,0 +1,296 @@
+// CheckInDeque.cpp
+// PL Review 4 - Priority check-in using a Double-Ended Queue (Deque)
+// Owner: Varad
+// CO3 (2310214L.CO.3): Build scenario based applications using stack and queue.
+//
+// SCENARIO
+//   At the check-in counter, normal passengers join at the REAR.
+//   Elderly (age >= 60) and VIP passengers join at the FRONT so they are served first.
+//   The counter serves passengers from the FRONT.
+//
+// The deque is a circular array, so freed slots are reused (no shifting).
+// It supports all four deque operations:
+//      insertFront()   insertRear()   deleteFront()   deleteRear()
+// and two restricted variants:
+//   INPUT_RESTRICTED  : insertion allowed only at REAR, deletion at both ends.
+//   OUTPUT_RESTRICTED : deletion allowed only at FRONT, insertion at both ends.
+//   (UNRESTRICTED     : the normal full deque, all four operations allowed.)
+//
+// Compile:  g++ -std=c++17 -Wall CheckInDeque.cpp -o CheckInDeque
+// Run:      ./CheckInDeque
+
+#include <iostream>
+#include <string>
+#include <limits>
+using namespace std;
+
+const int CAPACITY = 6;   // small on purpose so "full" is easy to demonstrate
+
+enum Category { NORMAL = 0, ELDERLY = 1, VIP = 2 };
+
+string categoryName(Category c) {
+    if (c == ELDERLY) return "Elderly";
+    if (c == VIP)     return "VIP";
+    return "Normal";
+}
+
+struct Passenger {
+    string pnr;
+    string name;
+    int age;
+    Category category;
+
+    Passenger() : pnr(""), name(""), age(0), category(NORMAL) {}
+    Passenger(string p, string n, int a, Category c)
+        : pnr(p), name(n), age(a), category(c) {}
+};
+
+enum DequeMode { UNRESTRICTED = 1, INPUT_RESTRICTED = 2, OUTPUT_RESTRICTED = 3 };
+
+string modeName(DequeMode m) {
+    if (m == INPUT_RESTRICTED)  return "Input-restricted (insert at REAR only)";
+    if (m == OUTPUT_RESTRICTED) return "Output-restricted (delete at FRONT only)";
+    return "Unrestricted (all four operations)";
+}
+
+class CheckInDeque {
+private:
+    Passenger data[CAPACITY];
+    int frontIdx;   // index of the front element
+    int count;      // number of passengers currently in the deque
+    DequeMode mode;
+
+    int rearIdx() const { return (frontIdx + count - 1 + CAPACITY) % CAPACITY; }
+
+public:
+    CheckInDeque(DequeMode m = UNRESTRICTED) : frontIdx(0), count(0), mode(m) {}
+
+    bool isEmpty() const { return count == 0; }
+    bool isFull()  const { return count == CAPACITY; }
+    int  size()    const { return count; }
+    DequeMode getMode() const { return mode; }
+
+    // ---------- 1. insertFront ----------
+    bool insertFront(const Passenger& p) {
+        if (mode == INPUT_RESTRICTED) {
+            cout << "  [Refused] Input-restricted deque: insertion at FRONT is not allowed.\n";
+            return false;
+        }
+        if (isFull()) {
+            cout << "  [Refused] Deque is FULL - cannot check in " << p.name << ".\n";
+            return false;
+        }
+        frontIdx = (frontIdx - 1 + CAPACITY) % CAPACITY;   // wrap-around backwards
+        data[frontIdx] = p;
+        count++;
+        return true;
+    }
+
+    // ---------- 2. insertRear ----------
+    bool insertRear(const Passenger& p) {
+        if (isFull()) {
+            cout << "  [Refused] Deque is FULL - cannot check in " << p.name << ".\n";
+            return false;
+        }
+        int pos = (frontIdx + count) % CAPACITY;           // wrap-around forwards
+        data[pos] = p;
+        count++;
+        return true;
+    }
+
+    // ---------- 3. deleteFront ----------
+    bool deleteFront(Passenger& removed) {
+        if (isEmpty()) {
+            cout << "  [Refused] Deque is EMPTY - nobody to serve.\n";
+            return false;
+        }
+        removed = data[frontIdx];
+        frontIdx = (frontIdx + 1) % CAPACITY;
+        count--;
+        return true;
+    }
+
+    // ---------- 4. deleteRear ----------
+    bool deleteRear(Passenger& removed) {
+        if (mode == OUTPUT_RESTRICTED) {
+            cout << "  [Refused] Output-restricted deque: deletion at REAR is not allowed.\n";
+            return false;
+        }
+        if (isEmpty()) {
+            cout << "  [Refused] Deque is EMPTY - nobody to remove.\n";
+            return false;
+        }
+        removed = data[rearIdx()];
+        count--;
+        return true;
+    }
+
+    // ---------- Scenario helper: priority check-in ----------
+    // Elderly / VIP go to the front, everyone else to the rear.
+    // In input-restricted mode the front is closed, so everyone joins the rear.
+    bool checkIn(const Passenger& p) {
+        bool priority = (p.category != NORMAL);
+        if (priority && mode != INPUT_RESTRICTED) {
+            bool ok = insertFront(p);
+            if (ok) cout << "  " << p.name << " (" << categoryName(p.category)
+                         << ") joined at the FRONT.\n";
+            return ok;
+        }
+        bool ok = insertRear(p);
+        if (ok) {
+            cout << "  " << p.name << " (" << categoryName(p.category)
+                 << ") joined at the REAR.";
+            if (priority) cout << "  (front is closed in this mode)";
+            cout << "\n";
+        }
+        return ok;
+    }
+
+    // ---------- Peek ----------
+    bool peekFront(Passenger& p) const {
+        if (isEmpty()) return false;
+        p = data[frontIdx];
+        return true;
+    }
+    bool peekRear(Passenger& p) const {
+        if (isEmpty()) return false;
+        p = data[rearIdx()];
+        return true;
+    }
+
+    // ---------- Display ----------
+    void display() const {
+        cout << "\n  Mode: " << modeName(mode) << "\n";
+        cout << "  Passengers in queue: " << count << "/" << CAPACITY << "\n";
+        if (isEmpty()) {
+            cout << "  (queue is empty)\n";
+            return;
+        }
+        cout << "  FRONT -> ";
+        for (int i = 0; i < count; i++) {
+            const Passenger& p = data[(frontIdx + i) % CAPACITY];
+            cout << "[" << p.pnr << " " << p.name << " (" << categoryName(p.category) << ")]";
+            if (i != count - 1) cout << " -> ";
+        }
+        cout << " <- REAR\n";
+    }
+};
+
+// ---------- Input helpers ----------
+int readInt(const string& prompt) {
+    int x;
+    cout << prompt;
+    while (!(cin >> x)) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "  Please enter a number: ";
+    }
+    return x;
+}
+
+Passenger readPassenger() {
+    string pnr, name;
+    int age, cat;
+    cout << "  PNR  : ";  cin >> pnr;
+    cout << "  Name (no spaces, e.g. Rahul_Sharma): ";  cin >> name;
+    age = readInt("  Age  : ");
+    cat = readInt("  Category (0=Normal, 1=Elderly, 2=VIP): ");
+    if (cat < 0 || cat > 2) cat = 0;
+    // Anyone aged 60+ is treated as elderly even if entered as Normal
+    if (age >= 60 && cat == NORMAL) cat = ELDERLY;
+    return Passenger(pnr, name, age, (Category)cat);
+}
+
+void printMenu(DequeMode m) {
+    cout << "\n========== PRIORITY CHECK-IN ==========\n";
+    cout << " 1. Check in passenger (auto: priority -> FRONT, normal -> REAR)\n";
+    cout << " 2. Insert at FRONT\n";
+    cout << " 3. Insert at REAR\n";
+    cout << " 4. Serve passenger (delete FRONT)\n";
+    cout << " 5. Remove from REAR (e.g. passenger left the line)\n";
+    cout << " 6. Display queue\n";
+    cout << " 7. Run automatic demo of all operations\n";
+    cout << " 0. Exit\n";
+    cout << " (Current mode: " << modeName(m) << ")\n";
+}
+
+// Automatic demo - shows every operation and the edge cases at both ends
+void runDemo(DequeMode m) {
+    cout << "\n######## DEMO: " << modeName(m) << " ########\n";
+    CheckInDeque dq(m);
+    Passenger out;
+
+    cout << "\n-- Edge case: serve from an EMPTY queue --\n";
+    dq.deleteFront(out);
+    cout << "-- Edge case: remove REAR from an EMPTY queue --\n";
+    dq.deleteRear(out);
+
+    cout << "\n-- Check-ins --\n";
+    dq.checkIn(Passenger("PNR001", "Amit",   30, NORMAL));
+    dq.checkIn(Passenger("PNR002", "Sunita", 68, ELDERLY));
+    dq.checkIn(Passenger("PNR003", "Rohan",  25, NORMAL));
+    dq.checkIn(Passenger("PNR004", "Meera",  41, VIP));
+    dq.display();
+
+    cout << "\n-- Direct operations --\n";
+    cout << "insertFront(PNR005 Kiran):\n";
+    dq.insertFront(Passenger("PNR005", "Kiran", 35, NORMAL));
+    cout << "insertRear (PNR006 Neha):\n";
+    dq.insertRear(Passenger("PNR006", "Neha", 29, NORMAL));
+    dq.display();
+
+    cout << "\n-- Edge case: insert into a FULL queue --\n";
+    // Fill every remaining slot first, so the queue is guaranteed to be full
+    int filler = 100;
+    while (!dq.isFull()) {
+        dq.insertRear(Passenger("PNR" + to_string(filler), "Filler" + to_string(filler), 30, NORMAL));
+        filler++;
+    }
+    cout << "  Queue is now full (" << dq.size() << "/" << CAPACITY << ").\n";
+    dq.insertRear(Passenger("PNR007", "Zoya", 22, NORMAL));
+    dq.insertFront(Passenger("PNR008", "Omar", 70, ELDERLY));
+
+    cout << "\n-- deleteFront (serve) --\n";
+    if (dq.deleteFront(out)) cout << "  Served: " << out.name << "\n";
+    cout << "-- deleteRear --\n";
+    if (dq.deleteRear(out)) cout << "  Removed from rear: " << out.name << "\n";
+    dq.display();
+
+    cout << "\n-- Wrap-around: insert again after freeing slots --\n";
+    dq.insertRear(Passenger("PNR009", "Tara", 33, NORMAL));
+    dq.display();
+
+    cout << "\n-- Serve everyone until empty --\n";
+    while (dq.deleteFront(out)) cout << "  Served: " << out.name << "\n";
+    dq.display();
+}
+
+int main() {
+    cout << "Select deque type:\n";
+    cout << " 1. Unrestricted deque (all 4 operations)\n";
+    cout << " 2. Input-restricted deque\n";
+    cout << " 3. Output-restricted deque\n";
+    int choice = readInt("Choice: ");
+    if (choice < 1 || choice > 3) choice = 1;
+    DequeMode mode = (DequeMode)choice;
+
+    CheckInDeque dq(mode);
+    int opt;
+    do {
+        printMenu(mode);
+        opt = readInt("Enter option: ");
+        Passenger p, out;
+        switch (opt) {
+            case 1: p = readPassenger(); dq.checkIn(p); break;
+            case 2: p = readPassenger(); if (dq.insertFront(p)) cout << "  Inserted at FRONT.\n"; break;
+            case 3: p = readPassenger(); if (dq.insertRear(p))  cout << "  Inserted at REAR.\n";  break;
+            case 4: if (dq.deleteFront(out)) cout << "  Served: " << out.name << " (" << out.pnr << ")\n"; break;
+            case 5: if (dq.deleteRear(out))  cout << "  Removed from rear: " << out.name << " (" << out.pnr << ")\n"; break;
+            case 6: dq.display(); break;
+            case 7: runDemo(UNRESTRICTED); runDemo(INPUT_RESTRICTED); runDemo(OUTPUT_RESTRICTED); break;
+            case 0: cout << "Goodbye.\n"; break;
+            default: cout << "  Invalid option.\n";
+        }
+    } while (opt != 0);
+    return 0;
+}

@@ -25,6 +25,7 @@
  */
 
 #include <GL/glut.h>
+#include "ScanlineFill.h"
 
 // ============================================================
 // World coordinate system used by this glyph (and shared with
@@ -55,25 +56,22 @@ static const float FUSELAGE_BOTTOM_EDGE = FUSELAGE_CENTER_Y - FUSELAGE_HALF_WIDT
 // plus a darker outline.
 // ---------------------------------------------------------------
 static void drawFuselage() {
-    glColor3f(0.85f, 0.87f, 0.90f);   // light grey body fill
-    glBegin(GL_POLYGON);
-        glVertex2f(0.0f,   FUSELAGE_CENTER_Y);      // nose tip
-        glVertex2f(90.0f,  FUSELAGE_TOP_EDGE);       // nose taper -> top edge
-        glVertex2f(850.0f, FUSELAGE_TOP_EDGE);       // straight top edge
-        glVertex2f(1000.0f,FUSELAGE_CENTER_Y);       // tail tip
-        glVertex2f(850.0f, FUSELAGE_BOTTOM_EDGE);    // straight bottom edge
-        glVertex2f(90.0f,  FUSELAGE_BOTTOM_EDGE);    // tail taper -> nose taper
-    glEnd();
+    const std::vector<std::pair<float, float>> fuselage = {
+        {0.0f,    FUSELAGE_CENTER_Y},
+        {90.0f,   FUSELAGE_TOP_EDGE},
+        {850.0f,  FUSELAGE_TOP_EDGE},
+        {1000.0f, FUSELAGE_CENTER_Y},
+        {850.0f,  FUSELAGE_BOTTOM_EDGE},
+        {90.0f,   FUSELAGE_BOTTOM_EDGE}
+    };
+    scanlineFillPolygon(fuselage, 0.85f, 0.87f, 0.90f);
 
     glColor3f(0.35f, 0.38f, 0.42f);   // darker outline
     glLineWidth(2.0f);
     glBegin(GL_LINE_LOOP);
-        glVertex2f(0.0f,   FUSELAGE_CENTER_Y);
-        glVertex2f(90.0f,  FUSELAGE_TOP_EDGE);
-        glVertex2f(850.0f, FUSELAGE_TOP_EDGE);
-        glVertex2f(1000.0f,FUSELAGE_CENTER_Y);
-        glVertex2f(850.0f, FUSELAGE_BOTTOM_EDGE);
-        glVertex2f(90.0f,  FUSELAGE_BOTTOM_EDGE);
+        for (const auto& point : fuselage) {
+            glVertex2f(point.first, point.second);
+        }
     glEnd();
     glLineWidth(1.0f);
 }

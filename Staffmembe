@@ -1,0 +1,31 @@
+package airline.model;
+
+// StaffMember.java
+// PSOOP - Inheritance (child of Person)
+// Owner: Varad (Prasad adds extra validation as support work)
+
+public class StaffMember extends Person {
+    private String employeeId;
+    private String designation;   // e.g. "Ground Staff", "Pilot", "Cabin Crew"
+
+    public StaffMember(String name, int age, String gender, String contactNumber,
+                       String employeeId, String designation) {
+        super(name, age, gender, contactNumber);
+        this.employeeId = employeeId;
+        this.designation = designation;
+    }
+
+    public String getEmployeeId()  { return employeeId; }
+    public String getDesignation() { return designation; }
+
+    @Override
+    public String getRole() {
+        return "Staff (" + designation + ")";
+    }
+
+    @Override
+    public void displayDetails() {
+        super.displayDetails();
+        System.out.println("Employee ID : " + employeeId);
+    }
+}
