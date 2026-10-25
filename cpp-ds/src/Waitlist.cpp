@@ -6,21 +6,19 @@ using namespace std;
 bool Waitlist::containsPNR(const string &pnr) const {
     queue<Passenger> remaining = passengers;
     while (!remaining.empty()) {
-        if (remaining.front().pnr == pnr) 
-        return true;
+        if (remaining.front().pnr == pnr) return true;
         remaining.pop();
     }
     return false;
 }
 
 bool Waitlist::addToWaitlist(const Passenger &passenger, const PassengerArray &bookedPassengers) {
-    Passenger existingPassenger;
+    Passenger existing;
     if (passenger.pnr.empty() || passenger.name.empty()) {
         cout << "Waitlist entry rejected: PNR and passenger name are required.\n";
         return false;
     }
-    if (bookedPassengers.getPassengerByPNR(passenger.pnr, existingPassenger) ||
-        containsPNR(passenger.pnr)) {
+    if (bookedPassengers.getPassengerByPNR(passenger.pnr, existing) || containsPNR(passenger.pnr)) {
         cout << "Waitlist entry rejected: PNR " << passenger.pnr
              << " is already booked or waitlisted.\n";
         return false;
@@ -33,23 +31,23 @@ bool Waitlist::addToWaitlist(const Passenger &passenger, const PassengerArray &b
 }
 
 bool Waitlist::cancelBooking(const string &pnr, PassengerArray &bookedPassengers, SeatMap2D &seatMap) {
-    Passenger cancelledPassenger;
-    if (!bookedPassengers.getPassengerByPNR(pnr, cancelledPassenger)) {
+    Passenger cancelled;
+    if (!bookedPassengers.getPassengerByPNR(pnr, cancelled)) {
         cout << "Cancellation failed: PNR " << pnr << " is not booked.\n";
         return false;
     }
-    if (cancelledPassenger.seatRow < 0 || cancelledPassenger.seatRow >= MAX_ROWS ||
-        cancelledPassenger.seatColumn < 0 || cancelledPassenger.seatColumn >= MAX_COLS ||
-        seatMap.getSeatStatus(cancelledPassenger.seatRow, cancelledPassenger.seatColumn) != 1) {
+    if (cancelled.seatRow < 0 || cancelled.seatRow >= MAX_ROWS ||
+        cancelled.seatColumn < 0 || cancelled.seatColumn >= MAX_COLS ||
+        seatMap.getSeatStatus(cancelled.seatRow, cancelled.seatColumn) != 1) {
         cout << "Cancellation failed: PNR " << pnr << " has no matching booked seat.\n";
         return false;
     }
     if (!bookedPassengers.deletePassenger(pnr)) return false;
-    if (!seatMap.setSeatStatus(cancelledPassenger.seatRow, cancelledPassenger.seatColumn, 0)) {
+    if (!seatMap.setSeatStatus(cancelled.seatRow, cancelled.seatColumn, 0)) {
         cout << "Cancellation error: the seat could not be released.\n";
         return false;
     }
-    cout << "Seat " << (cancelledPassenger.seatRow + 1) << char('A' + cancelledPassenger.seatColumn)
+    cout << "Seat " << cancelled.seatRow + 1 << char('A' + cancelled.seatColumn)
          << " released for PNR " << pnr << ".\n";
 
     if (passengers.empty()) {
@@ -57,36 +55,30 @@ bool Waitlist::cancelBooking(const string &pnr, PassengerArray &bookedPassengers
         return true;
     }
 
-    Passenger promotedPassenger = passengers.front();
-    promotedPassenger.seatRow = cancelledPassenger.seatRow;
-    promotedPassenger.seatColumn = cancelledPassenger.seatColumn;
-    promotedPassenger.seatNo = (promotedPassenger.seatRow * MAX_COLS) +
-                                promotedPassenger.seatColumn + 1;
+    Passenger promoted = passengers.front();
+    promoted.seatRow = cancelled.seatRow;
+    promoted.seatColumn = cancelled.seatColumn;
+    promoted.seatNo = promoted.seatRow * MAX_COLS + promoted.seatColumn + 1;
 
-    if (!seatMap.setSeatStatus(promotedPassenger.seatRow, promotedPassenger.seatColumn, 1)) {
+    if (!seatMap.setSeatStatus(promoted.seatRow, promoted.seatColumn, 1)) {
         cout << "Promotion failed: the released seat could not be booked.\n";
         return false;
     }
-    if (!bookedPassengers.addPassenger(promotedPassenger)) {
-        seatMap.setSeatStatus(promotedPassenger.seatRow, promotedPassenger.seatColumn, 0);
-        cout << "Promotion failed: PNR " << promotedPassenger.pnr
+    if (!bookedPassengers.addPassenger(promoted)) {
+        seatMap.setSeatStatus(promoted.seatRow, promoted.seatColumn, 0);
+        cout << "Promotion failed: PNR " << promoted.pnr
              << " could not be added to the passenger list.\n";
         return false;
     }
 
     passengers.pop();
-    cout << promotedPassenger.name << " (PNR " << promotedPassenger.pnr << ") promoted to seat "
-         << (promotedPassenger.seatRow + 1) << char('A' + promotedPassenger.seatColumn) << ".\n";
+    cout << promoted.name << " (PNR " << promoted.pnr << ") promoted to seat "
+         << promoted.seatRow + 1 << char('A' + promoted.seatColumn) << ".\n";
     return true;
 }
 
-bool Waitlist::empty() const {
-    return passengers.empty();
-}
-
-size_t Waitlist::size() const {
-    return passengers.size();
-}
+bool Waitlist::empty() const { return passengers.empty(); }
+size_t Waitlist::size() const { return passengers.size(); }
 
 void Waitlist::display() const {
     if (passengers.empty()) {
@@ -96,9 +88,8 @@ void Waitlist::display() const {
 
     queue<Passenger> remaining = passengers;
     cout << "\n--- Waitlist (FIFO order) ---\n";
-    size_t position = 1;
-    while (!remaining.empty()) {
-        cout << position++ << ". " << remaining.front().name
+    for (size_t position = 1; !remaining.empty(); ++position) {
+        cout << position << ". " << remaining.front().name
              << " (PNR " << remaining.front().pnr << ")\n";
         remaining.pop();
     }
@@ -106,30 +97,25 @@ void Waitlist::display() const {
 
 void runWaitlistDemo() {
     cout << "\n=== Airline Waitlist Queue and Seat Promotion ===\n";
-    PassengerArray bookedPassengers;
-    SeatMap2D seatMap;
+    PassengerArray booked;
+    SeatMap2D seats;
     Waitlist waitlist;
 
-    Passenger firstBooking = {"PNR101", "Aarav Sharma", 29, 'M', "9876543210", 1, "Economy", 0, 0};
-    Passenger secondBooking = {"PNR102", "Isha Verma", 34, 'F', "9876500001", 7, "Business", 1, 0};
-    bookedPassengers.addPassenger(firstBooking);
-    bookedPassengers.addPassenger(secondBooking);
-    seatMap.setSeatStatus(0, 0, 1);
-    seatMap.setSeatStatus(1, 0, 1);
+    booked.addPassenger({"PNR101", "Aarav Sharma", 29, 'M', "9876543210", 1, "Economy", 0, 0});
+    booked.addPassenger({"PNR102", "Isha Verma", 34, 'F', "9876500001", 7, "Business", 1, 0});
+    seats.setSeatStatus(0, 0, 1);
+    seats.setSeatStatus(1, 0, 1);
 
-    waitlist.addToWaitlist({"PNR201", "Rohan Mehta", 41, 'M', "9876500002", 0, "Economy"},
-                           bookedPassengers);
-    waitlist.addToWaitlist({"PNR202", "Sneha Iyer", 27, 'F', "9876500003", 0, "Business"},
-                           bookedPassengers);
+    waitlist.addToWaitlist(
+        {"PNR201", "Rohan Mehta", 41, 'M', "9876500002", 0, "Economy"}, booked);
+    waitlist.addToWaitlist(
+        {"PNR202", "Sneha Iyer", 27, 'F', "9876500003", 0, "Business"}, booked);
     waitlist.display();
 
-    cout << "\n--- Cancel PNR101; promote the first passenger ---\n";
-    waitlist.cancelBooking("PNR101", bookedPassengers, seatMap);
-    cout << "\n--- Cancel PNR102; promote the next passenger ---\n";
-    waitlist.cancelBooking("PNR102", bookedPassengers, seatMap);
+    waitlist.cancelBooking("PNR101", booked, seats);
+    waitlist.cancelBooking("PNR102", booked, seats);
 
-    cout << "\n--- Confirm promoted passengers and remaining waitlist ---\n";
-    bookedPassengers.displayAll();
+    booked.displayAll();
     waitlist.display();
-    seatMap.printOccupiedList();
+    seats.printOccupiedList();
 }

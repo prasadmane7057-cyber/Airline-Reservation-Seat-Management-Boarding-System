@@ -132,10 +132,14 @@ public class Main {
         paxList.sort((p1, p2) -> Integer.compare(p1.getSeatNo(), p2.getSeatNo()));
         paxList.forEach(p -> System.out.println("      Seat " + p.getSeatNo() + " -> " + p.getName() + " (" + p.getTravelClass() + ")"));
 
-        // 8. JDBC MYSQL DATABASE CONNECTION ARCHITECTURE (CO1)
-        System.out.println("\n--- 8. DATABASE JDBC INTEGRATION ---");
-        System.out.println("   Testing JDBC connection to MySQL Database...");
-        DBConnection.getConnection();
+        // Database access is optional so the demonstration also runs offline.
+        if (!Arrays.asList(args).contains("--skip-db")) {
+            System.out.println("\n--- 8. DATABASE JDBC INTEGRATION ---");
+            System.out.println("   Testing JDBC connection to MySQL Database...");
+            DBConnection.getConnection();
+        } else {
+            System.out.println("\n--- 8. DATABASE JDBC INTEGRATION SKIPPED ---");
+        }
 
         System.out.println("\n=======================================================================");
         System.out.println("   JAVA OOP DEMONSTRATION COMPLETED SUCCESSFULLY");

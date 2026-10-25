@@ -1,0 +1,38 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Download MySQL Connector/J",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "$ErrorActionPreference = 'Stop'; $jar = Join-Path '${workspaceFolder}' 'java-oop\\lib\\mysql-connector-j-8.4.0.jar'; if (-not (Test-Path -LiteralPath $jar)) { New-Item -ItemType Directory -Force -Path (Split-Path $jar) | Out-Null; Invoke-WebRequest -Uri 'https://repo.maven.apache.org/maven2/com/mysql/mysql-connector-j/8.4.0/mysql-connector-j-8.4.0.jar' -OutFile $jar }"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Build FlightStatusForm",
+            "type": "process",
+            "command": "javac",
+            "args": [
+                "-d",
+                "${workspaceFolder}\\java-oop\\out",
+                "-classpath",
+                "${workspaceFolder}\\java-oop\\lib\\mysql-connector-j-8.4.0.jar",
+                "${workspaceFolder}\\java-oop\\src\\FlightStatusForm.java",
+                "${workspaceFolder}\\java-oop\\src\\model\\DBConnection.java",
+                "${workspaceFolder}\\java-oop\\src\\ConnectionTest.java"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}\\java-oop\\src"
+            },
+            "dependsOn": "Download MySQL Connector/J",
+            "dependsOrder": "sequence",
+            "problemMatcher": "$javac"
+        }
+    ]
+}

@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+
+
+        {
+            "type": "java",
+            "name": "Run FlightStatusForm",
+            "request": "launch",
+            "mainClass": "FlightStatusForm",
+            "classPaths": [
+                "${workspaceFolder}\\java-oop\\out",
+                "${workspaceFolder}\\java-oop\\lib\\mysql-connector-j-8.4.0.jar"
+            ],
+            "cwd": "${workspaceFolder}\\java-oop\\src",
+            "preLaunchTask": "Build FlightStatusForm"
+        },
+        {
+            "type": "java",
+            "name": "Test MySQL Connection",
+            "request": "launch",
+            "mainClass": "ConnectionTest",
+            "classPaths": [
+                "${workspaceFolder}\\java-oop\\out",
+                "${workspaceFolder}\\java-oop\\lib\\mysql-connector-j-8.4.0.jar"
+            ],
+            "cwd": "${workspaceFolder}\\java-oop\\src",
+            "preLaunchTask": "Build FlightStatusForm"
+        }
+    ]
+}

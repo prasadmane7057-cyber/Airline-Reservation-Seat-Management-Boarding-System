@@ -9,15 +9,15 @@
 
 section .data
     msg1      db "Enter first number  (hex, e.g. 1F4): ", 0
-    msg1_len  equ $ - msg1
+    msg1_len  equ $ - msg1 - 1
     msg2      db "Enter second number (hex, e.g. A)  : ", 0
-    msg2_len  equ $ - msg2
+    msg2_len  equ $ - msg2 - 1
     msgres    db "Product (hex) = ", 0
-    msgres_len equ $ - msgres
+    msgres_len equ $ - msgres - 1
     msgbad    db "Invalid hex digit. Use 0-9 and A-F only.", 10, 0
-    msgbad_len equ $ - msgbad
+    msgbad_len equ $ - msgbad - 1
     msgovf    db "Overflow: product does not fit in 64 bits.", 10, 0
-    msgovf_len equ $ - msgovf
+    msgovf_len equ $ - msgovf - 1
     newline   db 10
     hexchars  db "0123456789ABCDEF"
 

@@ -1,3 +1,5 @@
+package model.SwingJava.AirlineForm;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -14,11 +16,13 @@ public class FlightStatusForm extends JFrame implements ActionListener {
 
     private static final String DB_URL = "jdbc:mysql://localhost:3306/airline";
     private static final String DB_USER = "root";
-    // Replace this placeholder with the password set for your MySQL account.
-    private static final String DB_PASSWORD = "Snowflake#789";
 
     private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        String password = System.getenv("AIRLINE_DB_PASSWORD");
+        if (password == null || password.isBlank()) {
+            throw new SQLException("Set AIRLINE_DB_PASSWORD before connecting to MySQL.");
+        }
+        return DriverManager.getConnection(DB_URL, DB_USER, password);
     }
 
     // Form components

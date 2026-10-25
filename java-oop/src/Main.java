@@ -30,9 +30,16 @@ public class Main {
         System.out.println("   AIRLINE RESERVATION SYSTEM - JAVA OOP ACADEMIC COMPONENT");
         System.out.println("=======================================================================\n");
 
+        boolean demoOnly = Arrays.asList(args).contains("--demo-only");
         java.nio.file.Path bookingFile = Paths.get("java-oop", "bookings.csv");
-        List<Booking> savedBookings = BookingFileManager.loadBookings(bookingFile);
-        System.out.println("   Loaded saved bookings: " + savedBookings.size());
+        List<Booking> savedBookings = demoOnly
+                ? new ArrayList<>()
+                : BookingFileManager.loadBookings(bookingFile);
+        if (demoOnly) {
+            System.out.println("   Running without database or file changes.");
+        } else {
+            System.out.println("   Loaded saved bookings: " + savedBookings.size());
+        }
 
         // 1. FUNDAMENTALS: Validation, Control Statements, Looping & Arrays (CO1)
         System.out.println("--- 1. JAVA FUNDAMENTALS (Validation, Loops, Arrays) ---");
@@ -141,13 +148,14 @@ public class Main {
         paxList.sort((p1, p2) -> Integer.compare(p1.getSeatNo(), p2.getSeatNo()));
         paxList.forEach(p -> System.out.println("      Seat " + p.getSeatNo() + " -> " + p.getName() + " (" + p.getTravelClass() + ")"));
 
-        // 8. JDBC MYSQL DATABASE CONNECTION ARCHITECTURE (CO1)
-        System.out.println("\n--- 8. DATABASE JDBC INTEGRATION ---");
-        System.out.println("   Testing JDBC connection to MySQL Database...");
-        DBConnection.getConnection();
-
-        BookingFileManager.saveBookings(bookingFile, savedBookings);
-        System.out.println("   Saved bookings to " + bookingFile + " (" + savedBookings.size() + ").");
+        if (demoOnly) {
+            System.out.println("\n--- 8. DATABASE AND BOOKING FILE STORAGE SKIPPED ---");
+        } else {
+            System.out.println("\n--- 8. DATABASE JDBC CONNECTION ---");
+            DBConnection.getConnection();
+            BookingFileManager.saveBookings(bookingFile, savedBookings);
+            System.out.println("   Saved bookings to " + bookingFile + " (" + savedBookings.size() + ").");
+        }
 
         System.out.println("\n=======================================================================");
         System.out.println("   JAVA OOP DEMONSTRATION COMPLETED SUCCESSFULLY");

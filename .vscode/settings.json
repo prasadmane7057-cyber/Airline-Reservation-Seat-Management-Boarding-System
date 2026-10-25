@@ -1,5 +1,6 @@
 {
   "java.project.sourcePaths": [
     "java-oop-coa-ui/src"
-  ]
+  ],
+  "sqltools.connections": []
 }

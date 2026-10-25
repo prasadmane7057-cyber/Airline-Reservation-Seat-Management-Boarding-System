@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Airline Computer Graphics Visualizer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #07111f;
+      color: #e8f1ff;
+      --muted: #9aacc3;
+      --line: #263950;
+      --panel: rgba(15, 31, 50, .88);
+      --cyan: #54d5e8;
+      --green: #55d6a0;
+      --gold: #ffc76a;
+      --red: #ff737d;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at 50% -20%, #173755 0, transparent 55%),
+        linear-gradient(145deg, #07111f, #0a1727 55%, #091321);
+    }
+
+    header, main { width: min(1440px, calc(100% - 40px)); margin: 0 auto; }
+    header { padding: 34px 0 20px; }
+    .eyebrow { color: var(--cyan); font-size: 12px; letter-spacing: .22em; text-transform: uppercase; }
+    h1 { margin: 8px 0; font-size: clamp(25px, 4vw, 40px); letter-spacing: -.035em; }
+    .subtitle { margin: 0; color: var(--muted); }
+    main { padding-bottom: 42px; }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      padding: 8px;
+      width: fit-content;
+      margin: 10px 0 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #0b1929;
+    }
+
+    .tab {
+      border: 0;
+      border-radius: 9px;
+      padding: 12px 18px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .tab[aria-selected="true"] {
+      color: #06131e;
+      background: linear-gradient(110deg, #70e3ed, #75edc1);
+      box-shadow: 0 5px 22px #43bfd433;
+    }
+
+    .tab:focus-visible, .seat:focus-visible, .state-button:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: 3px;
+    }
+
+    [role="tabpanel"][hidden] { display: none; }
+    .panel, .card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: 0 18px 50px #0003;
+    }
+
+    .panel { padding: 18px; }
+    .panel-heading, .card-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    h2, h3 { margin: 0; }
+    h2 { font-size: 19px; }
+    h3 { font-size: 16px; }
+    .hint, .card p { color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .hint { margin: 6px 0 0; }
+    .badge {
+      flex: 0 0 auto;
+      border: 1px solid #33516a;
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: #bceef3;
+      font-size: 12px;
+      background: #10273a;
+    }
+
+    .plane-frame, .visual-frame {
+      overflow: hidden;
+      border: 1px solid #293e55;
+      border-radius: 14px;
+      background:
+        linear-gradient(#19304944 1px, transparent 1px),
+        linear-gradient(90deg, #19304944 1px, transparent 1px),
+        radial-gradient(ellipse at 50% 48%, #1a3653, #0b1827 72%);
+      background-size: 32px 32px, 32px 32px, auto;
+    }
+
+    .plane-frame svg, .visual-frame svg { display: block; width: 100%; height: auto; }
+    .plane-frame { padding: 6px; }
+    .plane-svg text, .algorithm-svg text { font-family: "Segoe UI", Arial, sans-serif; }
+    .zone-label { fill: #b9cce0; font-size: 14px; font-weight: 700; letter-spacing: 2px; }
+    .small-label { fill: #90a8c0; font-size: 11px; }
+    .seat rect { stroke: #12283a; stroke-width: 2; rx: 7; }
+    .seat text { fill: #091521; font-size: 11px; font-weight: 800; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+    .seat.available rect { fill: #61d6a2; }
+    .seat.selected rect { fill: #ffca72; stroke: #fff0c9; stroke-width: 3; }
+    .seat.booked rect { fill: #ff747d; }
+    .seat.blocked rect { fill: #8b94a7; }
+    .seat { cursor: pointer; }
+    .seat.booked, .seat.blocked { cursor: not-allowed; }
+    .seat:hover:not(.booked):not(.blocked) rect { filter: brightness(1.2); }
+
+    .legend, .stats, .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .legend { padding: 14px 4px 3px; color: var(--muted); font-size: 12px; }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; margin-right: 8px; }
+    .swatch { width: 13px; height: 13px; border-radius: 4px; display: inline-block; }
+    .stats { margin-left: auto; color: #dceafd; }
+    .stat { padding: 6px 10px; border: 1px solid var(--line); border-radius: 9px; background: #102033; }
+    .stat strong { color: var(--cyan); }
+    .class-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 13px; }
+    .class-card { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #0d1c2d; }
+    .class-card strong { display: block; margin-bottom: 4px; }
+    .class-card span { color: var(--muted); font-size: 12px; }
+
+    .algorithm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .card { min-width: 0; padding: 17px; }
+    .card p { margin: 7px 0 14px; }
+    .visual-frame { padding: 10px; }
+    .route-line { stroke-dasharray: 9 7; animation: fly 2.4s linear infinite; }
+    @keyframes fly { to { stroke-dashoffset: -64; } }
+    .axis { stroke: #456079; stroke-width: 1; }
+    .grid-line { stroke: #263c52; stroke-width: 1; }
+    .pixel { fill: #55d5e8; }
+    .route { fill: none; stroke: #55d5e8; stroke-width: 4; }
+    .airport { fill: #ffc76a; stroke: #fff1cf; stroke-width: 2; }
+    .fill-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+    .fill-cell {
+      aspect-ratio: 1;
+      border: 1px solid #38506a;
+      border-radius: 5px;
+      background: #14273b;
+      cursor: pointer;
+    }
+    .fill-cell.filled { border-color: #a0f4c7; background: #45c992; }
+    .fill-cell.booked { border-color: #ffabb0; background: #e85e70; }
+    .fill-cell.boundary { border-color: #71839a; background: #8390a2; cursor: default; }
+    .toolbar { margin: 8px 0 12px; }
+    .state-button {
+      border: 1px solid #38506a;
+      border-radius: 8px;
+      padding: 7px 11px;
+      color: #dceafd;
+      background: #12243a;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .state-button.active { border-color: var(--cyan); color: var(--cyan); }
+    .note { margin-top: 15px; color: var(--muted); font-size: 12px; }
+
+    @media (max-width: 850px) {
+      .algorithm-grid { grid-template-columns: 1fr; }
+      .class-strip { grid-template-columns: 1fr; }
+      .tabs { width: 100%; }
+      .tab { flex: 1; padding-inline: 9px; }
+      .stats { width: 100%; margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">Airline reservation system · Computer graphics</div>
+    <h1>Cabin &amp; Graphics Explorer</h1>
+    <p class="subtitle">Aircraft layout, seat states, and the algorithms that draw them.</p>
+  </header>
+
+  <main>
+    <div class="tabs" role="tablist" aria-label="Computer graphics views">
+      <button class="tab" id="aircraft-tab" role="tab" aria-selected="true" aria-controls="aircraft-panel">Integrated Aircraft &amp; Seats</button>
+      <button class="tab" id="algorithms-tab" role="tab" aria-selected="false" aria-controls="algorithms-panel" tabindex="-1">CG Algorithms</button>
+    </div>
+
+    <section class="panel" id="aircraft-panel" role="tabpanel" aria-labelledby="aircraft-tab">
+      <div class="panel-heading">
+        <div>
+          <h2>Full aircraft with integrated cabin seating</h2>
+          <p class="hint">Click an available seat to select it. Click it again to release it. Occupied and blocked seats cannot be selected.</p>
+        </div>
+        <span class="badge">TOP-DOWN CABIN VIEW</span>
+      </div>
+      <div class="plane-frame">
+        <svg class="plane-svg" viewBox="0 0 1200 620" role="img" aria-labelledby="plane-title plane-desc">
+          <title id="plane-title">Airplane with first, business, and economy seats</title>
+          <desc id="plane-desc">A complete top-down aircraft illustration. The cockpit, wings, engines, tail, cabin zones, seats, and aisle are visible together.</desc>
+          <defs>
+            <linearGradient id="fuselage" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#eaf6ff"/>
+              <stop offset=".45" stop-color="#a8c5db"/>
+              <stop offset="1" stop-color="#6f91ac"/>
+            </linearGradient>
+            <linearGradient id="wing" x1="0" y1="0" x2="1" y2="1">
+              <stop stop-color="#a6c1d3"/>
+              <stop offset="1" stop-color="#536f87"/>
+            </linearGradient>
+            <linearGradient id="window" x1="0" y1="0" x2="1" y2="1">
+              <stop stop-color="#62ddec"/>
+              <stop offset="1" stop-color="#2583b9"/>
+            </linearGradient>
+            <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="9"/>
+            </filter>
+          </defs>
+          <ellipse cx="590" cy="320" rx="475" ry="218" fill="#000" opacity=".38" filter="url(#shadow)"/>
+
+          <g aria-label="Aircraft wings, engines, and tail">
+            <path d="M505 276 L690 84 Q716 60 747 65 L690 278 Z" fill="url(#wing)" stroke="#d5e7f5" stroke-width="3"/>
+            <path d="M505 344 L690 536 Q716 560 747 555 L690 342 Z" fill="url(#wing)" stroke="#d5e7f5" stroke-width="3"/>
+            <path d="M920 278 L1040 187 Q1059 174 1074 180 L1010 286 Z" fill="url(#wing)" stroke="#d5e7f5" stroke-width="3"/>
+            <path d="M920 342 L1040 433 Q1059 446 1074 440 L1010 334 Z" fill="url(#wing)" stroke="#d5e7f5" stroke-width="3"/>
+            <path d="M532 268 L568 175 Q578 155 596 162 L608 270 Z" fill="#728fa6" stroke="#c8ddeb" stroke-width="3"/>
+            <path d="M532 352 L568 445 Q578 465 596 458 L608 350 Z" fill="#728fa6" stroke="#c8ddeb" stroke-width="3"/>
+            <ellipse cx="650" cy="157" rx="30" ry="47" fill="#1b2b3d" stroke="#8fa8bd" stroke-width="6"/>
+            <ellipse cx="650" cy="463" rx="30" ry="47" fill="#1b2b3d" stroke="#8fa8bd" stroke-width="6"/>
+            <ellipse cx="875" cy="204" rx="23" ry="35" fill="#1b2b3d" stroke="#8fa8bd" stroke-width="5"/>
+            <ellipse cx="875" cy="416" rx="23" ry="35" fill="#1b2b3d" stroke="#8fa8bd" stroke-width="5"/>
+          </g>
+
+          <g aria-label="Fuselage and cabin">
+            <path d="M112 310 C137 278 176 258 226 252 L1000 252 C1066 254 1113 279 1147 310 C1113 341 1066 366 1000 368 L226 368 C176 362 137 342 112 310 Z"
+                  fill="url(#fuselage)" stroke="#eff8ff" stroke-width="4"/>
+            <path d="M145 310 C166 291 192 281 226 279 L995 279 C1045 281 1082 295 1107 310 C1082 325 1045 339 995 341 L226 341 C192 339 166 329 145 310 Z"
+                  fill="#102239" stroke="#7392aa" stroke-width="2"/>
+            <path d="M115 310 C133 286 157 273 187 264 L187 356 C157 347 133 334 115 310 Z"
+                  fill="url(#window)" stroke="#d3fbff" stroke-width="3"/>
+            <path d="M1105 291 Q1128 302 1147 310 Q1128 318 1105 329" fill="none" stroke="#4c6a84" stroke-width="4"/>
+            <path d="M216 280 L216 340 M392 280 L392 340 M607 280 L607 340 M855 280 L855 340 M1008 280 L1008 340"
+                  stroke="#65829a" stroke-width="2" stroke-dasharray="5 5"/>
+            <line x1="226" y1="310" x2="997" y2="310" stroke="#87a1b5" stroke-width="2" stroke-dasharray="8 7" opacity=".8"/>
+            <text x="151" y="386" class="small-label">COCKPIT</text>
+            <text x="278" y="270" class="zone-label">FIRST</text>
+            <text x="452" y="270" class="zone-label">BUSINESS</text>
+            <text x="738" y="270" class="zone-label">ECONOMY</text>
+            <text x="579" y="315" class="small-label" text-anchor="middle">AISLE</text>
+            <text x="1065" y="386" class="small-label">TAIL</text>
+            <g id="aircraft-seats" aria-label="Interactive airplane seats"></g>
+          </g>
+          <g fill="url(#window)" stroke="#e4faff" stroke-width="1" pointer-events="none">
+            <circle cx="265" cy="266" r="4"/><circle cx="265" cy="354" r="4"/>
+            <circle cx="415" cy="266" r="4"/><circle cx="415" cy="354" r="4"/>
+            <circle cx="625" cy="266" r="4"/><circle cx="625" cy="354" r="4"/>
+            <circle cx="870" cy="266" r="4"/><circle cx="870" cy="354" r="4"/>
+          </g>
+        </svg>
+      </div>
+      <div class="legend">
+        <span><i class="swatch" style="background:#61d6a2"></i>Available</span>
+        <span><i class="swatch" style="background:#ffca72"></i>Selected</span>
+        <span><i class="swatch" style="background:#ff747d"></i>Occupied</span>
+        <span><i class="swatch" style="background:#8b94a7"></i>Blocked</span>
+        <div class="stats">
+          <span class="stat">Selected: <strong id="selected-count">0</strong></span>
+          <span class="stat">Available: <strong id="available-count">0</strong></span>
+        </div>
+      </div>
+      <div class="class-strip">
+        <div class="class-card"><strong>First Class</strong><span>Quiet forward cabin · 2 seats per side</span></div>
+        <div class="class-card"><strong>Business Class</strong><span>Spacious cabin · 2 seats per side</span></div>
+        <div class="class-card"><strong>Economy Class</strong><span>Main cabin · 3 seats per side</span></div>
+      </div>
+    </section>
+
+    <section class="panel" id="algorithms-panel" role="tabpanel" aria-labelledby="algorithms-tab" hidden>
+      <div class="panel-heading">
+        <div>
+          <h2>Computer graphics algorithms</h2>
+          <p class="hint">Route rasterization, line algorithms, interactive flood fill, and scanline polygon filling.</p>
+        </div>
+        <span class="badge">ALGORITHM LAB</span>
+      </div>
+      <div class="algorithm-grid">
+        <article class="card">
+          <div class="card-heading"><h3>Bresenham flight route</h3><span class="badge">INTEGER PIXELS</span></div>
+          <p>A pixel-stepped route connects the departure airport and destination.</p>
+          <div class="visual-frame">
+            <svg class="algorithm-svg" viewBox="0 0 500 240" role="img" aria-label="Bresenham flight path between two airports">
+              <g class="grid-line">
+                <path d="M50 30V210 M100 30V210 M150 30V210 M200 30V210 M250 30V210 M300 30V210 M350 30V210 M400 30V210 M450 30V210"/>
+                <path d="M30 50H470 M30 90H470 M30 130H470 M30 170H470 M30 210H470"/>
+              </g>
+              <path class="route-line" d="M60 190 L440 55" fill="none" stroke="#55d5e8" stroke-width="4"/>
+              <circle class="airport" cx="60" cy="190" r="9"/><circle class="airport" cx="440" cy="55" r="9"/>
+              <text x="42" y="218" fill="#dceafd" font-size="13">BOM</text>
+              <text x="420" y="38" fill="#dceafd" font-size="13">DEL</text>
+              <text x="210" y="115" fill="#8fa9c2" font-size="12">Bresenham pixels</text>
+            </svg>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-heading"><h3>DDA vs. Bresenham</h3><span class="badge">LINE DRAWING</span></div>
+          <p>DDA advances with floating-point increments; Bresenham plots using an integer error term.</p>
+          <div class="visual-frame">
+            <svg class="algorithm-svg" viewBox="0 0 500 240" role="img" aria-label="DDA and Bresenham line pixel comparison">
+              <g class="grid-line">
+                <path d="M60 25V215 M100 25V215 M140 25V215 M180 25V215 M220 25V215 M260 25V215 M300 25V215 M340 25V215 M380 25V215 M420 25V215"/>
+                <path d="M40 45H460 M40 85H460 M40 125H460 M40 165H460 M40 205H460"/>
+              </g>
+              <path d="M60 195 L430 45" stroke="#ffc76a" stroke-width="2" stroke-dasharray="6 6"/>
+              <g fill="#ffc76a">
+                <circle cx="60" cy="195" r="5"/><circle cx="100" cy="179" r="5"/><circle cx="140" cy="163" r="5"/>
+                <circle cx="180" cy="147" r="5"/><circle cx="220" cy="131" r="5"/><circle cx="260" cy="115" r="5"/>
+                <circle cx="300" cy="99" r="5"/><circle cx="340" cy="83" r="5"/><circle cx="380" cy="67" r="5"/><circle cx="430" cy="45" r="5"/>
+              </g>
+              <g fill="#55d5e8">
+                <rect x="56" y="191" width="9" height="9"/><rect x="96" y="176" width="9" height="9"/><rect x="136" y="160" width="9" height="9"/>
+                <rect x="176" y="144" width="9" height="9"/><rect x="216" y="128" width="9" height="9"/><rect x="256" y="112" width="9" height="9"/>
+                <rect x="296" y="96" width="9" height="9"/><rect x="336" y="80" width="9" height="9"/><rect x="376" y="64" width="9" height="9"/><rect x="426" y="41" width="9" height="9"/>
+              </g>
+              <circle cx="68" cy="32" r="5" fill="#ffc76a"/><text x="80" y="36" fill="#dceafd" font-size="12">DDA samples</text>
+              <rect x="205" y="27" width="10" height="10" fill="#55d5e8"/><text x="223" y="36" fill="#dceafd" font-size="12">Bresenham pixels</text>
+            </svg>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-heading"><h3>Flood-fill seat map</h3><span class="badge">CLICK TO FILL</span></div>
+          <p>Select a color, then click an available cell. The fill spreads to connected cells and stops at the gray seat boundaries.</p>
+          <div class="toolbar" aria-label="Flood fill colors">
+            <button class="state-button active" data-color="filled">Select</button>
+            <button class="state-button" data-color="booked">Booked</button>
+            <button class="state-button" data-color="boundary">Boundary</button>
+            <button class="state-button" data-color="reset">Reset</button>
+          </div>
+          <div class="fill-grid" id="fill-grid" aria-label="Interactive flood fill grid"></div>
+          <p class="note">Click gray cells to toggle seat boundaries. Select or Booked then click a region to flood-fill it.</p>
+        </article>
+
+        <article class="card">
+          <div class="card-heading"><h3>Scanline polygon fill</h3><span class="badge">EDGE TABLE + SCANLINES</span></div>
+          <p>Horizontal scanlines fill a tapered aircraft body between each pair of polygon edges.</p>
+          <div class="visual-frame">
+            <svg class="algorithm-svg" viewBox="0 0 500 240" role="img" aria-label="Scanline fill algorithm filling an airplane fuselage polygon">
+              <g class="grid-line">
+                <path d="M50 30V210 M100 30V210 M150 30V210 M200 30V210 M250 30V210 M300 30V210 M350 30V210 M400 30V210 M450 30V210"/>
+                <path d="M30 50H470 M30 90H470 M30 130H470 M30 170H470 M30 210H470"/>
+              </g>
+              <path d="M75 120 L160 65 L370 65 L435 120 L370 175 L160 175 Z" fill="#55d5e844" stroke="#55d5e8" stroke-width="3"/>
+              <g stroke="#ffc76a" stroke-width="3" opacity=".95">
+                <path d="M117 120H393"/><path d="M145 102H412"/><path d="M145 138H412"/>
+                <path d="M175 84H393"/><path d="M175 156H393"/><path d="M208 66H369"/>
+              </g>
+              <text x="190" y="222" fill="#dceafd" font-size="12">Each row fills between left and right edge intersections</text>
+            </svg>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        tabs.forEach((item) => {
+          const selected = item === tab;
+          item.setAttribute('aria-selected', String(selected));
+          item.tabIndex = selected ? 0 : -1;
+          document.getElementById(item.getAttribute('aria-controls')).hidden = !selected;
+        });
+      });
+      tab.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        const next = tabs[(tabs.indexOf(tab) + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        next.focus();
+        next.click();
+      });
+    });
+
+    const aircraftSeats = document.getElementById('aircraft-seats');
+    const seatStates = new Map();
+    const rowY = [282, 314];
+    const zones = [
+      { name: 'F', start: 248, count: 2, spacing: 62, columns: 4 },
+      { name: 'B', start: 420, count: 4, spacing: 45, columns: 4 },
+      { name: 'E', start: 635, count: 8, spacing: 44, columns: 6 }
+    ];
+    const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+    zones.forEach((zone, zoneIndex) => {
+      for (let row = 0; row < zone.count; row++) {
+        Array.from({ length: zone.columns }, (_, col) => col).forEach((col) => {
+          const upper = col < zone.columns / 2;
+          const seatLetter = letters[col];
+          const cabinRow = row + 1;
+          const y = upper ? rowY[0] : rowY[1];
+          const seatId = `${zone.name}${cabinRow}${seatLetter}`;
+          let state = 'available';
+          if ((zoneIndex === 0 && row === 0 && col === 0) ||
+              (zoneIndex === 1 && row === 2 && col === 3) ||
+              (zoneIndex === 2 && row === 1 && col === 4) ||
+              (zoneIndex === 2 && row === 5 && col === 0)) state = 'booked';
+          if (zoneIndex === 2 && row === 7 && col === 2) state = 'blocked';
+          seatStates.set(seatId, state);
+
+          const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          group.classList.add('seat', state);
+          group.dataset.seatId = seatId;
+          group.setAttribute('role', 'button');
+          group.setAttribute('tabindex', state === 'booked' || state === 'blocked' ? '-1' : '0');
+          group.setAttribute('aria-label', `${zone.name === 'F' ? 'First' : zone.name === 'B' ? 'Business' : 'Economy'} seat ${cabinRow}${seatLetter}, ${state}`);
+          const x = zone.start + row * zone.spacing + (zoneIndex === 1 ? 8 : 0) + (upper ? col * 34 : (col - zone.columns / 2) * 34);
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', x);
+          rect.setAttribute('y', y);
+          rect.setAttribute('width', 31);
+          rect.setAttribute('height', 24);
+          const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          label.setAttribute('x', x + 15.5);
+          label.setAttribute('y', y + 12);
+          label.textContent = seatLetter;
+          group.append(rect, label);
+          const toggleSeat = () => {
+            const current = seatStates.get(seatId);
+            if (current === 'booked' || current === 'blocked') return;
+            const next = current === 'selected' ? 'available' : 'selected';
+            seatStates.set(seatId, next);
+            group.setAttribute('class', `seat ${next}`);
+            group.setAttribute('aria-label', `${seatId}, ${next}`);
+            updateSeatCounts();
+          };
+          group.addEventListener('click', toggleSeat);
+          group.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              toggleSeat();
+            }
+          });
+          aircraftSeats.append(group);
+        });
+      }
+    });
+
+    function updateSeatCounts() {
+      const states = [...seatStates.values()];
+      document.getElementById('selected-count').textContent = states.filter((state) => state === 'selected').length;
+      document.getElementById('available-count').textContent = states.filter((state) => state === 'available').length;
+    }
+    updateSeatCounts();
+
+    const fillGrid = document.getElementById('fill-grid');
+    let selectedFill = 'filled';
+    let isBoundary = false;
+    let fillState = 'filled';
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const cell = document.createElement('button');
+        cell.className = 'fill-cell';
+        cell.type = 'button';
+        cell.setAttribute('aria-label', `Fill cell row ${row + 1} column ${col + 1}`);
+        if (row === 0 || row === 7 || col === 0 || col === 7 || (row === 4 && col === 4)) {
+          cell.classList.add('boundary');
+          if (row === 0 || row === 7 || col === 0 || col === 7) cell.dataset.edge = 'true';
+          cell.setAttribute('aria-label', `Boundary cell row ${row + 1} column ${col + 1}`);
+        } else if (row === 3 && col === 3) {
+          cell.classList.add('filled');
+        } else if (row === 4 && col === 5) {
+          cell.classList.add('booked');
+        }
+        cell.addEventListener('click', () => {
+          if (isBoundary) {
+            if (cell.dataset.edge === 'true') return;
+            const nowBoundary = cell.classList.toggle('boundary');
+            if (nowBoundary) cell.classList.remove('filled', 'booked');
+            return;
+          }
+          floodFrom(cell, selectedFill);
+        });
+        fillGrid.append(cell);
+      }
+    }
+
+    function floodFrom(start, fillClass) {
+      const cells = [...fillGrid.children];
+      const startIndex = cells.indexOf(start);
+      const queue = [startIndex];
+      const seen = new Set();
+      const oldState = start.classList.contains('booked')
+        ? 'booked'
+        : start.classList.contains('filled') ? 'filled' : 'empty';
+      while (queue.length) {
+        const index = queue.shift();
+        if (seen.has(index) || index < 0 || index >= cells.length) continue;
+        seen.add(index);
+        const cell = cells[index];
+        if (cell.classList.contains('boundary')) continue;
+        const currentState = cell.classList.contains('booked')
+          ? 'booked'
+          : cell.classList.contains('filled') ? 'filled' : 'empty';
+        if (currentState !== oldState) continue;
+        if (currentState === fillClass) continue;
+        cell.classList.remove('filled', 'booked');
+        cell.classList.add(fillClass);
+        const x = index % 8;
+        const y = Math.floor(index / 8);
+        if (x > 0) queue.push(index - 1);
+        if (x < 7) queue.push(index + 1);
+        if (y > 0) queue.push(index - 8);
+        if (y < 7) queue.push(index + 8);
+      }
+    }
+
+    document.querySelectorAll('.state-button').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.state-button').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        isBoundary = button.dataset.color === 'boundary';
+        selectedFill = button.dataset.color === 'booked' ? 'booked' : 'filled';
+        if (button.dataset.color === 'reset') {
+          isBoundary = false;
+          fillGrid.querySelectorAll('.fill-cell').forEach((cell) => {
+            cell.classList.remove('filled', 'booked');
+            if (cell.dataset.edge !== 'true') cell.classList.remove('boundary');
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

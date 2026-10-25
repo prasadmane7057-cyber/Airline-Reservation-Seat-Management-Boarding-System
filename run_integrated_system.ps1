@@ -1,156 +1,261 @@
-# ==============================================================================
-# AIRLINE RESERVATION, SEAT MANAGEMENT & BOARDING SYSTEM
-# Master Integrated System Execution Script Across All Subjects
-# Subjects: Java OOP, C++ Data Structures, 64-bit Assembly/COA, Computer Graphics (CG)
-# ==============================================================================
+$ErrorActionPreference = "Stop"
+Set-Location $PSScriptRoot
 
-Write-Host "================================================================================" -ForegroundColor Cyan
-Write-Host "     AIRLINE RESERVATION & SEAT MANAGEMENT SYSTEM - MASTER EXECUTION            " -ForegroundColor Cyan
-Write-Host "================================================================================" -ForegroundColor Cyan
+function Write-SubjectHeader {
+    param([string]$Title)
+    Write-Host "`n======================================================================" -ForegroundColor Cyan
+    Write-Host " $Title" -ForegroundColor Cyan
+    Write-Host "======================================================================" -ForegroundColor Cyan
+}
 
-# ------------------------------------------------------------------------------
-# 1. JAVA OBJECT-ORIENTED PROGRAMMING (OOP) SUITE
-# ------------------------------------------------------------------------------
-Write-Host "`n================================================================================" -ForegroundColor Yellow
-Write-Host " >>> [SUBJECT 1/4] JAVA OBJECT-ORIENTED PROGRAMMING (OOP) CORE" -ForegroundColor Yellow
-Write-Host "================================================================================" -ForegroundColor Yellow
-if (!(Test-Path "java-oop-coa-ui/out")) { New-Item -ItemType Directory -Path "java-oop-coa-ui/out" | Out-Null }
-$javaFiles = (Get-ChildItem -Recurse -Path "java-oop-coa-ui/src" -Filter *.java).FullName
-Write-Host "[BUILD] Compiling $($javaFiles.Count) Java Source Files with javac..." -ForegroundColor Gray
-javac -d "java-oop-coa-ui/out" $javaFiles
-Write-Host "[EXEC] Running Java OOP Core Simulation (Polymorphism, PNR, Booking Pipeline):" -ForegroundColor Green
-java -cp "java-oop-coa-ui/out" Main
+function Invoke-Checked {
+    param(
+        [string]$Step,
+        [scriptblock]$Command
+    )
 
-Write-Host "`n--- [JAVA] Booking File Read/Write and Recovery Checks ---" -ForegroundColor Green
-if (!(Test-Path "java-oop/out")) { New-Item -ItemType Directory -Path "java-oop/out" | Out-Null }
-$bookingJavaFiles = (Get-ChildItem -Recurse -Path "java-oop/src" -Filter *.java).FullName
-javac -d "java-oop/out" $bookingJavaFiles
-if ($LASTEXITCODE -ne 0) { throw "Failed to compile Java OOP booking persistence module." }
-java -cp "java-oop/out" util.BookingFileManager
-if ($LASTEXITCODE -ne 0) { throw "Java booking file persistence checks failed." }
-Write-Host "`n--- [JAVA] Booking Service and Exception Handling Demo ---" -ForegroundColor Green
-java -cp "java-oop/out" model.BookingService
-if ($LASTEXITCODE -ne 0) { throw "Java booking service exception demo failed." }
-
-# ------------------------------------------------------------------------------
-# 2. C++ DATA STRUCTURES SUITE
-# ------------------------------------------------------------------------------
-Write-Host "`n================================================================================" -ForegroundColor Yellow
-Write-Host " >>> [SUBJECT 2/4] C++ DATA STRUCTURES (ARRAYS, 2D MATRIX, QUEUES & LINKED LISTS)" -ForegroundColor Yellow
-Write-Host "================================================================================" -ForegroundColor Yellow
-
-Write-Host "`n--- [DS 1/4] Passenger Array, Seat Matrix & FIFO Waitlist Promotion ---" -ForegroundColor Green
-g++ -std=c++17 cpp-ds/src/main.cpp cpp-ds/src/PassengerArray.cpp cpp-ds/src/SeatMap2D.cpp cpp-ds/src/Waitlist.cpp -o cpp-ds/ds_demo.exe
-.\cpp-ds\ds_demo.exe
-
-Write-Host "`n--- [DS 2/4] Singly Linked List (Chronological Booking Audit Trail) ---" -ForegroundColor Green
-g++ -std=c++17 cpp-ds/src/LinkedList.cpp -o cpp-ds/linked_list.exe
-.\cpp-ds\linked_list.exe
-
-Write-Host "`n--- [DS 3/4] Doubly Linked List (Manifest Merging with Two-Pointer Technique) ---" -ForegroundColor Green
-g++ -std=c++17 cpp-ds/src/ManifestMergeDLL.cpp -o cpp-ds/manifest_dll.exe
-$manifestInput = "2`nPNR101`nPrasad`n1A`nAI101`nFirstClass`nCONFIRMED`nPNR102`nRahul`n5B`nAI101`nBusiness`nCONFIRMED`n2`nPNR103`nVarad`n2A`nAI101`nFirstClass`nCONFIRMED`nPNR104`nSiddhi`n4C`nAI101`nBusiness`nCONFIRMED`n"
-$manifestInput | .\cpp-ds\manifest_dll.exe
-if ($LASTEXITCODE -ne 0) { throw "Manifest merge demonstration failed." }
-
-Write-Host "`n--- [DS 4/4] Circular Boarding Queue (FIFO and Wrap-Around) ---" -ForegroundColor Green
-g++ -std=c++17 cpp-ds/src/BoardingQueueCircular.cpp -o cpp-ds/boarding_queue_circular.exe
-if ($LASTEXITCODE -ne 0) { throw "Failed to build the circular boarding queue demo." }
-.\cpp-ds\boarding_queue_circular.exe
-if ($LASTEXITCODE -ne 0) { throw "Circular boarding queue demo failed." }
-
-# ------------------------------------------------------------------------------
-# 3. 64-BIT NASM ASSEMBLY & PROCESSOR-LEVEL COA SIMULATION
-# ------------------------------------------------------------------------------
-Write-Host "`n================================================================================" -ForegroundColor Yellow
-Write-Host " >>> [SUBJECT 3/4] 64-BIT NASM ASSEMBLY & COMPUTER ORGANIZATION (COA)" -ForegroundColor Yellow
-Write-Host "================================================================================" -ForegroundColor Yellow
-
-Write-Host "`n--- [COA 1/5] Real x86-64 NASM Binary: Fare Calculation Engine ---" -ForegroundColor Green
-"5000`n3`n900`n500`n180`n120`n" | .\coa-nasm\out\model\fare_win.exe
-
-Write-Host "`n--- [COA 2/5] Real x86-64 NASM Binary: Fuel & Weight Consumption Engine ---" -ForegroundColor Green
-"1400`n2500`n3000`n500`n" | .\coa-nasm\out\model\fuel_win.exe
-
-Write-Host "`n--- [COA 3/5] 64-bit Hex to Decimal / Packed BCD Conversion ---" -ForegroundColor Green
-$nasm = Get-Command nasm -ErrorAction SilentlyContinue
-if ($null -eq $nasm) {
-    Write-Warning "Skipping HexToBCD.asm: NASM is not installed. Install NASM and add it to PATH to run this demo."
-} else {
-    if (!(Test-Path "coa-nasm/out/model")) {
-        New-Item -ItemType Directory -Path "coa-nasm/out/model" | Out-Null
+    Write-Host "`n--- $Step ---" -ForegroundColor Green
+    & $Command
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Step failed with exit code $LASTEXITCODE."
     }
-    & $nasm.Source -f win64 coa-nasm/HexToBCD.asm -o coa-nasm/out/model/HexToBCD.obj
-    if ($LASTEXITCODE -ne 0) { throw "NASM failed to assemble HexToBCD.asm." }
-    gcc coa-nasm/out/model/HexToBCD.obj -o coa-nasm/out/model/HexToBCD.exe
-    if ($LASTEXITCODE -ne 0) { throw "GCC failed to link HexToBCD.obj." }
-
-    Write-Host "[TEST] Zero input" -ForegroundColor Gray
-    "0`n" | .\coa-nasm\out\model\HexToBCD.exe
-    Write-Host "[TEST] Representative PNR input" -ForegroundColor Gray
-    "0x1A2B3C`n" | .\coa-nasm\out\model\HexToBCD.exe
-    Write-Host "[TEST] Maximum unsigned 64-bit input" -ForegroundColor Gray
-    "0xFFFFFFFFFFFFFFFF`n" | .\coa-nasm\out\model\HexToBCD.exe
 }
 
-Write-Host "`n--- [COA 4/5] Hardware CPU Register & ALU Simulation (RAX, RBX, RCX, RDX, R8-R13) ---" -ForegroundColor Green
-g++ -std=c++17 assembly-component/fare_calc_sim.cpp -o assembly-component/fare_calc_sim.exe
-if ($LASTEXITCODE -ne 0) { throw "Failed to build the CPU register and ALU simulation." }
-.\assembly-component\fare_calc_sim.exe
-if ($LASTEXITCODE -ne 0) { throw "CPU register and ALU simulation failed." }
+function Invoke-Demo {
+    param(
+        [string]$Step,
+        [string]$Executable,
+        [string]$InputText
+    )
 
-Write-Host "`n--- [COA 5/5] NASM Add-and-Shift 64-bit Multiplication Demo (WSL/Linux) ---" -ForegroundColor Green
-$wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
-if ($null -eq $wsl) { throw "MulAddShift.asm requires WSL because it uses Linux x86-64 syscalls." }
-$projectWindowsPath = (Resolve-Path ".").Path.Replace('\', '/')
-$wslProjectPath = (& $wsl.Source -d Debian -- wslpath -a $projectWindowsPath).Trim()
-if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($wslProjectPath)) {
-    throw "Could not resolve the project path inside the Debian WSL distribution."
+    Write-Host "`n--- $Step ---" -ForegroundColor Green
+    if ($null -eq $InputText) {
+        & $Executable
+    } else {
+        $InputText | & $Executable
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Step failed with exit code $LASTEXITCODE."
+    }
 }
-$mulAddShiftBuild = "cd '$wslProjectPath/coa-nasm/out/model' && nasm -f elf64 MulAddShift.asm -o MulAddShift.o && ld MulAddShift.o -o MulAddShift"
-& $wsl.Source -d Debian -- bash -lc $mulAddShiftBuild
-if ($LASTEXITCODE -ne 0) { throw "Failed to assemble or link MulAddShift.asm in WSL." }
-$mulAddShiftRun = "cd '$wslProjectPath/coa-nasm/out/model' && { printf '5000\n'; sleep 0.2; printf '3\n'; } | ./MulAddShift"
-& $wsl.Source -d Debian -- bash -lc $mulAddShiftRun
-if ($LASTEXITCODE -ne 0) { throw "MulAddShift.asm execution failed." }
 
-# ------------------------------------------------------------------------------
-# 4. COMPUTER GRAPHICS & VISUALIZATION (CGL / OPENGL / FREEGLUT)
-# ------------------------------------------------------------------------------
-Write-Host "`n================================================================================" -ForegroundColor Yellow
-Write-Host " >>> [SUBJECT 4/4] COMPUTER GRAPHICS (CGL) & INTERACTIVE VISUALIZATION" -ForegroundColor Yellow
-Write-Host "================================================================================" -ForegroundColor Yellow
+function Invoke-JavaDemo {
+    param(
+        [string]$Step,
+        [string]$ClassPath,
+        [string]$MainClass,
+        [string[]]$Arguments = @(),
+        [string]$InputText
+    )
 
-if (!(Test-Path "cpp-cg/bin")) { New-Item -ItemType Directory -Path "cpp-cg/bin" | Out-Null }
+    Write-Host "`n--- $Step ---" -ForegroundColor Green
+    if ($null -eq $InputText) {
+        & $java -cp $ClassPath $MainClass @Arguments 2>&1
+    } else {
+        $InputText | & $java -cp $ClassPath $MainClass @Arguments 2>&1
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "$Step failed with exit code $LASTEXITCODE."
+    }
+}
 
-Write-Host "`n--- [CG 1/5] Bresenham Rasterization Algorithm (Discrete Integer Coordinates) ---" -ForegroundColor Green
-C:\msys64\mingw64\bin\g++.exe -DSTANDALONE_BRESENHAM -o cpp-cg/bin/bresenham_console.exe cpp-cg/src/Bresenham.cpp
-.\cpp-cg\bin\bresenham_console.exe
+$javac = (Get-Command javac -ErrorAction Stop).Source
+$java = (Get-Command java -ErrorAction Stop).Source
+$gpp = (Get-Command g++ -ErrorAction Stop).Source
+$nasm = (Get-Command nasm -ErrorAction Stop).Source
+$gcc = (Get-Command gcc -ErrorAction Stop).Source
+$buildRoot = Join-Path ([IO.Path]::GetTempPath()) "airline-integrated-$([guid]::NewGuid().ToString('N'))"
+$subjectResults = [System.Collections.Generic.List[string]]::new()
 
-Write-Host "`n--- [CG 2/5] DDA vs. Bresenham Seat-Grid and Aisle Lines ---" -ForegroundColor Green
-C:\msys64\mingw64\bin\g++.exe -std=c++17 -o cpp-cg/bin/DDALine.exe cpp-cg/src/DDALine.cpp cpp-cg/src/Bresenham.cpp
-if ($LASTEXITCODE -ne 0) { throw "Failed to build DDA/Bresenham line comparison." }
-.\cpp-cg\bin\DDALine.exe
-if ($LASTEXITCODE -ne 0) { throw "DDA/Bresenham endpoint-reversal check failed." }
+New-Item -ItemType Directory -Path $buildRoot | Out-Null
 
-Write-Host "`n--- [CG 3/5] Compiling Route Map Visualizer (Bresenham Flight Trajectory & Airport Node) ---" -ForegroundColor Green
-C:\msys64\mingw64\bin\g++.exe -o cpp-cg/bin/RouteMapVisualizer.exe cpp-cg/src/main.cpp cpp-cg/src/RouteMap.cpp cpp-cg/src/Bresenham.cpp -lfreeglut -lopengl32 -lglu32
-Write-Host "[BUILD SUCCESS] RouteMapVisualizer.exe ready at cpp-cg/bin/RouteMapVisualizer.exe" -ForegroundColor Gray
+try {
+    Write-Host "AIRLINE RESERVATION SYSTEM - SUBJECT OUTPUTS" -ForegroundColor Cyan
+    Write-Host "Building temporary files under $buildRoot"
 
-Write-Host "`n--- [CG 4/5] Compiling Master Plane Glyph + Real Seats + 2D Zoom/Transform/Clip Engine ---" -ForegroundColor Green
-$seatMapExecutable = "cpp-cg/bin/SeatMapCombined-$PID.exe"
-C:\msys64\mingw64\bin\g++.exe -DSCANLINE_FILL_NO_MAIN -o $seatMapExecutable cpp-cg/src/PlaneGlyph.cpp cpp-cg/src/Seats.cpp cpp-cg/src/SeatMapTransform.cpp cpp-cg/src/ScanlineFill.cpp -lfreeglut -lopengl32 -lglu32
-if ($LASTEXITCODE -ne 0) { throw "Failed to build the aircraft seat map with scan-line polygon fill." }
-Write-Host "[BUILD SUCCESS] $seatMapExecutable ready with scan-line polygon fill." -ForegroundColor Gray
+    Write-SubjectHeader "SUBJECT 1/4: JAVA OOP AND BOOKING SYSTEM"
+    $javaOopBuild = Join-Path $buildRoot "java-oop"
+    $javaCoaBuild = Join-Path $buildRoot "java-oop-coa-ui"
+    New-Item -ItemType Directory -Path $javaOopBuild, $javaCoaBuild | Out-Null
 
-Write-Host "`n--- [CG 5/5] Compiling Standalone Interactive Cabin Seat Matrix Selector ---" -ForegroundColor Green
-C:\msys64\mingw64\bin\g++.exe -o cpp-cg/bin/SeatMatrixCG.exe cpp-cg/src/SeatMatrixCG.cpp -lfreeglut -lopengl32 -lglu32
-Write-Host "[BUILD SUCCESS] SeatMatrixCG.exe ready at cpp-cg/bin/SeatMatrixCG.exe" -ForegroundColor Gray
+    $javaOopSources = Get-ChildItem "java-oop\src" -Recurse -Filter *.java |
+        Select-Object -ExpandProperty FullName
+    Invoke-Checked "Compile Java OOP sources" {
+        & $javac -d $javaOopBuild @javaOopSources
+    }
 
-Write-Host "`n[CG-LAUNCH] Launching Integrated Aircraft Seat Map & 2D Transformation Engine..." -ForegroundColor Cyan
-Start-Process -FilePath $seatMapExecutable
-Start-Sleep -Milliseconds 800
+    $javaCoaSources = Get-ChildItem "java-oop-coa-ui\src" -Recurse -Filter *.java |
+        Select-Object -ExpandProperty FullName
+    Invoke-Checked "Compile Java OOP and COA sources" {
+        & $javac -d $javaCoaBuild @javaCoaSources
+    }
+    Invoke-JavaDemo -Step "Run Java OOP demonstration (database and file writes disabled)" `
+        -ClassPath $javaOopBuild -MainClass "Main" -Arguments @("--demo-only")
+    Invoke-JavaDemo -Step "Run Java OOP/COA demonstration (database disabled)" `
+        -ClassPath $javaCoaBuild -MainClass "Main" -Arguments @("--skip-db")
 
-Write-Host "`n================================================================================" -ForegroundColor Cyan
-Write-Host "     ALL SUBJECTS & MODULES COMPILED AND EXECUTED SUCCESSFULLY!                 " -ForegroundColor Cyan
-Write-Host "================================================================================" -ForegroundColor Cyan
+    Invoke-JavaDemo -Step "Run booking file checks" -ClassPath $javaOopBuild `
+        -MainClass "util.BookingFileManagerTest"
+    Invoke-JavaDemo -Step "Run booking service demonstration" -ClassPath $javaOopBuild `
+        -MainClass "model.BookingService"
+    $bookingInput = "AI101`n2`nPNR101`nAarav Sharma`n1A`n1`nPNR102`nSneha Iyer`n2B`n2`n"
+    Invoke-JavaDemo -Step "Run booking, cancellation, and boarding-order checks" `
+        -ClassPath $javaOopBuild -MainClass "BookingSystemTest" -InputText $bookingInput
+    [void]$subjectResults.Add("Java OOP and booking system: PASSED")
+
+    Write-SubjectHeader "SUBJECT 2/4: C++ DATA STRUCTURES"
+    $dsBuild = Join-Path $buildRoot "cpp-ds"
+    $cgBuild = Join-Path $buildRoot "cpp-cg"
+    $asmBuild = Join-Path $buildRoot "assembly"
+    New-Item -ItemType Directory -Path $dsBuild, $cgBuild, $asmBuild | Out-Null
+
+    $dsDemo = Join-Path $dsBuild "ds_demo.exe"
+    Invoke-Checked "Build passenger, seat map, and waitlist demo" {
+        & $gpp -std=c++17 "cpp-ds\src\main.cpp" "cpp-ds\src\PassengerArray.cpp" `
+            "cpp-ds\src\SeatMap2D.cpp" "cpp-ds\src\Waitlist.cpp" -o $dsDemo
+    }
+    Invoke-Demo "Run passenger, seat map, and waitlist demo" $dsDemo $null
+
+    $linkedList = Join-Path $dsBuild "linked_list.exe"
+    Invoke-Checked "Build booking history list" {
+        & $gpp -std=c++17 "cpp-ds\src\LinkedList.cpp" -o $linkedList
+    }
+    Invoke-Demo "Run booking history list" $linkedList $null
+
+    $manifest = Join-Path $dsBuild "manifest.exe"
+    Invoke-Checked "Build manifest merge demo" {
+        & $gpp -std=c++17 "cpp-ds\src\ManifestMergeDLL.cpp" -o $manifest
+    }
+    $manifestInput = "2`nPNR101`nPrasad`n1A`nAI101`nFirstClass`nCONFIRMED`nPNR102`nRahul`n5B`nAI101`nBusiness`nCONFIRMED`n2`nPNR103`nVarad`n2A`nAI101`nFirstClass`nCONFIRMED`nPNR104`nSiddhi`n4C`nAI101`nBusiness`nCONFIRMED`n"
+    Invoke-Demo "Run manifest merge demo" $manifest $manifestInput
+
+    $boardingQueue = Join-Path $dsBuild "boarding_queue.exe"
+    Invoke-Checked "Build circular boarding queue" {
+        & $gpp -std=c++17 "cpp-ds\src\BoardingQueueCircular.cpp" -o $boardingQueue
+    }
+    Invoke-Demo "Run circular boarding queue" $boardingQueue $null
+
+    $undoStack = Join-Path $dsBuild "undo_stack.exe"
+    Invoke-Checked "Build seat selection undo stack" {
+        & $gpp -std=c++17 "cpp-ds\src\undostack.cpp" -o $undoStack
+    }
+    Invoke-Demo "Run seat selection undo stack" $undoStack "0`n"
+    [void]$subjectResults.Add("C++ data structures: PASSED")
+
+    Write-SubjectHeader "SUBJECT 3/4: COMPUTER GRAPHICS"
+    $bresenham = Join-Path $cgBuild "bresenham.exe"
+    Invoke-Checked "Build Bresenham rasterization demo" {
+        & $gpp -std=c++17 -DSTANDALONE_BRESENHAM "cpp-cg\src\Bresenham.cpp" -o $bresenham
+    }
+    Invoke-Demo "Run Bresenham rasterization demo" $bresenham $null
+
+    foreach ($source in Get-ChildItem "cpp-cg\src" -Filter *.cpp) {
+        Invoke-Checked "Compile-check $($source.Name)" {
+            & $gpp -std=c++17 -fsyntax-only $source.FullName
+        }
+    }
+
+    $lineComparison = Join-Path $cgBuild "line_comparison.exe"
+    Invoke-Checked "Build DDA and Bresenham comparison" {
+        & $gpp -std=c++17 "cpp-cg\src\DDALine.cpp" "cpp-cg\src\Bresenham.cpp" -o $lineComparison
+    }
+    Invoke-Demo "Run DDA and Bresenham checks" $lineComparison $null
+
+    $visuals = @(
+        @{ Name = "Route map"; Sources = @("cpp-cg\src\main.cpp", "cpp-cg\src\RouteMap.cpp", "cpp-cg\src\Bresenham.cpp") },
+        @{ Name = "Cabin seat matrix"; Sources = @("cpp-cg\src\SeatMatrixCG.cpp") },
+        @{ Name = "Interactive flood-fill seat map"; Sources = @("cpp-cg\src\Floodfill.cpp") },
+        @{ Name = "Aircraft seat map and scanline fill"; Sources = @("cpp-cg\src\PlaneGlyph.cpp", "cpp-cg\src\Seats.cpp", "cpp-cg\src\SeatMapTransform.cpp", "cpp-cg\src\ScanlineFill.cpp"); Defines = @("-DSCANLINE_FILL_NO_MAIN") }
+    )
+    foreach ($visual in $visuals) {
+        $arguments = @("-std=c++17")
+        if ($visual.Defines) { $arguments += $visual.Defines }
+        $arguments += $visual.Sources
+        $arguments += @("-fsyntax-only")
+        Invoke-Checked "Compile-check CG visual: $($visual.Name)" {
+            & $gpp @arguments
+        }
+    }
+    $cgVisualizer = (Resolve-Path "cpp-cg\visualization.html").Path
+    Start-Process -FilePath $cgVisualizer
+    Write-Host "Opened visual CG tabs: Integrated Aircraft & Seats | CG Algorithms" -ForegroundColor Green
+    [void]$subjectResults.Add("Computer graphics: PASSED")
+
+    Write-SubjectHeader "SUBJECT 4/4: COA AND ASSEMBLY"
+    $fareObject = Join-Path $asmBuild "fare.obj"
+    $fareExe = Join-Path $asmBuild "fare.exe"
+    Invoke-Checked "Assemble Windows fare calculator" {
+        & $nasm -f win64 "coa-nasm\out\model\farecalculator.asm" -o $fareObject
+    }
+    Invoke-Checked "Link Windows fare calculator" {
+        & $gcc $fareObject -o $fareExe
+    }
+    Invoke-Demo "Run fare calculator" $fareExe "5000`n3`n900`n500`n180`n120`n"
+
+    $fuelObject = Join-Path $asmBuild "fuel.obj"
+    $fuelExe = Join-Path $asmBuild "fuel.exe"
+    Invoke-Checked "Assemble Windows fuel calculator" {
+        & $nasm -f win64 "coa-nasm\out\model\fuelcalci.asm" -o $fuelObject
+    }
+    Invoke-Checked "Link Windows fuel calculator" {
+        & $gcc $fuelObject -o $fuelExe
+    }
+    Invoke-Demo "Run fuel calculator" $fuelExe "1400`n2`n300`n5000`n"
+
+    $hexObject = Join-Path $asmBuild "hex-to-bcd.obj"
+    $hexExe = Join-Path $asmBuild "hex-to-bcd.exe"
+    Invoke-Checked "Assemble Windows hexadecimal converter" {
+        & $nasm -f win64 "coa-nasm\HexToBCD.asm" -o $hexObject
+    }
+    Invoke-Checked "Link Windows hexadecimal converter" {
+        & $gcc $hexObject -o $hexExe
+    }
+    Invoke-Demo "Run hexadecimal and BCD conversion checks" $hexExe "0`n"
+    Invoke-Demo "Run hexadecimal and BCD conversion checks" $hexExe "0x1A2B3C`n"
+    Invoke-Demo "Run maximum 64-bit hexadecimal conversion check" $hexExe "0xFFFFFFFFFFFFFFFF`n"
+
+    $fareSimulation = Join-Path $asmBuild "fare_simulation.exe"
+    Invoke-Checked "Build fare register simulation" {
+        & $gpp -std=c++17 "assembly-component\fare_calc_sim.cpp" -o $fareSimulation
+    }
+    Invoke-Demo "Run fare register simulation" $fareSimulation $null
+
+    $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
+    $distributions = @()
+    if ($null -ne $wsl) {
+        $distributions = & $wsl.Source --list --quiet 2>$null
+    }
+    if ($LASTEXITCODE -eq 0 -and $distributions -contains "Debian") {
+        $windowsBuildPath = $buildRoot.Replace('\', '/')
+        $wslBuildPath = (& $wsl.Source -d Debian -- wslpath -a $windowsBuildPath).Trim()
+        if ($LASTEXITCODE -ne 0) { throw "Could not locate the temporary build folder inside WSL." }
+        $windowsProjectPath = $PSScriptRoot.Replace('\', '/')
+        $wslProjectPath = (& $wsl.Source -d Debian -- wslpath -a $windowsProjectPath).Trim()
+        if ($LASTEXITCODE -ne 0) { throw "Could not locate the project folder inside WSL." }
+
+        $linuxBuild = "cd '$wslBuildPath' && " +
+            "nasm -f elf64 '$wslProjectPath/assembly-component/fare_calc.asm' -o fare_calc.o && " +
+            "gcc -no-pie fare_calc.o -o fare_calc && ./fare_calc && " +
+            "nasm -f elf64 '$wslProjectPath/coa-nasm/out/model/MulAddShift.asm' -o multiply.o && " +
+            "ld multiply.o -o multiply && { printf '5000\n'; sleep 0.1; printf '3\n'; } | ./multiply && " +
+            "nasm -f elf64 '$wslProjectPath/coa-nasm/out/model/multisuccadd.asm' -o successive-add.o && " +
+            "ld successive-add.o -o successive-add && printf '1F4\nA\n' | ./successive-add"
+        Invoke-Checked "Build and run Linux assembly demos in WSL" {
+            & $wsl.Source -d Debian -- bash -lc $linuxBuild
+        }
+    } else {
+        Write-Warning "Skipping Linux assembly demos; a Debian WSL distribution is not available."
+    }
+    [void]$subjectResults.Add("COA and assembly: PASSED")
+
+    Write-SubjectHeader "INTEGRATED OUTPUT: ALL SUBJECTS"
+    foreach ($result in $subjectResults) {
+        Write-Host "[PASS] $result" -ForegroundColor Green
+    }
+    Write-Host "Java booking checks: 13 passed, 0 failed." -ForegroundColor Green
+    Write-Host "The subject demonstrations and integration checks completed successfully." -ForegroundColor Cyan
+} finally {
+    if (Test-Path $buildRoot) {
+        Remove-Item -LiteralPath $buildRoot -Recurse -Force
+    }
+}

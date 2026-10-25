@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Airline Project — Subject Concepts and Code Map</title>
+  <style>
+    @page { size: A4; margin: 17mm 16mm 18mm; }
+    :root { color: #18283d; background: #fff; font: 9.5pt/1.45 "Segoe UI", Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    h1, h2, h3 { color: #12395a; line-height: 1.2; }
+    h1 { font-size: 27pt; margin: 0 0 10pt; }
+    h2 { font-size: 18pt; margin: 0 0 12pt; padding-bottom: 6pt; border-bottom: 2px solid #38a6ba; }
+    h3 { font-size: 11.5pt; margin: 13pt 0 5pt; }
+    p { margin: 5pt 0 8pt; }
+    ul, ol { margin: 5pt 0 9pt; padding-left: 19pt; }
+    li { margin: 3pt 0; }
+    code { font: 8.4pt Consolas, "Courier New", monospace; color: #173d63; overflow-wrap: anywhere; }
+    .cover { min-height: 245mm; display: flex; flex-direction: column; justify-content: center; padding: 17mm 14mm; border-left: 8px solid #27a2b6; background: linear-gradient(145deg,#f2f9fb,#fff 58%,#edf4fb); page-break-after: always; }
+    .eyebrow { color: #19778a; text-transform: uppercase; letter-spacing: 2pt; font-weight: 700; font-size: 8.5pt; }
+    .subtitle { color: #48627b; font-size: 14pt; max-width: 145mm; }
+    .tag { display: inline-block; background: #e3f4f6; color: #14566a; border-radius: 10px; padding: 3px 8px; margin: 3px 4px 3px 0; font-size: 8pt; }
+    .card { border: 1px solid #d5e0e8; border-radius: 6px; padding: 9pt 11pt; margin: 8pt 0; page-break-inside: avoid; }
+    .note, .warning { padding: 9pt 11pt; margin: 9pt 0; border-radius: 5px; page-break-inside: avoid; }
+    .note { background: #eef7fb; border-left: 4px solid #368daf; }
+    .warning { background: #fff5e6; border-left: 4px solid #d58b1d; }
+    table { width: 100%; border-collapse: collapse; margin: 8pt 0 12pt; font-size: 8.4pt; }
+    th { color: #fff; background: #17496c; text-align: left; }
+    td, th { padding: 5.5pt 6pt; border: 1px solid #d5e0e8; vertical-align: top; }
+    tr { page-break-inside: avoid; }
+    .subject { page-break-before: always; }
+    .first { page-break-before: auto; }
+    .label { color: #19778a; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1.4pt; }
+    .small { color: #536b80; font-size: 8pt; }
+    @media print {
+      th, .tag, .cover { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="eyebrow">Appendix · Subject-to-code reference</div>
+    <h1>Where the Subject Concepts Apply</h1>
+    <p class="subtitle">A practical map from course concepts to the airline project’s source files, worked examples, and user-facing scenarios.</p>
+    <div>
+      <span class="tag">PSOOP · Java</span><span class="tag">PL · C++ data structures</span>
+      <span class="tag">COA · Assembly / CPU concepts</span><span class="tag">CGL · Graphics algorithms</span>
+      <span class="tag">Web application · Integration</span>
+    </div>
+    <div class="card">
+      <strong>How to read this appendix</strong>
+      <p><strong>Direct application</strong> means the concept is visible in a feature or workflow. <strong>Coursework demonstration</strong> means a focused example models an airline scenario but is a separate program. <strong>Related, not shared</strong> means the same idea appears in the web product, but the academic code is not called by the web application.</p>
+      <p class="small">Paths are relative to the repository root. This appendix extends the main Airline Project Overview and is intended to be appended to it.</p>
+    </div>
+  </section>
+
+  <section class="subject first">
+    <div class="label">Subject 1</div>
+    <h2>PSOOP — Principles of Object-Oriented Programming</h2>
+    <p>PSOOP concepts organize airline entities as objects with state and behavior. Java is the clearest explicit course demonstration in this repository. The web backend also separates its responsibilities into modules, but it is JavaScript rather than a reuse of these Java classes.</p>
+    <table>
+      <tr><th>Concept</th><th>How it applies to the airline scenario</th><th>Where to see it</th></tr>
+      <tr><td>Classes and objects</td><td>Passengers, flights, airports, seats, bookings, and cabin classes are represented by domain classes. A booking object brings together passenger/flight/seat details, fare, PNR, and status.</td><td><code>java-oop/src/model/Passenger.java</code>; <code>Flight.java</code>; <code>Booking.java</code>; <code>Airport.java</code>; <code>Seat.java</code></td></tr>
+      <tr><td>Encapsulation</td><td>Model fields are kept private/protected and accessed through methods; a booking’s board/confirm operations express behavior instead of requiring callers to manipulate every field.</td><td><code>java-oop/src/model/Booking.java</code>; <code>Flight.java</code>; <code>Person.java</code></td></tr>
+      <tr><td>Abstraction</td><td>A general person has shared identity/contact information and a role-description contract; callers can work with the common abstraction without needing every role-specific detail.</td><td><code>java-oop/src/model/Person.java</code> (abstract class and <code>getRoleDescription()</code>); <code>SeatClass.java</code></td></tr>
+      <tr><td>Inheritance</td><td>A passenger is a kind of person. Economy, Business, and FirstClass are kinds of travel-class fare/priority policy.</td><td><code>java-oop/src/model/Passenger.java</code> extends <code>Person</code>; <code>Economy.java</code>, <code>Business.java</code>, <code>FirstClass.java</code> extend <code>SeatClass.java</code></td></tr>
+      <tr><td>Polymorphism: overriding</td><td>Each cabin class provides its own fare and boarding priority; calling through a SeatClass reference selects the runtime class implementation.</td><td><code>java-oop/src/model/SeatClass.java</code>; <code>Economy.java</code>; <code>Business.java</code>; <code>FirstClass.java</code>; <code>PolymorphismDemo.java</code></td></tr>
+      <tr><td>Polymorphism: overloading</td><td>Flight fare calculation can be called with no options, travel class, baggage, or a promotional code. The selected overload adds the corresponding calculation.</td><td><code>java-oop/src/model/Flight.java</code> — overloaded <code>calculateFare(...)</code> methods</td></tr>
+      <tr><td>Interfaces</td><td>Boarding capability is expressed as a contract: check eligibility, choose a boarding zone, and confirm boarding. Booking implements that contract.</td><td><code>java-oop/src/model/IBoardable.java</code>; <code>Booking.java</code></td></tr>
+      <tr><td>Custom exceptions</td><td>A taken seat or invalid PNR is an expected booking failure that can be caught and handled; a checked seat-conflict exception forces callers to acknowledge the case.</td><td><code>java-oop/src/model/SeatAlreadyBookedException.java</code>; <code>InvalidPNRException.java</code>; <code>BookingService.java</code>; <code>java-oop/src/BookingSystemTest.java</code></td></tr>
+      <tr><td>Collections and file I/O</td><td>A passenger can hold multiple bookings in a list. A separate file manager saves and loads booking records using a versioned format and validates corrupt entries.</td><td><code>Passenger.java</code> (<code>ArrayList&lt;Booking&gt;</code>); <code>java-oop/src/util/BookingFileManager.java</code> and <code>BookingFileManagerTest.java</code></td></tr>
+      <tr><td>Input validation</td><td>PNR, flight number, age, and seat-number input are checked before being treated as valid domain data.</td><td><code>java-oop/src/util/ValidationUtils.java</code>; <code>StringUtils.java</code></td></tr>
+    </table>
+    <div class="note"><strong>Connection to the actual web workflow:</strong> the Vue screens and Express controllers also represent booking, passenger, seat, and flight concepts. That is a related architecture, not a shared class model: the web product is implemented in Vue/JavaScript and Node/JavaScript, and the Java model is compiled and demonstrated independently.</div>
+    <h3>What a demonstration proves</h3>
+    <p>The Java practicals show object-oriented modeling, method dispatch, booking-state behavior, exception paths, validation, and a local file format. They do not prove Java persistence is synchronized with the MySQL-backed web API.</p>
+  </section>
+
+  <section class="subject">
+    <div class="label">Subject 2</div>
+    <h2>PL — Programming Lab / Data Structures</h2>
+    <p>The C++ practicals choose a data structure to match an airline operation. These implementations make the abstract structures tangible by inserting passengers, mapping seats, promoting waitlisted passengers, ordering manifests, or undoing seat selections.</p>
+    <table>
+      <tr><th>Concept / structure</th><th>Airline use and behavior</th><th>Project location</th></tr>
+      <tr><td>Fixed array and sequential search</td><td>A bounded passenger register supports add, display, lookup, update, and delete by PNR. Lookup scans entries linearly; deletion shifts later entries to close the gap. Capacity is limited to 50 entries.</td><td><code>cpp-ds/src/PassengerArray.h</code>; <code>PassengerArray.cpp</code></td></tr>
+      <tr><td>Two-dimensional array</td><td>Rows and columns represent cabin seats. Values encode available (0), booked (1), or blocked/emergency (2); bounds are checked, and rows map to cabin classes.</td><td><code>cpp-ds/src/SeatMap2D.h</code>; <code>SeatMap2D.cpp</code></td></tr>
+      <tr><td>Sparse representation</td><td>The full cabin grid is dense, but an auxiliary vector records only non-available seats. It illustrates the sparse-matrix idea when most seats are empty.</td><td><code>cpp-ds/src/SeatMap2D.h</code> (<code>occupiedList</code>); <code>SeatMap2D.cpp</code></td></tr>
+      <tr><td>FIFO queue / waitlist</td><td>Passengers join a waiting line in arrival order. When a booked passenger cancels, their seat is released and the queue front is promoted first, preserving fairness by arrival order.</td><td><code>cpp-ds/src/Waitlist.h</code>; <code>Waitlist.cpp</code> (<code>std::queue&lt;Passenger&gt;</code>)</td></tr>
+      <tr><td>Circular queue</td><td>The boarding line uses a fixed array; front/rear wrap using modulo, reusing freed slots without shifting the remaining passengers. An explicit count distinguishes full from empty.</td><td><code>cpp-ds/src/BoardingQueueCircular.cpp</code> (<code>enqueue</code>, <code>dequeue</code>, <code>display</code>)</td></tr>
+      <tr><td>Singly linked list</td><td>Booking-history nodes link to the next booking; records can be appended, searched by PNR, and displayed. The destructor releases the allocated nodes.</td><td><code>cpp-ds/src/LinkedList.cpp</code> (<code>BookingHistoryList</code>)</td></tr>
+      <tr><td>Doubly linked list and sorted merge</td><td>Passenger manifest nodes hold previous and next pointers; seat ordering enables inserting records into a sorted list and merging boarding-group manifests.</td><td><code>cpp-ds/src/ManifestMergeDLL.cpp</code></td></tr>
+      <tr><td>Stack / LIFO</td><td>Each seat select/cancel action is pushed. Undo pops the latest action and applies its inverse, so the most recent change is reversed first.</td><td><code>cpp-ds/src/undostack.cpp</code></td></tr>
+      <tr><td>Composition of structures</td><td>The combined demonstration invokes passenger storage, a seat map, and a waitlist as separate components of one console scenario.</td><td><code>cpp-ds/src/main.cpp</code>; <code>PassengerArray.cpp</code>; <code>SeatMap2D.cpp</code>; <code>Waitlist.cpp</code></td></tr>
+    </table>
+    <h3>How to explain the data-structure choices</h3>
+    <ul>
+      <li><strong>Array:</strong> simple indexed seat/passenger storage with fixed capacity; linear search is straightforward but grows with the number of stored entries.</li>
+      <li><strong>Queue:</strong> natural for fairness and first-come-first-served service at a waitlist or boarding gate.</li>
+      <li><strong>Stack:</strong> natural for undo because the newest action is the first one reversed.</li>
+      <li><strong>Linked list:</strong> supports dynamically linked records and ordered insertion, at the cost of pointer management and traversal to find positions.</li>
+      <li><strong>2D / sparse seat map:</strong> the grid mirrors cabin coordinates; sparse tracking avoids listing every available seat when reporting exceptions/status.</li>
+    </ul>
+    <div class="warning"><strong>Boundary:</strong> these C++ structures are coursework implementations and demonstrations. The website uses MySQL tables and backend logic for live booking; the C++ arrays and queues are not the production storage layer and do not automatically synchronize with it.</div>
+  </section>
+
+  <section class="subject">
+    <div class="label">Subject 3</div>
+    <h2>COA — Computer Organization and Architecture</h2>
+    <p>COA examples connect high-level airline arithmetic to machine-level representation and execution: values are loaded into registers, operations update register contents, memory holds input/output data, and control flow responds to comparisons.</p>
+    <table>
+      <tr><th>Concept</th><th>How the project demonstrates it</th><th>Project location</th></tr>
+      <tr><td>Registers and arithmetic instructions</td><td>The fare practical loads base fare into RAX, tax into RBX, discount into RCX, then performs ADD and SUB; the result is stored and printed. Example: 5000 + 900 − 500 = 5400.</td><td><code>assembly-component/fare_calc.asm</code>; C++ companion <code>fare_calc_sim.cpp</code></td></tr>
+      <tr><td>Memory sections and data sizes</td><td>NASM separates initialized constants/data, reserved storage, and executable instructions using .data/.bss/.text. Directives such as <code>dq</code> and <code>resq</code> reserve 64-bit quantities.</td><td><code>assembly-component/fare_calc.asm</code>; <code>coa-nasm/HexToBCD.asm</code>; <code>coa-nasm/out/model/fuelcalci.asm</code></td></tr>
+      <tr><td>Addressing and memory access</td><td>Examples load and store values through registers and memory operands, including RIP-relative references such as <code>[rel base_fare]</code>.</td><td><code>assembly-component/fare_calc.asm</code>; <code>coa-nasm/HexToBCD.asm</code></td></tr>
+      <tr><td>Input/output calling convention</td><td>Assembly routines call C runtime <code>printf</code>/<code>scanf</code>. Register arguments and stack space/alignment demonstrate the platform ABI boundary.</td><td><code>assembly-component/fare_calc.asm</code> (SysV-style registers); <code>coa-nasm/HexToBCD.asm</code> and <code>fuelcalci.asm</code> (Windows x64 shadow-space setup)</td></tr>
+      <tr><td>Multiplication, division, and conditional branch</td><td>The fuel example multiplies distance by fuel rate, adds reserve, subtracts from capacity, then compares remaining fuel and branches to a critical/low/sufficient status message.</td><td><code>coa-nasm/out/model/fuelcalci.asm</code> (assembled by the root PowerShell runner)</td></tr>
+      <tr><td>Number systems and BCD</td><td>A 64-bit hexadecimal booking-like value is converted to decimal digits and packed BCD for display, illustrating base conversion and digit representation.</td><td><code>coa-nasm/HexToBCD.asm</code></td></tr>
+      <tr><td>Control unit: fetch/decode/execute</td><td>A small instruction list is fetched in sequence, its opcode is decoded, and a stub ALU executes ADD/SUB/MUL. This is a conceptual CPU control-flow simulation, not a hardware emulator.</td><td><code>java-oop-coa-ui/src/coa/controlunit.java</code></td></tr>
+      <tr><td>Higher-level arithmetic model</td><td>A Java fare calculator applies cabin multipliers and a passenger-count surcharge, presenting the same business domain above the assembly level.</td><td><code>java-oop-coa-ui/src/coa/FareCalculator.java</code></td></tr>
+    </table>
+    <h3>Where COA meets the airline domain</h3>
+    <p>Fare/tax/discount and fuel/distance arithmetic provide meaningful values for the examples. They are independent practicals: the NASM fare result is not the live backend’s fare calculator. The web booking backend separately calculates a fare breakdown in <code>airline-backend/src/utils/fareCalculator.js</code>.</p>
+    <p>The root <code>run_integrated_system.ps1</code> assembles the Windows examples with NASM and links them with GCC. Linux ELF practicals run only if Debian on WSL is available; the runner reports when those are skipped.</p>
+  </section>
+
+  <section class="subject">
+    <div class="label">Subject 4</div>
+    <h2>CGL — Computer Graphics Lab</h2>
+    <p>CGL turns routes, airport nodes, aircraft silhouettes, and cabin seats into pixels and filled shapes. The project shows both algorithmic output and interactive renderings.</p>
+    <table>
+      <tr><th>Concept / algorithm</th><th>Airline visual application</th><th>Project location</th></tr>
+      <tr><td>DDA line rasterization</td><td>Plots a route or cabin-grid line by advancing fractional x/y increments and rounding to pixel coordinates; comparisons illustrate floating-point arithmetic and rounding.</td><td><code>cpp-cg/src/DDALine.cpp</code></td></tr>
+      <tr><td>Bresenham line algorithm</td><td>Plots a flight path between airport coordinates using integer error updates; route line pixels can be passed to OpenGL as points.</td><td><code>cpp-cg/src/Bresenham.cpp</code>; <code>Bresenham.h</code>; <code>RouteMap.cpp</code>; <code>main.cpp</code></td></tr>
+      <tr><td>Midpoint/Bresenham circle</td><td>Uses eight-way symmetry to draw a circular airport/terminal marker around a route endpoint.</td><td><code>cpp-cg/src/Bresenham.cpp</code> (<code>bresenhamCircle</code>); <code>RouteMap.cpp</code></td></tr>
+      <tr><td>Flood fill</td><td>Starts from a clicked seed pixel and fills connected interior pixels without crossing a seat boundary; colors communicate available, selected, or booked state.</td><td><code>cpp-cg/src/Floodfill.cpp</code> (iterative 4-connected stack fill)</td></tr>
+      <tr><td>Scan-line polygon fill</td><td>Builds an edge table and active edge list, finds edge intersections per horizontal scanline, and fills spans. This can fill the tapered fuselage or other irregular polygons.</td><td><code>cpp-cg/src/ScanlineFill.cpp</code>; <code>ScanlineFill.h</code>; used with <code>PlaneGlyph.cpp</code></td></tr>
+      <tr><td>2D transformations / viewport</td><td>Defines cabin class panel bounds and seat layout zones within an aircraft world-coordinate frame; graphics setup fits/clips the content into the window.</td><td><code>cpp-cg/src/SeatMapTransform.cpp</code>; <code>PlaneGlyph.cpp</code>; <code>Seats.cpp</code></td></tr>
+      <tr><td>OpenGL rendering pipeline callbacks</td><td>Initializes a window and projection, registers a display callback, then sends rasterized route/airport points for drawing.</td><td><code>cpp-cg/src/main.cpp</code>; <code>RouteMap.cpp</code>; <code>Bresenham.cpp</code></td></tr>
+      <tr><td>Interactive visualization</td><td>Provides tabs and interactive seat/algorithm views as an easy-to-run visual overview without compiling each window for browsing.</td><td><code>cpp-cg/visualization.html</code></td></tr>
+    </table>
+    <h3>How the graphics concepts relate to the booking experience</h3>
+    <p>A route drawing corresponds visually to a flight between airports; a seat grid corresponds to cabin layout; fill colors correspond to seat status. These are illustrative representations. The C++/OpenGL visuals do not query live seat inventory or render the Vue seat-selection page.</p>
+    <div class="note"><strong>Validation note:</strong> the integration runner compile-checks CG source files and opens the standalone HTML visualizer. OpenGL window builds require the appropriate FreeGLUT/OpenGL development environment.</div>
+  </section>
+
+  <section class="subject">
+    <div class="label">Cross-subject integration</div>
+    <h2>Web application and software integration concepts</h2>
+    <p>Beyond the academic subjects, the Vue/Express/MySQL portion puts the same airline domain into an application architecture with separate presentation, API, and persistence responsibilities.</p>
+    <table>
+      <tr><th>Software concept</th><th>Project application</th><th>Where to see it</th></tr>
+      <tr><td>Presentation and routing</td><td>Passenger and administrator pages are routed separately, with route metadata for login and role requirements.</td><td><code>frontend/src/router/index.js</code>; <code>frontend/src/layouts/</code>; <code>frontend/src/views/</code></td></tr>
+      <tr><td>Client state and service boundary</td><td>Pinia stores hold session, flight, seat, booking, and admin state. An Axios service centralizes the API base URL, bearer token, and response/error behavior.</td><td><code>frontend/src/stores/</code>; <code>frontend/src/services/api.js</code></td></tr>
+      <tr><td>REST-style endpoints</td><td>Feature routes divide authentication, flights, airports, seats, bookings, boarding, payments, passengers, and admin operations.</td><td><code>airline-backend/src/app.js</code>; <code>airline-backend/src/routes/</code></td></tr>
+      <tr><td>Middleware and authorization</td><td>JWT middleware authenticates requests; an admin role guard protects administrator operations. Central error/404 handlers are mounted at the application boundary.</td><td><code>airline-backend/src/middleware/auth.js</code>; <code>errorHandler.js</code></td></tr>
+      <tr><td>Relational modeling and constraints</td><td>Foreign keys link accounts, profiles, flights, seats, bookings, passengers, payments, PNRs, and boarding rows. Uniqueness constraints prevent duplicate identifiers and duplicate seats on the same flight.</td><td><code>database/schema.sql</code></td></tr>
+      <tr><td>Transactions and concurrency</td><td>The MySQL booking flow starts a transaction and locks the flight/selected seats before inserting booking records and updating occupancy, reducing conflicting seat assignments.</td><td><code>airline-backend/src/controllers/bookingController.js</code></td></tr>
+      <tr><td>Fare calculation and validation</td><td>The server calculates the fare breakdown; client fare state is used for display/booking preparation. Backend validation checks passenger data, duplicate seats, flight seats, and occupied/blocked status.</td><td><code>airline-backend/src/utils/fareCalculator.js</code>; <code>bookingController.js</code>; <code>frontend/src/stores/bookingStore.js</code></td></tr>
+      <tr><td>Configuration and build</td><td>Environment variables configure server/database/token settings; Vite builds the frontend; a PowerShell script separately compiles course demonstrations.</td><td><code>airline-backend/.env.example</code>; <code>frontend/package.json</code>; <code>run_integrated_system.ps1</code></td></tr>
+    </table>
+    <h3>One booking, viewed across subjects</h3>
+    <ol>
+      <li><strong>PSOOP:</strong> Passenger, Flight, Seat, and Booking model the domain and its behavior.</li>
+      <li><strong>PL:</strong> arrays/maps/queues/lists/stacks demonstrate passenger records, seat occupancy, waitlisting, manifests, and undo.</li>
+      <li><strong>COA:</strong> fare arithmetic is reduced to register operations; values are stored and processed at machine level.</li>
+      <li><strong>CGL:</strong> the route and cabin are rendered as geometric shapes and rasterized pixels.</li>
+      <li><strong>Web application:</strong> a real UI workflow sends a booking request to an API and, when MySQL is configured, persists associated records transactionally.</li>
+    </ol>
+    <div class="warning"><strong>Keep the boundaries clear in a presentation:</strong> the connection among subjects is a shared airline scenario and complementary demonstrations. Unless specifically wired otherwise, the Java, C++, assembly, and browser visualizer examples do not invoke one another or the live web API.</div>
+  </section>
+</body>
+</html>

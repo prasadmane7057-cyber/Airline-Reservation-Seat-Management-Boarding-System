@@ -14,6 +14,15 @@ public class DBConnection {
     private static final String PASSWORD = "password";
     private static Connection connection = null;
 
+    public static void testConnection() throws ClassNotFoundException, SQLException {
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        try (Connection testConnection = DriverManager.getConnection(URL, USER, PASSWORD)) {
+            if (!testConnection.isValid(3)) {
+                throw new SQLException("The database connection did not pass validation.");
+            }
+        }
+    }
+
     public static Connection getConnection() {
         if (connection == null) {
             try {
@@ -22,9 +31,11 @@ public class DBConnection {
                 connection = DriverManager.getConnection(URL, USER, PASSWORD);
                 System.out.println(" Connected to MySQL database successfully.");
             } catch (ClassNotFoundException e) {
-                System.out.println("  MySQL JDBC Driver not found in classpath (Expected for standalone CLI demo).");
+                System.err.println("MySQL JDBC driver is missing from the classpath.");
+                e.printStackTrace();
             } catch (SQLException e) {
-                System.out.println("  MySQL Database unreachable (Ensure MySQL service is running on port 3306).");
+                System.err.println("MySQL connection failed: " + e.getMessage());
+                e.printStackTrace();
             }
         }
         return connection;

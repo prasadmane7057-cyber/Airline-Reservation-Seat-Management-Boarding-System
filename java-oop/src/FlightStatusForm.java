@@ -2,6 +2,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+
+import model.DBConnection;
 
 /*
  * Airline Management System - Flight Status Update Form
@@ -20,8 +26,11 @@ public class FlightStatusForm extends JFrame implements ActionListener {
     JLabel lblFlight, lblDest, lblStatus;
     JTextField txtFlight, txtDest;
     JComboBox<String> cmbStatus;
-    JButton btnAdd, btnUpdate, btnView;
+    JButton btnAdd, btnUpdate, btnView, btnTestConnection;
     JTextArea area;
+    private JPanel flightActionsPanel;
+    private final Set<String> flightNumbers = new HashSet<>();
+    private boolean flightNumbersLoaded;
 
     public FlightStatusForm() {
         setTitle("Flight Status Update");
@@ -44,6 +53,16 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         btnAdd = new JButton("Add Flight");
         btnUpdate = new JButton("Update Status");
         btnView = new JButton("View All");
+        btnTestConnection = new JButton("Test Connection");
+
+        flightActionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        flightActionsPanel.setBorder(BorderFactory.createTitledBorder("Flight Actions"));
+        flightActionsPanel.add(btnUpdate);
+        flightActionsPanel.add(btnView);
+
+        JPanel connectionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        connectionPanel.setBorder(BorderFactory.createTitledBorder("Database"));
+        connectionPanel.add(btnTestConnection);
 
         // Output area
         area = new JTextArea(12, 35);
@@ -53,13 +72,23 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         add(lblFlight);  add(txtFlight);
         add(lblDest);    add(txtDest);
         add(lblStatus);  add(cmbStatus);
-        add(btnAdd);     add(btnUpdate);   add(btnView);
+        add(btnAdd);
+        add(connectionPanel);
+        add(flightActionsPanel);
         add(new JScrollPane(area));
+
+        try {
+            loadFlightNumbers();
+            flightActionsPanel.setVisible(!flightNumbers.isEmpty());
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error reading flights: " + ex.getMessage());
+        }
 
         // Register button clicks
         btnAdd.addActionListener(this);
         btnUpdate.addActionListener(this);
         btnView.addActionListener(this);
+        btnTestConnection.addActionListener(this);
 
         setVisible(true);
     }
@@ -72,10 +101,27 @@ public class FlightStatusForm extends JFrame implements ActionListener {
             updateStatus();
         } else if (e.getSource() == btnView) {
             viewAll();
+        } else if (e.getSource() == btnTestConnection) {
+            testDatabaseConnection();
         }
     }
 
-    // ADD: appends one line to the file -> O(1) to write, O(n) to check duplicates
+    private void testDatabaseConnection() {
+        try {
+            DBConnection.testConnection();
+            JOptionPane.showMessageDialog(this, "Database connection successful.");
+        } catch (ClassNotFoundException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "MySQL JDBC driver is missing. Add Connector/J to the Java classpath.",
+                    "Connection Test Failed", JOptionPane.ERROR_MESSAGE);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Database connection failed: " + ex.getMessage(),
+                    "Connection Test Failed", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ADD: builds the duplicate-check index once, then checks duplicates in O(1) on average
     void addFlight() {
         String no = txtFlight.getText().trim();
         String dest = txtDest.getText().trim().replace(",", " "); // commas would break the CSV
@@ -87,13 +133,21 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         }
         no = no.replace(",", "");
 
-        if (flightExists(no)) {
-            JOptionPane.showMessageDialog(this, "Flight already exists. Use Update Status.");
+        try {
+            if (flightExists(no)) {
+                JOptionPane.showMessageDialog(this, "Flight already exists. Use Update Status.");
+                return;
+            }
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error reading flights: " + ex.getMessage());
             return;
         }
 
         try (FileWriter fw = new FileWriter(FILE, true)) { // true = append mode
             fw.write(no + "," + dest + "," + status + "\n");
+            flightNumbers.add(normalizeFlightNumber(no));
+            flightActionsPanel.setVisible(true);
+            revalidate();
             JOptionPane.showMessageDialog(this, "Flight added.");
             txtFlight.setText("");
             txtDest.setText("");
@@ -159,19 +213,31 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         }
     }
 
-    // Helper: checks whether a flight number is already in the file
-    boolean flightExists(String no) {
-        try (BufferedReader br = new BufferedReader(new FileReader(FILE))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (line.split(",")[0].equalsIgnoreCase(no)) {
-                    return true;
+    // The first check loads the CSV once; later checks use the in-memory index.
+    boolean flightExists(String no) throws IOException {
+        loadFlightNumbers();
+        return flightNumbers.contains(normalizeFlightNumber(no));
+    }
+
+    private void loadFlightNumbers() throws IOException {
+        if (!flightNumbersLoaded) {
+            File file = new File(FILE);
+            if (file.exists()) {
+                try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        int delimiter = line.indexOf(',');
+                        String flightNo = delimiter < 0 ? line : line.substring(0, delimiter);
+                        flightNumbers.add(normalizeFlightNumber(flightNo));
+                    }
                 }
             }
-        } catch (IOException ex) {
-            // file does not exist yet, so no duplicates
+            flightNumbersLoaded = true;
         }
-        return false;
+    }
+
+    private String normalizeFlightNumber(String no) {
+        return no.toLowerCase(Locale.ROOT);
     }
 
     public static void main(String[] args) {

@@ -142,7 +142,7 @@ void buildGroupFromInput(Node*& head, Node*& tail, const string& groupName) {
         Node* newNode = readPassengerFromInput(groupName);//Read passenger details and create a node
         insertSorted(head, tail, newNode);//Insert the passenger into the sorted list
     }
-}hjkj7
+}
 //this function two already sorted doubly linked lists into one sorted doubly linked list.
 Node* mergeManifests(Node* headA, Node* headB) {
     if (headA == nullptr) return headB;

@@ -11,9 +11,12 @@ package-lock.json
 out/
 bin/
 dist/
+java-oop/lib/*.jar
 
 # IDE & OS
-.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
 .idea/
 .DS_Store
 Thumbs.db

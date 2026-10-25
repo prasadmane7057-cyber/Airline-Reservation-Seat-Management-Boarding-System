@@ -2,6 +2,9 @@
 // Test that uses values typed by the user (nothing hardcoded). Run: java BookingSystemTest
 // Expected results are worked out from what the user typed.
 
+import model.Economy;
+import model.SeatClass;
+
 import java.util.ArrayList;
 
 public class BookingSystemTest {
@@ -30,7 +33,7 @@ public class BookingSystemTest {
                 String pnr  = BookingSystem.ConsoleInput.text("  PNR: ");
                 String name = BookingSystem.ConsoleInput.text("  Passenger name: ");
                 String seat = BookingSystem.ConsoleInput.seat();
-                BookingClass bc = BookingSystem.ConsoleInput.bookingClass();
+                SeatClass bc = BookingSystem.ConsoleInput.bookingClass();
                 BookingSystem.BookingRecord b =
                     new BookingSystem.BookingRecord(pnr, name, flight, seat, bc, "Confirmed");
                 if (store.addBooking(b)) { all[i] = b; break; }
@@ -82,5 +85,6 @@ public class BookingSystemTest {
 
         System.out.println("\nPassed: " + passed + "  Failed: " + failed);
         if (failed == 0) System.out.println("ALL TESTS PASSED.");
+        else System.exit(1);
     }
 }

@@ -36,3 +36,20 @@ An integrated airline project combining PSOOP, programming/data structures, COA,
 - `cpp-cg/`: C++ graphics algorithms, seat grid, and route map.
 - `shared-data/`: CSV data and its format notes for cross-module use.
 - `report/`: syllabus mapping, final report, AI usage log, demo script, and viva preparation.
+
+## Run the command-line demos
+
+From the repository root, run:
+
+```powershell
+.\run_integrated_system.ps1
+```
+
+The script compiles into a temporary folder, runs the Java, C++, and assembly
+command-line demos and checks, then removes its build files. It opens
+`cpp-cg/visualization.html` in the default browser, with one tab for the
+complete aircraft and interactive seats and another for the CG algorithms.
+It requires a JDK, a C++ compiler with the graphics headers, GCC, and NASM.
+Linux-only assembly examples also run when Debian on WSL is available;
+otherwise, the script reports that those examples were skipped. It does not
+start the MySQL-backed web services.
