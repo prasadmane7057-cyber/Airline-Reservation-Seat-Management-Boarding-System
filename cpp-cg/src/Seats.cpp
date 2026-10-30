@@ -113,14 +113,28 @@ void drawSeats()
     drawPilotSeat(55.0f, 270.0f);
 
     // ==================================================
-    // 2. BUSINESS CLASS - 2 + 2
+    // 2. FIRST CLASS - 2 + 2
     // ==================================================
-    float businessStartX = 125.0f;
+    for (int row = 0; row < 2; row++)
+    {
+        float x = 95.0f + row * 48.0f;
+        int matrixRow = row;
+
+        drawPassengerSeat(x, 320.0f, matrixRow, 0, true);
+        drawPassengerSeat(x, 300.0f, matrixRow, 1, true);
+        drawPassengerSeat(x, 275.0f, matrixRow, 2, true);
+        drawPassengerSeat(x, 255.0f, matrixRow, 3, true);
+    }
+
+    // ==================================================
+    // 3. BUSINESS CLASS - 2 + 2
+    // ==================================================
+    float businessStartX = 210.0f;
 
     for (int row = 0; row < 4; row++)
     {
         float x = businessStartX + row * 48.0f;
-        int matrixRow = row % rows;
+        int matrixRow = row + 2;
 
         // Left side
         drawPassengerSeat(x, 320.0f, matrixRow, 0, true);
@@ -134,7 +148,7 @@ void drawSeats()
     }
 
     // ==================================================
-    // 3. ECONOMY CLASS - 3 + 3 across the long fuselage
+    // 4. ECONOMY CLASS - 3 + 3 across the long fuselage
     // ==================================================
     float economyStartX = 390.0f;
 
@@ -155,7 +169,7 @@ void drawSeats()
     }
 
     // ==================================================
-    // 4. CREW / EMERGENCY JUMP SEATS
+    // 5. CREW / EMERGENCY JUMP SEATS
     // ==================================================
     drawCrewSeat(350.0f, 320.0f);
     drawCrewSeat(350.0f, 255.0f);
@@ -164,14 +178,14 @@ void drawSeats()
     drawCrewSeat(825.0f, 255.0f);
 
     // ==================================================
-    // 5. AISLES
+    // 6. AISLES
     // ==================================================
     glColor3f(0.75f, 0.75f, 0.75f);
 
-    // Business aisle
+    // First and business-class aisle
     glBegin(GL_LINES);
-        glVertex2f(120.0f, 289.0f);
-        glVertex2f(330.0f, 289.0f);
+        glVertex2f(90.0f, 289.0f);
+        glVertex2f(375.0f, 289.0f);
     glEnd();
 
     // Economy aisle

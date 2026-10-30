@@ -6,7 +6,12 @@
 extern const float PLANE_WORLD_WIDTH;    // 1000 - world X extent of the aircraft glyph
 extern const float PLANE_WORLD_HEIGHT;   // 600  - world Y extent of the aircraft glyph
 void drawPlaneGlyph();                   // draws fuselage + wings + tail + engines + doors
-void drawSeats();                        // draws cockpit, business, economy, crew seats & aisles
+void drawSeats();                        // draws cockpit, passenger classes, crew seats & aisles
+void initializeAircraftMaterials();
+void setAircraftTextureEnabled(bool enabled);
+void setAircraftLightingEnabled(bool enabled);
+bool isAircraftTextureEnabled();
+bool isAircraftLightingEnabled();
 
 // ---------------------------------------------------------------
 // Window size. The extra 100px of height above the aircraft's own
@@ -38,17 +43,7 @@ enum SeatClassZone {
     ECONOMY_ZONE
 };
 
-// ============================================================
-// INTEGRATION POINT - see the big comment at the top of this file.
-// Returns the on-screen rectangle a class's seats occupy, using
-// PLACEHOLDER numbers until the teammate's seat module is merged in.
-//
-// CHANGE: the old Business block (95 -> 375) is now split into two
-// blocks - First (95 -> 200) and Business (210 -> 375) - with a
-// 10-unit gap between them for a visible cabin divider. Economy is
-// unchanged: it still starts just past the overwing exit door at
-// X = 380, matching PlaneGlyph.cpp's OVERWING_DOOR_X.
-// ============================================================
+// Returns the aircraft-space bounds used to center each cabin zoom.
 void getClassPanelBounds(SeatClassZone zone, float& minX, float& minY, float& maxX, float& maxY) {
     // vertical range = inside the fuselage walls (same for every class)
     minY = 245.0f + 8.0f;    // a little inside the fuselage's bottom edge
@@ -72,37 +67,6 @@ const char* zoneToString(SeatClassZone zone) {
         case BUSINESS_ZONE: return "Business Class";
         default:             return "Economy Class";
     }
-}
-
-// ---------------------------------------------------------------
-// TEMPORARY STAND-IN for the teammate's seat-drawing function.
-// Draws a light, semi-transparent panel with a label over the
-// class's bounds, so the demo is visually complete before the
-// real seat grid is merged in. DELETE this function (and its calls
-// in display()) once the real seat module is plugged in.
-// ---------------------------------------------------------------
-void drawPlaceholderSeatPanel(SeatClassZone zone) {
-    float minX, minY, maxX, maxY;
-    getClassPanelBounds(zone, minX, minY, maxX, maxY);
-
-    glColor4f(0.40f, 0.70f, 0.95f, 0.35f);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBegin(GL_QUADS);
-        glVertex2f(minX, minY);
-        glVertex2f(maxX, minY);
-        glVertex2f(maxX, maxY);
-        glVertex2f(minX, maxY);
-    glEnd();
-    glDisable(GL_BLEND);
-
-    glColor3f(0.15f, 0.35f, 0.55f);
-    glBegin(GL_LINE_LOOP);
-        glVertex2f(minX, minY);
-        glVertex2f(maxX, minY);
-        glVertex2f(maxX, maxY);
-        glVertex2f(minX, maxY);
-    glEnd();
 }
 
 // ---------------------------------------------------------------
@@ -188,9 +152,6 @@ void display() {
 
     drawPlaneGlyph();
     drawSeats();
-    drawPlaceholderSeatPanel(FIRST_ZONE);
-    drawPlaceholderSeatPanel(BUSINESS_ZONE);
-    drawPlaceholderSeatPanel(ECONOMY_ZONE);
 
     // -----------------------------------------------------
     // Draw a white outline showing exactly where the clip window
@@ -216,10 +177,15 @@ void display() {
     glColor3f(1.0f, 1.0f, 1.0f);
     drawText(20, PLANE_WORLD_HEIGHT + 55, "Press 1 = Zoom First Class | 2 = Zoom Business | 3 = Zoom Economy | 0 = Reset | ESC = Quit");
 
-    char modeText[120];
-    snprintf(modeText, sizeof(modeText), "Current view: %s  (zoom x%.2f)  |  white box = clip window",
-             currentModeLabel, currentZoom);
+    char modeText[180];
+    snprintf(modeText, sizeof(modeText), "Current view: %s  (zoom x%.2f)  |  T texture: %s  |  L lighting: %s",
+             currentModeLabel, currentZoom,
+             isAircraftTextureEnabled() ? "ON" : "OFF",
+             isAircraftLightingEnabled() ? "ON" : "OFF");
     drawText(20, PLANE_WORLD_HEIGHT + 25, modeText);
+
+    snprintf(modeText, sizeof(modeText), "White box = clip window  |  Material: brushed metal with directional light");
+    drawText(20, PLANE_WORLD_HEIGHT - 5, modeText);
 
     glutSwapBuffers();
 }
@@ -283,6 +249,20 @@ void keyboard(unsigned char key, int x, int y) {
             currentModeLabel = "Full Aircraft View";
             printf("[CG-TRANSFORM] Key '0' Pressed -> Reset to Full Aircraft View (1.0x Zoom)\n");
             break;
+        case 't':
+        case 'T':
+            setAircraftTextureEnabled(!isAircraftTextureEnabled());
+            printf("[CG-MATERIAL] Surface texture %s\n",
+                   isAircraftTextureEnabled() ? "enabled" : "disabled");
+            glutPostRedisplay();
+            break;
+        case 'l':
+        case 'L':
+            setAircraftLightingEnabled(!isAircraftLightingEnabled());
+            printf("[CG-MATERIAL] Directional lighting %s\n",
+                   isAircraftLightingEnabled() ? "enabled" : "disabled");
+            glutPostRedisplay();
+            break;
         case 27:   // ESC
             printf("[CG-TRANSFORM] ESC Pressed -> Exiting Plane Glyph + Seat Transform Visualizer.\n");
             exit(0);
@@ -304,15 +284,18 @@ int main(int argc, char** argv) {
     printf("====================================================================\n");
     printf("[CG-INIT] Initializing FreeGLUT Window (1000x700)...\n");
     printf("[CG-INIT] Plane Glyph: Fuselage, Swept Wings, Jet Engines, Stabilizer, 6 Doors\n");
-    printf("[CG-INIT] Cabin Seats: Pilot Seats (Blue), Business (Purple), Economy (Green), Crew (Orange)\n");
+    printf("[CG-INIT] Cabin Seats: Pilots (Blue), First/Business (Purple), Economy (Green), Crew (Orange)\n");
     printf("[CG-INIT] 2D Transformation Pipeline: glScalef() + glTranslatef()\n");
     printf("[CG-INIT] Viewport Clipping: glScissor() bounding box\n");
+    printf("[CG-INIT] Surface Materials: procedural brushed-metal textures + directional OpenGL lighting\n");
     printf("--------------------------------------------------------------------\n");
     printf("Controls:\n");
     printf("  [1] Zoom to First Class Cabin\n");
     printf("  [2] Zoom to Business Class Cabin\n");
     printf("  [3] Zoom to Economy Class Cabin\n");
     printf("  [0] Reset to Full Aircraft Overview\n");
+    printf("  [T] Toggle surface textures\n");
+    printf("  [L] Toggle directional lighting\n");
     printf("  [ESC] Close Window and Exit\n");
     printf("====================================================================\n");
 
@@ -321,6 +304,9 @@ int main(int argc, char** argv) {
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     glutCreateWindow("Airline Seat Map - Plane Glyph + Real Seats + Transform/Clip Engine");
 
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    initializeAircraftMaterials();
     glClearColor(0.08f, 0.08f, 0.10f, 1.0f);
     reshape(WINDOW_WIDTH, WINDOW_HEIGHT);
 

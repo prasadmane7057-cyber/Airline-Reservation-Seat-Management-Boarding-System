@@ -33,7 +33,7 @@ An integrated airline project combining PSOOP, programming/data structures, COA,
 
 - `java-oop-coa-ui/`: Java domain model, structures, COA examples, and UI screens. Java sources are rooted at `java-oop-coa-ui/src/`.
 - `cpp-ds/`: C++ data-structure implementations and demonstrations.
-- `cpp-cg/`: C++ graphics algorithms, seat grid, and route map.
+- `cpp-cg/`: C++ graphics algorithms, Cohen-Sutherland line clipping, UV-mapped aircraft surface textures, directional lighting/materials, seat grid, and route map.
 - `shared-data/`: CSV data and its format notes for cross-module use.
 - `report/`: syllabus mapping, final report, AI usage log, demo script, and viva preparation.
 
@@ -47,9 +47,12 @@ From the repository root, run:
 
 The script compiles into a temporary folder, runs the Java, C++, and assembly
 command-line demos and checks, then removes its build files. It opens
-`cpp-cg/visualization.html` in the default browser, with one tab for the
-complete aircraft and interactive seats and another for the CG algorithms.
+`cpp-cg/visualization.html` in the default browser. The visualizer opens in a
+combined view with the aircraft, the C++ seat-matrix layout and booked states,
+material controls, and the CG algorithm demonstrations together; separate
+tabs are available to focus on the aircraft or algorithm outputs.
 It requires a JDK, a C++ compiler with the graphics headers, GCC, and NASM.
-Linux-only assembly examples also run when Debian on WSL is available;
-otherwise, the script reports that those examples were skipped. It does not
+Linux-only assembly examples, including the PNR string-operation tool, also run
+when Debian on WSL is available; otherwise, the script reports that those
+examples were skipped. It does not
 start the MySQL-backed web services.

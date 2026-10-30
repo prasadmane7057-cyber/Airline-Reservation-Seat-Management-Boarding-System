@@ -5,6 +5,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
 
+import model.DBConnection;
+
 /*
  * Airline Management System - Flight Status Update Form
  * Simple Swing concepts: JFrame, JLabel, JTextField, JComboBox, JButton, JTextArea
@@ -14,15 +16,12 @@ import java.sql.*;
  */
 public class FlightStatusForm extends JFrame implements ActionListener {
 
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/airline";
-    private static final String DB_USER = "root";
-
     private Connection getConnection() throws SQLException {
-        String password = System.getenv("AIRLINE_DB_PASSWORD");
-        if (password == null || password.isBlank()) {
-            throw new SQLException("Set AIRLINE_DB_PASSWORD before connecting to MySQL.");
+        Connection connection = DBConnection.getConnection();
+        if (connection == null || connection.isClosed()) {
+            throw new SQLException("Unable to connect. Verify MySQL and AIRLINE_DB_PASSWORD.");
         }
-        return DriverManager.getConnection(DB_URL, DB_USER, password);
+        return connection;
     }
 
     // Form components
@@ -42,11 +41,11 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         lblFlight = new JLabel("Flight No:");
         txtFlight = new JTextField(15);
 
-        lblDest = new JLabel("Destination:");
+        lblDest = new JLabel("Destination code:");
         txtDest = new JTextField(15);
 
         lblStatus = new JLabel("Status:");
-        String[] statuses = {"On Time", "Delayed", "Cancelled", "Boarding", "Departed"};
+        String[] statuses = {"SCHEDULED", "BOARDING", "DEPARTED", "DELAYED", "CANCELLED", "COMPLETED"};
         cmbStatus = new JComboBox<>(statuses);
 
         // Buttons
@@ -95,16 +94,26 @@ public class FlightStatusForm extends JFrame implements ActionListener {
             return;
         }
 
-        String sql = "INSERT INTO flights (flight_no, destination, status) VALUES (?, ?, ?)";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, no);
-            stmt.setString(2, dest);
-            stmt.setString(3, status);
-            stmt.executeUpdate();
-            JOptionPane.showMessageDialog(this, "Flight added.");
-            txtFlight.setText("");
-            txtDest.setText("");
+        String sql = "INSERT INTO flights "
+                + "(flight_number, aircraft_id, from_airport_id, to_airport_id, "
+                + "departure_time, arrival_time, duration, status) "
+                + "SELECT ?, 1, 1, a.id, NOW(), DATE_ADD(NOW(), INTERVAL 2 HOUR), "
+                + "'2h', ? FROM airports a WHERE a.airport_code = ?";
+        try {
+            Connection conn = getConnection();
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, no.toUpperCase());
+                stmt.setString(2, status);
+                stmt.setString(3, dest.toUpperCase());
+                int inserted = stmt.executeUpdate();
+                if (inserted == 0) {
+                    JOptionPane.showMessageDialog(this, "Unknown destination airport code. Example: DEL, BOM, BLR.");
+                    return;
+                }
+                JOptionPane.showMessageDialog(this, "Flight added.");
+                txtFlight.setText("");
+                txtDest.setText("");
+            }
         } catch (SQLException ex) {
             if ("23000".equals(ex.getSQLState())) {
                 JOptionPane.showMessageDialog(this, "Flight already exists. Use Update Status.");
@@ -124,16 +133,18 @@ public class FlightStatusForm extends JFrame implements ActionListener {
             return;
         }
 
-        String sql = "UPDATE flights SET status = ? WHERE flight_no = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, status);
-            stmt.setString(2, no);
+        String sql = "UPDATE flights SET status = ? WHERE flight_number = ?";
+        try {
+            Connection conn = getConnection();
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, status);
+                stmt.setString(2, no.toUpperCase());
 
-            if (stmt.executeUpdate() > 0) {
-                JOptionPane.showMessageDialog(this, "Status updated.");
-            } else {
-                JOptionPane.showMessageDialog(this, "Flight not found.");
+                if (stmt.executeUpdate() > 0) {
+                    JOptionPane.showMessageDialog(this, "Status updated.");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Flight not found.");
+                }
             }
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage());
@@ -145,19 +156,23 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         area.setText("Flight No | Destination | Status\n");
         area.append("--------------------------------------\n");
 
-        String sql = "SELECT flight_no, destination, status FROM flights ORDER BY flight_no";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            boolean hasFlights = false;
-            while (rs.next()) {
-                hasFlights = true;
-                area.append(rs.getString("flight_no") + "  |  "
-                        + rs.getString("destination") + "  |  "
-                        + rs.getString("status") + "\n");
-            }
-            if (!hasFlights) {
-                area.append("No flights saved yet.\n");
+        String sql = "SELECT f.flight_number, a.airport_code AS destination, f.status "
+                + "FROM flights f JOIN airports a ON a.id = f.to_airport_id "
+                + "ORDER BY f.flight_number";
+        try {
+            Connection conn = getConnection();
+            try (PreparedStatement stmt = conn.prepareStatement(sql);
+                 ResultSet rs = stmt.executeQuery()) {
+                boolean hasFlights = false;
+                while (rs.next()) {
+                    hasFlights = true;
+                    area.append(rs.getString("flight_number") + "  |  "
+                            + rs.getString("destination") + "  |  "
+                            + rs.getString("status") + "\n");
+                }
+                if (!hasFlights) {
+                    area.append("No flights saved yet.\n");
+                }
             }
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage());

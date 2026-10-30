@@ -11,7 +11,7 @@ import java.sql.SQLException;
 public class DBConnection {
     private static final String URL = "jdbc:mysql://localhost:3306/airline_reservation?useSSL=false&allowPublicKeyRetrieval=true";
     private static final String USER = "root";
-    private static final String PASSWORD = "password";
+    private static final String PASSWORD = System.getenv().getOrDefault("AIRLINE_DB_PASSWORD", "password");
     private static Connection connection = null;
 
     public static Connection getConnection() {

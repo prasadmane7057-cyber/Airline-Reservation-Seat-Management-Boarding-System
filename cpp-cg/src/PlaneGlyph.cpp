@@ -27,6 +27,10 @@
 #include <GL/glut.h>
 #include "ScanlineFill.h"
 
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
 // ============================================================
 // World coordinate system used by this glyph (and shared with
 // SeatMapTransform.cpp via the extern declarations there):
@@ -50,6 +54,93 @@ static const float FUSELAGE_HALF_WIDTH = 55.0f;          // distance from center
 static const float FUSELAGE_TOP_EDGE    = FUSELAGE_CENTER_Y + FUSELAGE_HALF_WIDTH;   // 355
 static const float FUSELAGE_BOTTOM_EDGE = FUSELAGE_CENTER_Y - FUSELAGE_HALF_WIDTH;   // 245
 
+static GLuint fuselageTexture = 0;
+static GLuint wingTexture = 0;
+static bool aircraftTextureEnabled = true;
+static bool aircraftLightingEnabled = true;
+
+static GLuint createBrushedMetalTexture(int baseLevel, int seed) {
+    const int width = 128;
+    const int height = 64;
+    std::vector<unsigned char> pixels(width * height * 3);
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const int grain = (x * 37 + y * 17 + seed * 13) % 19 - 9;
+            const int brushed = (y % 8 == 0) ? 10 : 0;
+            const unsigned char value = static_cast<unsigned char>(
+                std::max(0, std::min(255, baseLevel + grain + brushed)));
+            const size_t offset = static_cast<size_t>((y * width + x) * 3);
+            pixels[offset] = value;
+            pixels[offset + 1] = static_cast<unsigned char>(std::max(0, value - 2));
+            pixels[offset + 2] = static_cast<unsigned char>(std::max(0, value - 5));
+        }
+    }
+
+    GLuint texture = 0;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    return texture;
+}
+
+void initializeAircraftMaterials() {
+    fuselageTexture = createBrushedMetalTexture(190, 1);
+    wingTexture = createBrushedMetalTexture(150, 7);
+
+    const GLfloat ambient[] = {0.35f, 0.35f, 0.38f, 1.0f};
+    const GLfloat diffuse[] = {0.85f, 0.85f, 0.90f, 1.0f};
+    const GLfloat specular[] = {0.65f, 0.65f, 0.70f, 1.0f};
+    const GLfloat lightPosition[] = {-0.35f, 0.65f, 1.0f, 0.0f};
+    const GLfloat materialSpecular[] = {0.75f, 0.75f, 0.80f, 1.0f};
+
+    glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, materialSpecular);
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 56.0f);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+}
+
+void setAircraftTextureEnabled(bool enabled) {
+    aircraftTextureEnabled = enabled;
+}
+
+void setAircraftLightingEnabled(bool enabled) {
+    aircraftLightingEnabled = enabled;
+}
+
+bool isAircraftTextureEnabled() {
+    return aircraftTextureEnabled;
+}
+
+bool isAircraftLightingEnabled() {
+    return aircraftLightingEnabled;
+}
+
+struct TexturedVertex {
+    float x;
+    float y;
+    float u;
+    float v;
+};
+
+static void drawTexturedPolygon(const std::vector<TexturedVertex>& vertices, GLuint texture) {
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glBegin(GL_POLYGON);
+        for (const TexturedVertex& vertex : vertices) {
+            glTexCoord2f(vertex.u, vertex.v);
+            glVertex2f(vertex.x, vertex.y);
+        }
+    glEnd();
+}
+
 // ---------------------------------------------------------------
 // Draws the main fuselage body: a pointed nose, a straight
 // mid-section, and a pointed tail - one simple filled polygon
@@ -64,7 +155,23 @@ static void drawFuselage() {
         {850.0f,  FUSELAGE_BOTTOM_EDGE},
         {90.0f,   FUSELAGE_BOTTOM_EDGE}
     };
-    scanlineFillPolygon(fuselage, 0.85f, 0.87f, 0.90f);
+
+    if (aircraftTextureEnabled && fuselageTexture != 0) {
+        glEnable(GL_TEXTURE_2D);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glNormal3f(0.0f, 0.0f, 1.0f);
+        drawTexturedPolygon({
+            {0.0f,    FUSELAGE_CENTER_Y,      0.0f, 0.5f},
+            {90.0f,   FUSELAGE_TOP_EDGE,      0.5f, 0.0f},
+            {850.0f,  FUSELAGE_TOP_EDGE,      5.0f, 0.0f},
+            {1000.0f, FUSELAGE_CENTER_Y,      6.0f, 0.5f},
+            {850.0f,  FUSELAGE_BOTTOM_EDGE,   5.0f, 1.0f},
+            {90.0f,   FUSELAGE_BOTTOM_EDGE,   0.5f, 1.0f}
+        }, fuselageTexture);
+        glDisable(GL_TEXTURE_2D);
+    } else {
+        scanlineFillPolygon(fuselage, 0.85f, 0.87f, 0.90f);
+    }
 
     glColor3f(0.35f, 0.38f, 0.42f);   // darker outline
     glLineWidth(2.0f);
@@ -91,13 +198,26 @@ static void drawWing(bool isTop) {
     float rootY = isTop ? FUSELAGE_TOP_EDGE : FUSELAGE_BOTTOM_EDGE;
     float tipY  = isTop ? 580.0f : 20.0f;
 
-    glColor3f(0.78f, 0.80f, 0.84f);
-    glBegin(GL_POLYGON);
-        glVertex2f(rootLeadingX,  rootY);
-        glVertex2f(tipLeadingX,   tipY);
-        glVertex2f(tipTrailingX,  tipY);
-        glVertex2f(rootTrailingX, rootY);
-    glEnd();
+    if (aircraftTextureEnabled && wingTexture != 0) {
+        glEnable(GL_TEXTURE_2D);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glNormal3f(0.0f, 0.0f, 1.0f);
+        drawTexturedPolygon({
+            {rootLeadingX,  rootY,  0.0f, 0.0f},
+            {tipLeadingX,   tipY,   1.0f, 0.0f},
+            {tipTrailingX,  tipY,   1.0f, 1.0f},
+            {rootTrailingX, rootY,  0.0f, 1.0f}
+        }, wingTexture);
+        glDisable(GL_TEXTURE_2D);
+    } else {
+        glColor3f(0.78f, 0.80f, 0.84f);
+        glBegin(GL_POLYGON);
+            glVertex2f(rootLeadingX,  rootY);
+            glVertex2f(tipLeadingX,   tipY);
+            glVertex2f(tipTrailingX,  tipY);
+            glVertex2f(rootTrailingX, rootY);
+        glEnd();
+    }
 
     glColor3f(0.35f, 0.38f, 0.42f);
     glBegin(GL_LINE_LOOP);
@@ -232,6 +352,15 @@ static void drawDoors() {
 // everything so they're always visible).
 // ============================================================
 void drawPlaneGlyph() {
+    glEnable(GL_COLOR_MATERIAL);
+    glEnable(GL_NORMALIZE);
+    if (aircraftLightingEnabled) {
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+    } else {
+        glDisable(GL_LIGHTING);
+    }
+
     drawWing(true);
     drawWing(false);
     drawEngine(true);
@@ -239,4 +368,8 @@ void drawPlaneGlyph() {
     drawTailSurfaces();
     drawFuselage();
     drawDoors();
+
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_NORMALIZE);
 }

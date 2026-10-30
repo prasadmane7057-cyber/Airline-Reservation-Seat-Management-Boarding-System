@@ -89,10 +89,18 @@ try {
     Invoke-Checked "Compile Java OOP and COA sources" {
         & $javac -d $javaCoaBuild @javaCoaSources
     }
-    Invoke-JavaDemo -Step "Run Java OOP demonstration (database and file writes disabled)" `
-        -ClassPath $javaOopBuild -MainClass "Main" -Arguments @("--demo-only")
-    Invoke-JavaDemo -Step "Run Java OOP/COA demonstration (database disabled)" `
-        -ClassPath $javaCoaBuild -MainClass "Main" -Arguments @("--skip-db")
+    $mysqlConnector = Join-Path $PSScriptRoot "java-oop\lib\mysql-connector-j-8.4.0.jar"
+    if (-not (Test-Path -LiteralPath $mysqlConnector)) {
+        throw "MySQL JDBC connector not found at $mysqlConnector."
+    }
+
+    $javaOopRuntimeClassPath = "$javaOopBuild;$mysqlConnector"
+    $javaCoaRuntimeClassPath = "$javaCoaBuild;$mysqlConnector"
+
+    Invoke-JavaDemo -Step "Run Java OOP demonstration (database and booking file storage enabled)" `
+        -ClassPath $javaOopRuntimeClassPath -MainClass "Main"
+    Invoke-JavaDemo -Step "Run Java OOP/COA demonstration (database enabled)" `
+        -ClassPath $javaCoaRuntimeClassPath -MainClass "Main"
 
     Invoke-JavaDemo -Step "Run booking file checks" -ClassPath $javaOopBuild `
         -MainClass "util.BookingFileManagerTest"
@@ -160,6 +168,12 @@ try {
         & $gpp -std=c++17 "cpp-cg\src\DDALine.cpp" "cpp-cg\src\Bresenham.cpp" -o $lineComparison
     }
     Invoke-Demo "Run DDA and Bresenham checks" $lineComparison $null
+
+    $lineClipping = Join-Path $cgBuild "line_clipping.exe"
+    Invoke-Checked "Build Cohen-Sutherland line clipping demo" {
+        & $gpp -std=c++17 "cpp-cg\src\LineClipping.cpp" -o $lineClipping
+    }
+    Invoke-Demo "Run Cohen-Sutherland clipping checks" $lineClipping $null
 
     $visuals = @(
         @{ Name = "Route map"; Sources = @("cpp-cg\src\main.cpp", "cpp-cg\src\RouteMap.cpp", "cpp-cg\src\Bresenham.cpp") },
@@ -239,7 +253,9 @@ try {
             "nasm -f elf64 '$wslProjectPath/coa-nasm/out/model/MulAddShift.asm' -o multiply.o && " +
             "ld multiply.o -o multiply && { printf '5000\n'; sleep 0.1; printf '3\n'; } | ./multiply && " +
             "nasm -f elf64 '$wslProjectPath/coa-nasm/out/model/multisuccadd.asm' -o successive-add.o && " +
-            "ld successive-add.o -o successive-add && printf '1F4\nA\n' | ./successive-add"
+            "ld successive-add.o -o successive-add && printf '1F4\nA\n' | ./successive-add && " +
+            "nasm -f elf64 '$wslProjectPath/coa-nasm/out/model/PNRStringOps.asm' -o pnr-string-ops.o && " +
+            "ld pnr-string-ops.o -o pnr-string-ops && printf '1\n1001\n2\nPNR1001\n3\nriya\n4\n' | ./pnr-string-ops"
         Invoke-Checked "Build and run Linux assembly demos in WSL" {
             & $wsl.Source -d Debian -- bash -lc $linuxBuild
         }
