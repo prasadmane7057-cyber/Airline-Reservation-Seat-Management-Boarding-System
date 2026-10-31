@@ -109,6 +109,20 @@ try {
     $bookingInput = "AI101`n2`nPNR101`nAarav Sharma`n1A`n1`nPNR102`nSneha Iyer`n2B`n2`n"
     Invoke-JavaDemo -Step "Run booking, cancellation, and boarding-order checks" `
         -ClassPath $javaOopBuild -MainClass "BookingSystemTest" -InputText $bookingInput
+
+    Write-Host "`n--- Launch Flight Status Swing form ---" -ForegroundColor Green
+    $flightStatusWorkingDirectory = Join-Path $PSScriptRoot "java-oop\src"
+    $flightStatusArguments = "-cp `"$javaOopRuntimeClassPath`" FlightStatusForm"
+    $flightStatusProcess = Start-Process -FilePath $java `
+        -ArgumentList $flightStatusArguments `
+        -WorkingDirectory $flightStatusWorkingDirectory `
+        -PassThru
+    Start-Sleep -Milliseconds 500
+    if ($flightStatusProcess.HasExited) {
+        throw "Flight Status form exited immediately. Exit code $($flightStatusProcess.ExitCode)."
+    }
+    Write-Host "Flight Status form launched (PID $($flightStatusProcess.Id))."
+
     [void]$subjectResults.Add("Java OOP and booking system: PASSED")
 
     Write-SubjectHeader "SUBJECT 2/4: C++ DATA STRUCTURES"
@@ -190,6 +204,19 @@ try {
             & $gpp @arguments
         }
     }
+    $aircraft3dDirectory = Join-Path $PSScriptRoot "cpp-cg\bin"
+    New-Item -ItemType Directory -Path $aircraft3dDirectory -Force | Out-Null
+    $aircraft3d = Join-Path $aircraft3dDirectory "Aircraft3D.exe"
+    Invoke-Checked "Build interactive 3D aircraft visual" {
+        & $gpp -std=c++17 "cpp-cg\src\Aircraft3D.cpp" -o $aircraft3d -lfreeglut -lopengl32 -lglu32
+    }
+    Write-Host "`n--- Launch interactive 3D aircraft visual ---" -ForegroundColor Green
+    $aircraft3dProcess = Start-Process -FilePath $aircraft3d -PassThru
+    Start-Sleep -Milliseconds 500
+    if ($aircraft3dProcess.HasExited) {
+        throw "Aircraft3D visual exited immediately. Exit code $($aircraft3dProcess.ExitCode)."
+    }
+    Write-Host "Aircraft3D visual launched (PID $($aircraft3dProcess.Id))." -ForegroundColor Green
     $cgVisualizer = (Resolve-Path "cpp-cg\visualization.html").Path
     Start-Process -FilePath $cgVisualizer
     Write-Host "Opened visual CG tabs: Integrated Aircraft & Seats | CG Algorithms" -ForegroundColor Green

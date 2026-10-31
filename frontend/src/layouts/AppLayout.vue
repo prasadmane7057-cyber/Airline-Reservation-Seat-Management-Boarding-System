@@ -14,6 +14,7 @@
         <nav class="nav-links">
           <router-link to="/" class="nav-item" exact-active-class="active">Home</router-link>
           <router-link to="/flights" class="nav-item" active-class="active">Search Flights</router-link>
+          <router-link to="/project-dashboard" class="nav-item" active-class="active">Project Dashboard</router-link>
           
           <template v-if="authStore.isAuthenticated">
             <router-link to="/my-bookings" class="nav-item" active-class="active">My Bookings</router-link>

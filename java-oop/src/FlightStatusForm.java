@@ -1,26 +1,20 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.*;
-import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Set;
+import java.io.IOException;
+import java.util.List;
 
-import model.DBConnection;
+import model.SupabaseClient;
 
 /*
  * Airline Management System - Flight Status Update Form
  * Simple Swing concepts: JFrame, JLabel, JTextField, JComboBox, JButton, JTextArea
- * Storage: flights.csv  (format: flightNo,destination,status)
+ * Storage: Supabase PostgreSQL flights table
  *
  * Compile : javac FlightStatusForm.java
  * Run     : java FlightStatusForm
  */
 public class FlightStatusForm extends JFrame implements ActionListener {
-
-    // File used to store data
-    static final String FILE = "flights.csv";
 
     // Form components
     JLabel lblFlight, lblDest, lblStatus;
@@ -29,8 +23,7 @@ public class FlightStatusForm extends JFrame implements ActionListener {
     JButton btnAdd, btnUpdate, btnView, btnTestConnection;
     JTextArea area;
     private JPanel flightActionsPanel;
-    private final Set<String> flightNumbers = new HashSet<>();
-    private boolean flightNumbersLoaded;
+    private SupabaseClient supabase;
 
     public FlightStatusForm() {
         setTitle("Flight Status Update");
@@ -53,7 +46,7 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         btnAdd = new JButton("Add Flight");
         btnUpdate = new JButton("Update Status");
         btnView = new JButton("View All");
-        btnTestConnection = new JButton("Test Connection");
+        btnTestConnection = new JButton("Test Supabase");
 
         flightActionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         flightActionsPanel.setBorder(BorderFactory.createTitledBorder("Flight Actions"));
@@ -61,7 +54,7 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         flightActionsPanel.add(btnView);
 
         JPanel connectionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        connectionPanel.setBorder(BorderFactory.createTitledBorder("Database"));
+        connectionPanel.setBorder(BorderFactory.createTitledBorder("Supabase"));
         connectionPanel.add(btnTestConnection);
 
         // Output area
@@ -78,10 +71,12 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         add(new JScrollPane(area));
 
         try {
-            loadFlightNumbers();
-            flightActionsPanel.setVisible(!flightNumbers.isEmpty());
+            supabase = new SupabaseClient();
+            flightActionsPanel.setVisible(true);
         } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this, "Error reading flights: " + ex.getMessage());
+            flightActionsPanel.setVisible(false);
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Supabase Configuration",
+                    JOptionPane.ERROR_MESSAGE);
         }
 
         // Register button clicks
@@ -108,16 +103,15 @@ public class FlightStatusForm extends JFrame implements ActionListener {
 
     private void testDatabaseConnection() {
         try {
-            DBConnection.testConnection();
-            JOptionPane.showMessageDialog(this, "Database connection successful.");
-        } catch (ClassNotFoundException ex) {
+            if (supabase == null) {
+                supabase = new SupabaseClient();
+            }
+            supabase.testConnection();
+            JOptionPane.showMessageDialog(this, "Supabase connection successful.");
+        } catch (IOException | InterruptedException ex) {
             JOptionPane.showMessageDialog(this,
-                    "MySQL JDBC driver is missing. Add Connector/J to the Java classpath.",
-                    "Connection Test Failed", JOptionPane.ERROR_MESSAGE);
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Database connection failed: " + ex.getMessage(),
-                    "Connection Test Failed", JOptionPane.ERROR_MESSAGE);
+                    "Supabase connection failed: " + ex.getMessage(),
+                    "Supabase Connection Failed", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -134,24 +128,24 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         no = no.replace(",", "");
 
         try {
-            if (flightExists(no)) {
+            ensureSupabase();
+            if (supabase.flightExists(no)) {
                 JOptionPane.showMessageDialog(this, "Flight already exists. Use Update Status.");
                 return;
             }
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             JOptionPane.showMessageDialog(this, "Error reading flights: " + ex.getMessage());
             return;
         }
 
-        try (FileWriter fw = new FileWriter(FILE, true)) { // true = append mode
-            fw.write(no + "," + dest + "," + status + "\n");
-            flightNumbers.add(normalizeFlightNumber(no));
+        try {
+            supabase.addFlight(no, dest, status);
             flightActionsPanel.setVisible(true);
             revalidate();
             JOptionPane.showMessageDialog(this, "Flight added.");
             txtFlight.setText("");
             txtDest.setText("");
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
         }
     }
@@ -167,35 +161,17 @@ public class FlightStatusForm extends JFrame implements ActionListener {
             return;
         }
 
-        File original = new File(FILE);
-        File temp = new File("temp.csv");
-        boolean found = false;
-
-        try (BufferedReader br = new BufferedReader(new FileReader(original));
-             PrintWriter pw = new PrintWriter(new FileWriter(temp))) {
-
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] p = line.split(",");
-                if (p[0].equalsIgnoreCase(no)) {
-                    line = p[0] + "," + p[1] + "," + status; // new status
-                    found = true;
-                }
-                pw.println(line);
+        try {
+            ensureSupabase();
+            if (!supabase.flightExists(no)) {
+                JOptionPane.showMessageDialog(this, "Flight not found.");
+                return;
             }
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this, "No flights saved yet.");
-            temp.delete();
-            return;
-        }
-
-        if (found) {
-            original.delete();
-            temp.renameTo(original);
+            supabase.updateStatus(no, status);
             JOptionPane.showMessageDialog(this, "Status updated.");
-        } else {
-            temp.delete();
-            JOptionPane.showMessageDialog(this, "Flight not found.");
+        } catch (IOException | InterruptedException ex) {
+            JOptionPane.showMessageDialog(this, "Supabase error: " + ex.getMessage());
+            return;
         }
     }
 
@@ -203,44 +179,31 @@ public class FlightStatusForm extends JFrame implements ActionListener {
     void viewAll() {
         area.setText("Flight No | Destination | Status\n");
         area.append("--------------------------------------\n");
-        try (BufferedReader br = new BufferedReader(new FileReader(FILE))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                area.append(line.replace(",", "  |  ") + "\n");
-            }
-        } catch (IOException ex) {
-            area.append("No flights saved yet.\n");
-        }
-    }
-
-    // The first check loads the CSV once; later checks use the in-memory index.
-    boolean flightExists(String no) throws IOException {
-        loadFlightNumbers();
-        return flightNumbers.contains(normalizeFlightNumber(no));
-    }
-
-    private void loadFlightNumbers() throws IOException {
-        if (!flightNumbersLoaded) {
-            File file = new File(FILE);
-            if (file.exists()) {
-                try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        int delimiter = line.indexOf(',');
-                        String flightNo = delimiter < 0 ? line : line.substring(0, delimiter);
-                        flightNumbers.add(normalizeFlightNumber(flightNo));
-                    }
+        try {
+            ensureSupabase();
+            List<String[]> flights = supabase.viewFlights();
+            if (flights.isEmpty()) {
+                area.append("No flights saved yet.\n");
+            } else {
+                for (String[] flight : flights) {
+                    area.append(flight[0] + "  |  " + flight[1] + "  |  " + flight[2] + "\n");
                 }
             }
-            flightNumbersLoaded = true;
+        } catch (IOException | InterruptedException ex) {
+            area.append("Supabase error: " + ex.getMessage() + "\n");
         }
     }
 
-    private String normalizeFlightNumber(String no) {
-        return no.toLowerCase(Locale.ROOT);
+    private void ensureSupabase() throws IOException {
+        if (supabase == null) {
+            supabase = new SupabaseClient();
+        }
     }
 
     public static void main(String[] args) {
-        new FlightStatusForm();
+        SwingUtilities.invokeLater(() -> {
+            FlightStatusForm form = new FlightStatusForm();
+            form.setLocationRelativeTo(null);
+        });
     }
 }

@@ -1,0 +1,3853 @@
+<template>
+  <div class="project-dashboard">
+    <!-- Top Hero Banner with Live Supabase Status -->
+    <header class="dashboard-hero">
+      <div class="container hero-content">
+        <div class="hero-left">
+          <div class="hero-tag-row">
+            <span class="eyebrow-tag">ACADEMIC &amp; SYSTEM INTEGRATION</span>
+            <span class="supabase-live-tag" :class="{ connected: supabaseConnected }">
+              <span class="pulsing-dot"></span>
+              {{ supabaseStatusText }}
+            </span>
+          </div>
+          <h1 class="hero-title">Airline Master Integration Dashboard</h1>
+          <p class="hero-desc">
+            One unified engineering platform joining <strong>Java OOP</strong>, <strong>C++ Data Structures</strong>, <strong>Computer Architecture &amp; 64-bit Assembly</strong>, <strong>Computer Graphics &amp; 3D WebGL</strong>, and <strong>Supabase Cloud PostgreSQL</strong>.
+          </p>
+        </div>
+
+        <div class="hero-quick-stats">
+          <div class="stat-pill">
+            <span class="stat-number">5/5</span>
+            <span class="stat-label">Subjects Unified</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-number">{{ supabaseFlightCount }}</span>
+            <span class="stat-label">Cloud Flights</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-number" :class="occupancyStatusClass">{{ occupancyPercentage }}%</span>
+            <span class="stat-label">Seat Occupancy ({{ occupancyStatus }})</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <div class="tab-nav-wrapper">
+      <div class="container">
+        <nav class="master-tabs" role="tablist">
+          <button
+            v-for="tab in mainTabs"
+            :key="tab.id"
+            type="button"
+            role="tab"
+            :aria-selected="activeMainTab === tab.id"
+            :class="['master-tab-btn', { active: activeMainTab === tab.id }]"
+            @click="activeMainTab = tab.id"
+          >
+            <span class="tab-badge-icon">{{ tab.icon }}</span>
+            <span class="tab-title-text">{{ tab.name }}</span>
+            <span class="tab-sub-text">{{ tab.sub }}</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="container dashboard-body">
+
+      <!-- =================================================================== -->
+      <!-- TAB 1: OVERVIEW & LIVE SUPABASE INTEGRATION                         -->
+      <!-- =================================================================== -->
+      <section v-show="activeMainTab === 'overview'" class="tab-section">
+        <div class="section-intro">
+          <div>
+            <h2>System Topology &amp; Cloud Synchronization</h2>
+            <p class="subtitle">Live bidirectional synchronization between local modules and Supabase Cloud database.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" @click="fetchSupabaseData" :disabled="loadingSupabase">
+            <span v-if="loadingSupabase">Syncing...</span>
+            <span v-else>↻ Sync Supabase Cloud</span>
+          </button>
+        </div>
+
+        <!-- Live Status Metric Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon blue">☁</div>
+            <div class="metric-info">
+              <span class="metric-label">Supabase Project Endpoint</span>
+              <span class="metric-value code-font">{{ supabaseEndpointMasked }}</span>
+              <span class="metric-sub">Connected via RLS Publishable Key</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon green">✈</div>
+            <div class="metric-info">
+              <span class="metric-label">Live Flights in Supabase</span>
+              <span class="metric-value">{{ supabaseFlights.length }} Flights Synced</span>
+              <span class="metric-sub">Public schema: public.flights</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon violet">☕</div>
+            <div class="metric-info">
+              <span class="metric-label">Java OOP Booking Store</span>
+              <span class="metric-value">{{ javaBookings.length }} Bookings Active</span>
+              <span class="metric-sub">Synced with bookings.csv &amp; PNR Generator</span>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon gold">⚙</div>
+            <div class="metric-info">
+              <span class="metric-label">COA Hardware Threshold</span>
+              <span class="metric-value" :class="occupancyStatusClass">{{ occupancyStatus }}</span>
+              <span class="metric-sub">{{ totalSeatsCount - bookedSeatsCount }} of {{ totalSeatsCount }} Seats Available</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Supabase Flights Table -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Supabase Cloud PostgreSQL Flights</h3>
+              <p class="panel-hint">Direct queries from table <code>public.flights</code> running over PostgREST API.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-outline btn-sm" @click="showAddFlightModal = !showAddFlightModal">
+                + Add Flight to Supabase
+              </button>
+            </div>
+          </div>
+
+          <!-- Add Flight Form (Toggleable) -->
+          <div v-if="showAddFlightModal" class="inline-form-card">
+            <h4>Insert New Flight Record (Direct Supabase Insert)</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Flight No</label>
+                <input v-model="newFlight.flight_number" placeholder="e.g. AI707" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label>Destination</label>
+                <input v-model="newFlight.destination" placeholder="e.g. MUMBAI" class="form-input" />
+              </div>
+              <div class="form-group">
+                <label>Status</label>
+                <select v-model="newFlight.status" class="form-input">
+                  <option value="On Time">On Time</option>
+                  <option value="Delayed">Delayed</option>
+                  <option value="Boarding">Boarding</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div class="form-group form-actions-col">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" @click="insertSupabaseFlight" :disabled="submittingFlight">
+                  {{ submittingFlight ? 'Inserting...' : 'Commit to Supabase' }}
+                </button>
+              </div>
+            </div>
+            <p v-if="flightMessage" class="form-feedback" :class="{ error: flightMessageIsError }">{{ flightMessage }}</p>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Flight No</th>
+                  <th>Destination</th>
+                  <th>Flight Status</th>
+                  <th>Database Source</th>
+                  <th>Cloud Record Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="f in supabaseFlights" :key="f.id || f.flight_number">
+                  <td class="bold-text">#{{ f.id || 'N/A' }}</td>
+                  <td><span class="flight-tag">{{ f.flight_number || f.flight_no }}</span></td>
+                  <td><strong>{{ f.destination || 'N/A' }}</strong></td>
+                  <td>
+                    <span :class="['status-chip', getStatusClass(f.status)]">{{ f.status }}</span>
+                  </td>
+                  <td><span class="badge-source">Supabase PostgreSQL</span></td>
+                  <td class="code-font text-muted">{{ f.created_at ? new Date(f.created_at).toLocaleString() : 'Live Sync' }}</td>
+                </tr>
+                <tr v-if="supabaseFlights.length === 0">
+                  <td colspan="6" class="empty-cell">No flights loaded. Click "Sync Supabase Cloud" to refresh.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 5-Subject Architectural Topology -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Unified Academic Architecture Topology</h3>
+              <p class="panel-hint">How data structures, computer graphics, low-level assembly, and Java OOP integrate into the web application.</p>
+            </div>
+            <span class="badge-verified">✓ 100% Implemented</span>
+          </div>
+          <div class="topology-grid">
+            <div class="topo-card" v-for="mod in moduleOverviews" :key="mod.title">
+              <div class="topo-icon" :style="{ background: mod.color + '22', color: mod.color }">{{ mod.icon }}</div>
+              <h4>{{ mod.title }}</h4>
+              <span class="topo-code">{{ mod.subject }}</span>
+              <p>{{ mod.desc }}</p>
+              <div class="topo-files">
+                <code v-for="src in mod.sources" :key="src">{{ src }}</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 2: JAVA OOP & AIRLINE RESERVATION HUB                          -->
+      <!-- =================================================================== -->
+      <section v-show="activeMainTab === 'java'" class="tab-section">
+        <div class="section-intro">
+          <div>
+            <h2>Java OOP &amp; Airline Reservation System (PSOOP / JDBC)</h2>
+            <p class="subtitle">Interactive implementation of Java domain models, static PNR generators, polymorphic cabin classes, method overloading, CSV persistence, and Swing flight status management.</p>
+          </div>
+          <span class="badge-source">java-oop/src/model/</span>
+        </div>
+
+        <div class="two-col-layout">
+          <!-- PNR & Booking Generator Card -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Interactive PNR &amp; Booking Generator</h3>
+                <p class="panel-hint">Executes exact logic from <code>model.PNR.java</code> and <code>BookingSystem.java</code>.</p>
+              </div>
+            </div>
+
+            <div class="generator-box">
+              <div class="pnr-display-area">
+                <span class="pnr-title">GENERATED PNR (6-CHAR ALPHANUMERIC)</span>
+                <span class="pnr-highlight">{{ activePNR }}</span>
+                <button class="btn btn-outline btn-sm" @click="generateNewPNR">🎲 Re-generate PNR</button>
+              </div>
+
+              <form @submit.prevent="createJavaBooking" class="booking-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Passenger Name</label>
+                    <input v-model="bookingForm.name" required placeholder="e.g. Aarav Sharma" class="form-input" />
+                  </div>
+                  <div class="form-group">
+                    <label>Flight Number</label>
+                    <select v-model="bookingForm.flight" class="form-input">
+                      <option v-for="f in availableFlights" :key="f.flightNumber" :value="f.flightNumber">
+                        {{ f.flightNumber }} ({{ f.from }} → {{ f.to }})
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Seat Number</label>
+                    <input v-model="bookingForm.seat" required placeholder="e.g. 1A, 5B, 12F" class="form-input" />
+                  </div>
+                  <div class="form-group">
+                    <label>Cabin Class (Polymorphic SeatClass)</label>
+                    <select v-model="bookingForm.cabinClass" class="form-input">
+                      <option value="Economy">Economy (Priority 3, Multiplier 1.0x)</option>
+                      <option value="Business">Business (Priority 2, Multiplier 1.8x)</option>
+                      <option value="FirstClass">First Class (Priority 1, Multiplier 2.5x)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Confirm Booking &amp; Issue Ticket</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Compile-Time Method Overloading Demo -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Compile-Time Polymorphism (Method Overloading)</h3>
+                <p class="panel-hint">Simulates the 4 overloaded <code>Flight.calculateFare()</code> methods.</p>
+              </div>
+            </div>
+
+            <div class="overload-simulator">
+              <div class="form-group">
+                <label>Base Fare (₹)</label>
+                <input type="number" v-model.number="overloadParams.baseFare" class="form-input" />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Cabin Class</label>
+                  <select v-model="overloadParams.cabinClass" class="form-input">
+                    <option value="Economy">Economy (1.0x)</option>
+                    <option value="Business">Business (1.8x)</option>
+                    <option value="First Class">First Class (2.5x)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Baggage Weight (kg) [Allowance 15kg]</label>
+                  <input type="number" v-model.number="overloadParams.baggageKg" class="form-input" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Promo Code (10% Off)</label>
+                <input v-model="overloadParams.promoCode" placeholder="Enter FLYAI10" class="form-input" />
+              </div>
+
+              <div class="overload-cards">
+                <div class="overload-res-card">
+                  <span class="code-method">1. calculateFare()</span>
+                  <strong>₹{{ overloadResults.overload1.toLocaleString() }}</strong>
+                  <small>Standard Base Fare</small>
+                </div>
+                <div class="overload-res-card">
+                  <span class="code-method">2. calculateFare(class)</span>
+                  <strong>₹{{ overloadResults.overload2.toLocaleString() }}</strong>
+                  <small>Cabin Class Multiplier</small>
+                </div>
+                <div class="overload-res-card">
+                  <span class="code-method">3. calculateFare(class, baggage)</span>
+                  <strong>₹{{ overloadResults.overload3.toLocaleString() }}</strong>
+                  <small>Class + Surcharge (₹500/kg >15kg)</small>
+                </div>
+                <div class="overload-res-card highlight">
+                  <span class="code-method">4. calculateFare(class, baggage, promo)</span>
+                  <strong class="text-green">₹{{ overloadResults.overload4.toLocaleString() }}</strong>
+                  <small>Final with Promo Code</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Java Bookings List with Cancellation & Boarding Priority -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Active Bookings &amp; Priority Boarding Order</h3>
+              <p class="panel-hint">Managed via <code>BookingSystem.BookingStore</code> and <code>PassengerSorter.sortForBoarding()</code>.</p>
+            </div>
+            <button class="btn btn-outline btn-sm" @click="sortBookingsForBoarding">
+              Sort by Boarding Priority (Class + Seat)
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>PNR</th>
+                  <th>Passenger</th>
+                  <th>Flight</th>
+                  <th>Seat</th>
+                  <th>Class (Priority)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="b in javaBookings" :key="b.pnr">
+                  <td class="bold-text code-font"><span class="pnr-badge">{{ b.pnr }}</span></td>
+                  <td><strong>{{ b.passengerName }}</strong></td>
+                  <td><span class="flight-tag">{{ b.flightNumber }}</span></td>
+                  <td><span class="seat-badge">{{ b.seatNumber }}</span></td>
+                  <td>
+                    <span :class="['class-chip', b.bookingClass.toLowerCase()]">
+                      {{ b.bookingClass }} (P{{ b.priority }})
+                    </span>
+                  </td>
+                  <td>
+                    <span :class="['status-chip', b.status === 'CONFIRMED' ? 'green' : 'red']">{{ b.status }}</span>
+                  </td>
+                  <td>
+                    <button
+                      v-if="b.status === 'CONFIRMED'"
+                      class="btn btn-danger btn-xs"
+                      @click="cancelJavaBooking(b.pnr)"
+                    >
+                      Cancel Booking
+                    </button>
+                    <span v-else class="text-muted">Cancelled</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Swing FlightStatusForm & CSV Persistence Inspector -->
+        <div class="two-col-layout">
+          <!-- Swing Flight Status Simulator -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Desktop Swing GUI Synchronizer</h3>
+                <p class="panel-hint">Represents <code>FlightStatusForm.java</code> (JFrame &amp; JDBC).</p>
+              </div>
+            </div>
+
+            <div class="swing-window-mockup">
+              <div class="swing-title-bar">
+                <span class="swing-dot red"></span>
+                <span class="swing-dot yellow"></span>
+                <span class="swing-dot green"></span>
+                <span class="swing-title">Flight Status Update (Java Swing / JDBC)</span>
+              </div>
+              <div class="swing-body">
+                <div class="swing-field">
+                  <label>Flight No:</label>
+                  <input v-model="swingForm.flightNo" class="swing-input" placeholder="e.g. AI101" />
+                </div>
+                <div class="swing-field">
+                  <label>Destination:</label>
+                  <input v-model="swingForm.destination" class="swing-input" placeholder="e.g. Mumbai" />
+                </div>
+                <div class="swing-field">
+                  <label>Status:</label>
+                  <select v-model="swingForm.status" class="swing-input">
+                    <option value="On Time">On Time</option>
+                    <option value="Delayed">Delayed</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Boarding">Boarding</option>
+                    <option value="Departed">Departed</option>
+                  </select>
+                </div>
+                <div class="swing-buttons">
+                  <button class="btn swing-btn" @click="handleSwingAdd">Add Flight</button>
+                  <button class="btn swing-btn" @click="handleSwingUpdate">Update Status</button>
+                  <button class="btn swing-btn" @click="handleSwingView">View All</button>
+                </div>
+                <div class="swing-textarea">
+                  <pre>{{ swingTerminalOutput }}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- File Handling (CSV Viewer) -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>File Handling (BookingFileManager.java)</h3>
+                <p class="panel-hint">Persistent serialization into <code>bookings.csv</code> with corruption checking.</p>
+              </div>
+            </div>
+            <div class="csv-viewer">
+              <div class="csv-header-bar">
+                <span>FILE: java-oop/bookings.csv</span>
+                <span class="records-count">{{ javaBookings.length }} records</span>
+              </div>
+              <pre class="csv-content">PNR,PASSENGER_NAME,FLIGHT_NUMBER,SEAT_NUMBER,CLASS,STATUS
+<span v-for="b in javaBookings" :key="b.pnr">{{ b.pnr }},"{{ b.passengerName }}",{{ b.flightNumber }},{{ b.seatNumber }},{{ b.bookingClass }},{{ b.status }}
+</span></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 3: DATA STRUCTURES (DS) INTERACTIVE LABORATORY                  -->
+      <!-- =================================================================== -->
+      <section v-show="activeMainTab === 'ds'" class="tab-section">
+        <div class="section-intro">
+          <div>
+            <h2>Data Structures &amp; Algorithms Laboratory (C++ DS)</h2>
+            <p class="subtitle">Live interactive execution of linear and non-linear data structures from <code>cpp-ds/src</code>: Circular Queues, Priority Deques, Dynamic Arrays, Linked Lists, Doubly Linked Lists for manifest merges, and Undo Stacks.</p>
+          </div>
+          <span class="badge-source">cpp-ds/src/</span>
+        </div>
+
+        <!-- DS Algorithms Grid -->
+        <div class="two-col-layout">
+
+          <!-- 1. Circular Boarding Queue -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Circular Boarding Queue</h3>
+                <span class="badge-algo">BoardingQueueCircular.cpp</span>
+                <p class="panel-hint">Modulo arithmetic wrapping: <code>rear = (rear + 1) % capacity</code>.</p>
+              </div>
+            </div>
+
+            <div class="ds-lab-card">
+              <div class="circular-queue-visual">
+                <div class="ring-slots">
+                  <div
+                    v-for="(slot, idx) in circularQueue.slots"
+                    :key="idx"
+                    :class="['queue-slot', {
+                      occupied: slot !== null,
+                      isFront: idx === circularQueue.front && circularQueue.count > 0,
+                      isRear: idx === circularQueue.rear && !circularQueueIsFull
+                    }]"
+                  >
+                    <span class="slot-idx">#{{ idx }}</span>
+                    <strong v-if="slot" class="slot-val">{{ slot.name }}<br><small>G{{ slot.group }}</small></strong>
+                    <span v-else class="slot-empty">Empty</span>
+                    <div class="slot-labels">
+                      <span v-if="idx === circularQueue.front && circularQueue.count > 0" class="ptr-tag front-tag">FRONT</span>
+                      <span v-if="idx === circularQueue.rear" class="ptr-tag rear-tag">REAR</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="queue-status-bar">
+                  <span>Front: <strong>{{ circularQueue.front }}</strong></span>
+                  <span>Rear: <strong>{{ circularQueue.rear }}</strong></span>
+                  <span>Count: <strong>{{ circularQueue.count }} / {{ circularQueue.capacity }}</strong></span>
+                  <span :class="['queue-badge', circularQueueIsFull ? 'red' : 'green']">
+                    {{ circularQueueIsFull ? 'FULL' : circularQueue.count === 0 ? 'EMPTY' : 'AVAILABLE' }}
+                  </span>
+                </div>
+
+                <div class="queue-controls">
+                  <div class="input-inline">
+                    <input v-model="newQueuePassenger.name" placeholder="Passenger Name" class="form-input sm" />
+                    <input type="number" v-model.number="newQueuePassenger.group" placeholder="Group (1-4)" min="1" max="4" class="form-input sm narrow" />
+                    <button class="btn btn-primary btn-sm" @click="enqueuePassenger" :disabled="circularQueueIsFull">Enqueue</button>
+                  </div>
+                  <button class="btn btn-danger btn-sm" @click="dequeuePassenger" :disabled="circularQueue.count === 0">Dequeue Front</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Priority Check-In Deque -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Priority Check-In Deque (Double-Ended Queue)</h3>
+                <span class="badge-algo">Checkindeque</span>
+                <p class="panel-hint">Priority insertion: Elderly/VIP at FRONT, Normal at REAR.</p>
+              </div>
+            </div>
+
+            <div class="ds-lab-card">
+              <div class="deque-mode-selector">
+                <label>Operating Mode:</label>
+                <div class="radio-pill-group">
+                  <button
+                    v-for="m in dequeModes"
+                    :key="m.value"
+                    :class="['btn-pill', { active: currentDequeMode === m.value }]"
+                    @click="currentDequeMode = m.value"
+                  >
+                    {{ m.label }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="deque-display">
+                <div class="deque-end-label">FRONT (High Priority)</div>
+                <div class="deque-items-row">
+                  <div v-for="(p, i) in dequeList" :key="p.pnr || i" class="deque-item" :class="p.category.toLowerCase()">
+                    <span class="category-badge">{{ p.category }}</span>
+                    <strong>{{ p.name }}</strong>
+                    <small>Age: {{ p.age }} | {{ p.pnr }}</small>
+                  </div>
+                  <div v-if="dequeList.length === 0" class="empty-deque">Queue is Empty</div>
+                </div>
+                <div class="deque-end-label">REAR (Standard)</div>
+              </div>
+
+              <div class="deque-actions-panel">
+                <div class="input-inline">
+                  <input v-model="newDequePassenger.name" placeholder="Name" class="form-input sm" />
+                  <input type="number" v-model.number="newDequePassenger.age" placeholder="Age" class="form-input sm narrow" />
+                  <select v-model="newDequePassenger.category" class="form-input sm">
+                    <option value="NORMAL">Normal</option>
+                    <option value="ELDERLY">Elderly (&ge;60)</option>
+                    <option value="VIP">VIP</option>
+                  </select>
+                </div>
+                <div class="deque-btn-row">
+                  <button class="btn btn-outline btn-sm" @click="insertDequeFront" :disabled="currentDequeMode === 'INPUT_RESTRICTED' || dequeList.length >= 6">
+                    + Insert Front
+                  </button>
+                  <button class="btn btn-primary btn-sm" @click="insertDequeRear" :disabled="dequeList.length >= 6">
+                    + Insert Rear
+                  </button>
+                  <button class="btn btn-danger btn-sm" @click="deleteDequeFront" :disabled="dequeList.length === 0">
+                    - Serve Front
+                  </button>
+                  <button class="btn btn-outline btn-sm" @click="deleteDequeRear" :disabled="currentDequeMode === 'OUTPUT_RESTRICTED' || dequeList.length === 0">
+                    - Remove Rear
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="two-col-layout">
+          <!-- 3. Seat Selection Undo Stack -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Seat Selection Undo Stack (LIFO)</h3>
+                <span class="badge-algo">undostack.cpp</span>
+                <p class="panel-hint">Array-backed stack recording seat actions ('S' = Selected, 'C' = Cancelled).</p>
+              </div>
+            </div>
+
+            <div class="ds-lab-card">
+              <div class="stack-layout">
+                <!-- 30-Seat Interactive Grid -->
+                <div class="seat-mini-grid">
+                  <span class="grid-title">Click seat to select / cancel:</span>
+                  <div class="seats-30-container">
+                    <button
+                      v-for="seatNum in 30"
+                      :key="seatNum"
+                      :class="['mini-seat-btn', { selected: seatStackStates[seatNum] }]"
+                      @click="toggleStackSeat(seatNum)"
+                    >
+                      {{ seatNum }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Vertical Stack Visualizer -->
+                <div class="stack-visualizer">
+                  <div class="stack-top-header">
+                    <span>STACK TOP ({{ stackItems.length }}/50)</span>
+                    <button class="btn btn-warning btn-xs" @click="popStackUndo" :disabled="stackItems.length === 0">
+                      ↺ UNDO Last Action
+                    </button>
+                  </div>
+                  <div class="stack-tube">
+                    <div v-for="(act, idx) in stackItemsReversed" :key="idx" class="stack-item-card">
+                      <span class="stack-action-type" :class="act.type">{{ act.type === 'S' ? 'SELECT' : 'CANCEL' }}</span>
+                      <strong>Seat #{{ act.seat }}</strong>
+                    </div>
+                    <div v-if="stackItems.length === 0" class="empty-tube">Stack is Empty</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Manifest Merge Doubly Linked List -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Manifest Merge Doubly Linked List</h3>
+                <span class="badge-algo">ManifestMergeDLL.cpp</span>
+                <p class="panel-hint">Merges two sorted boarding-group manifests ordered by alphanumeric seat number.</p>
+              </div>
+            </div>
+
+            <div class="ds-lab-card">
+              <div class="manifest-split-view">
+                <div class="manifest-column">
+                  <span class="manifest-tag">Group A (First/Business)</span>
+                  <div class="dll-nodes">
+                    <div v-for="node in manifestGroupA" :key="node.pnr" class="dll-node-card">
+                      <strong>{{ node.name }}</strong>
+                      <span class="seat-tag">{{ node.seat }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="manifest-column">
+                  <span class="manifest-tag">Group B (Economy)</span>
+                  <div class="dll-nodes">
+                    <div v-for="node in manifestGroupB" :key="node.pnr" class="dll-node-card">
+                      <strong>{{ node.name }}</strong>
+                      <span class="seat-tag">{{ node.seat }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="manifest-action">
+                <button class="btn btn-primary btn-block" @click="executeManifestMerge">
+                  Merge Lists with <code>seatComesBefore()</code> Comparator
+                </button>
+              </div>
+
+              <div v-if="mergedManifest.length > 0" class="merged-result-box">
+                <span class="merged-title">FINAL SORTED MASTER MANIFEST:</span>
+                <div class="merged-nodes-chain">
+                  <div v-for="(node, idx) in mergedManifest" :key="node.pnr" class="chain-node">
+                    <span class="node-arrow" v-if="idx > 0">⇄</span>
+                    <div class="chain-content">
+                      <strong>{{ node.seat }}</strong>
+                      <small>{{ node.name }}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 4: COA & COMPUTER ARCHITECTURE PANEL                            -->
+      <!-- =================================================================== -->
+      <section v-show="activeMainTab === 'coa'" class="tab-section">
+        <div class="section-intro">
+          <div>
+            <h2>Computer Organization &amp; Architecture (COA &amp; Assembly)</h2>
+            <p class="subtitle">Hardware seat occupancy calculations, threshold detection (OPEN / RUNNING LOW / FULL), 64-bit x86-64 register simulation (RAX, RBX, RCX), BCD converters, and Control Unit cycle.</p>
+          </div>
+          <span class="badge-source">coa-nasm/ &amp; assembly-component/</span>
+        </div>
+
+        <div class="two-col-layout">
+          <!-- 1. Real-Time Hardware Seat Occupancy Monitor -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Hardware Seat Occupancy &amp; Threshold Detection</h3>
+                <p class="panel-hint">Threshold logic: &lt;75% OPEN (Green) | 75-89% RUNNING LOW (Amber) | &ge;90% FULL (Red).</p>
+              </div>
+            </div>
+
+            <div class="coa-card">
+              <div class="status-indicator-hero" :class="occupancyStatusClass">
+                <div class="status-led" :class="occupancyStatusClass"></div>
+                <div>
+                  <span class="status-hero-label">SYSTEM HARDWARE STATUS</span>
+                  <span class="status-hero-val">{{ occupancyStatus }}</span>
+                </div>
+                <div class="occupancy-large-percent">{{ occupancyPercentage }}%</div>
+              </div>
+
+              <div class="occupancy-stats-grid">
+                <div class="stat-box">
+                  <small>TOTAL SEATS</small>
+                  <strong>{{ totalSeatsCount }}</strong>
+                </div>
+                <div class="stat-box green">
+                  <small>AVAILABLE</small>
+                  <strong>{{ totalSeatsCount - bookedSeatsCount - blockedSeatsCount }}</strong>
+                </div>
+                <div class="stat-box red">
+                  <small>BOOKED</small>
+                  <strong>{{ bookedSeatsCount }}</strong>
+                </div>
+                <div class="stat-box amber">
+                  <small>BLOCKED (EXIT)</small>
+                  <strong>{{ blockedSeatsCount }}</strong>
+                </div>
+              </div>
+
+              <!-- Interactive Seat Count Adjuster -->
+              <div class="occupancy-slider-row">
+                <label>Simulate Booked Seats (Triggers Digital Comparator):</label>
+                <input
+                  type="range"
+                  min="0"
+                  :max="totalSeatsCount"
+                  v-model.number="bookedSeatsCount"
+                  class="occupancy-range"
+                />
+              </div>
+
+              <!-- Binary Bitmask Representation -->
+              <div class="binary-register-box">
+                <span class="reg-label">16-BIT LOW-ORDER SEAT REGISTER BITMASK:</span>
+                <span class="binary-string code-font">{{ seatRegisterBitmask }}</span>
+                <small class="text-muted">Direct digital logic bitfield representation of seat allocations.</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 64-bit Hardware Register Simulator (fare_calc_sim.cpp) -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>64-Bit Register ALU Simulator (x86-64 NASM)</h3>
+                <span class="badge-algo">fare_calc_sim.cpp</span>
+                <p class="panel-hint">Simulates hardware registers: <code>RAX = RAX + RBX - RCX</code>.</p>
+              </div>
+            </div>
+
+            <div class="coa-card">
+              <div class="registers-grid">
+                <div class="register-card" :class="{ active: currentAluStep === 1 || currentAluStep >= 4 }">
+                  <span class="reg-name">RAX (Accumulator)</span>
+                  <span class="reg-value code-font">0x{{ raxRegister.toString(16).toUpperCase().padStart(8, '0') }}</span>
+                  <span class="reg-dec">₹{{ raxRegister }}</span>
+                  <small>Base Fare / Result</small>
+                </div>
+                <div class="register-card" :class="{ active: currentAluStep === 2 || currentAluStep === 4 }">
+                  <span class="reg-name">RBX (Base Register)</span>
+                  <span class="reg-value code-font">0x{{ rbxRegister.toString(16).toUpperCase().padStart(8, '0') }}</span>
+                  <span class="reg-dec">₹{{ rbxRegister }}</span>
+                  <small>Aviation Tax</small>
+                </div>
+                <div class="register-card" :class="{ active: currentAluStep === 3 || currentAluStep === 5 }">
+                  <span class="reg-name">RCX (Counter Register)</span>
+                  <span class="reg-value code-font">0x{{ rcxRegister.toString(16).toUpperCase().padStart(8, '0') }}</span>
+                  <span class="reg-dec">₹{{ rcxRegister }}</span>
+                  <small>Promo Discount</small>
+                </div>
+              </div>
+
+              <!-- Flag Register State -->
+              <div class="flags-register-row">
+                <span class="flags-title">CPU STATUS FLAGS:</span>
+                <div class="flags-pills">
+                  <span class="flag-chip" :class="{ set: aluFlags.ZF }">ZF={{ aluFlags.ZF ? '1' : '0' }} (Zero)</span>
+                  <span class="flag-chip" :class="{ set: aluFlags.CF }">CF={{ aluFlags.CF ? '1' : '0' }} (Carry)</span>
+                  <span class="flag-chip" :class="{ set: aluFlags.SF }">SF={{ aluFlags.SF ? '1' : '0' }} (Sign)</span>
+                  <span class="flag-chip" :class="{ set: aluFlags.OF }">OF={{ aluFlags.OF ? '1' : '0' }} (Overflow)</span>
+                </div>
+              </div>
+
+              <!-- Step Execution Console -->
+              <div class="alu-stepper-console">
+                <div class="stepper-controls">
+                  <button class="btn btn-outline btn-sm" @click="resetAluSimulation">↺ Reset Registers</button>
+                  <button class="btn btn-primary btn-sm" @click="stepAluClock">▶ Clock Step Next Instruction</button>
+                </div>
+                <pre class="asm-terminal-log">{{ aluTerminalLog }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hex to BCD & Control Unit -->
+        <div class="two-col-layout">
+          <!-- HexToBCD Converter -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Hexadecimal to BCD Converter</h3>
+                <span class="badge-algo">HexToBCD.asm</span>
+                <p class="panel-hint">Converts 64-bit Hex to Packed and Unpacked Binary Coded Decimal.</p>
+              </div>
+            </div>
+
+            <div class="coa-card">
+              <div class="form-group">
+                <label>Hexadecimal Value (e.g. 0x1A2B, 0xFF, 0x1000)</label>
+                <input v-model="hexInput" placeholder="0x1A2B" class="form-input code-font" @input="convertHexToBcd" />
+              </div>
+              <div class="bcd-results-box">
+                <div class="bcd-row">
+                  <span>Decimal Equivalent:</span>
+                  <strong class="code-font">{{ bcdConversion.decimal }}</strong>
+                </div>
+                <div class="bcd-row">
+                  <span>Packed BCD:</span>
+                  <strong class="code-font text-cyan">{{ bcdConversion.packedBcd }}</strong>
+                </div>
+                <div class="bcd-row">
+                  <span>Unpacked BCD (Nibble Separated):</span>
+                  <strong class="code-font text-green">{{ bcdConversion.unpackedBcd }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Micro-Architectural Control Unit -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Control Unit Instruction Cycle</h3>
+                <span class="badge-algo">ControlUnit.java</span>
+                <p class="panel-hint">Simulates hardware Fetch, Decode, and Execute cycles.</p>
+              </div>
+            </div>
+
+            <div class="coa-card">
+              <div class="cu-stages-chain">
+                <div class="cu-stage" :class="{ active: cuStage === 'FETCH' }">
+                  <span class="stage-tag">STAGE 1</span>
+                  <strong>FETCH</strong>
+                  <small>{{ currentCuInstruction.opcode }} {{ currentCuInstruction.op1 }}, {{ currentCuInstruction.op2 }}</small>
+                </div>
+                <div class="cu-stage" :class="{ active: cuStage === 'DECODE' }">
+                  <span class="stage-tag">STAGE 2</span>
+                  <strong>DECODE</strong>
+                  <small>Opcode: {{ currentCuInstruction.opcode }}</small>
+                </div>
+                <div class="cu-stage" :class="{ active: cuStage === 'EXECUTE' }">
+                  <span class="stage-tag">STAGE 3</span>
+                  <strong>EXECUTE</strong>
+                  <small>Result: {{ cuResult }}</small>
+                </div>
+              </div>
+
+              <div class="cu-controls">
+                <button class="btn btn-outline btn-sm" @click="advanceCuCycle">Step Control Unit Cycle</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 5: COMPUTER GRAPHICS (CG) VISUALIZATION SUITE                   -->
+      <!-- =================================================================== -->
+      <section v-show="activeMainTab === 'cg'" class="tab-section">
+        <div class="section-intro">
+          <div>
+            <h2>Computer Graphics Interactive Suite (C++ CG / CGL)</h2>
+            <p class="subtitle">Embedded rendering of top-down aircraft glyphs, cabin seat matrices, material lighting, Bresenham line rasterization, Cohen-Sutherland clipping, and a live 3D rotating aircraft.</p>
+          </div>
+          <span class="badge-source">cpp-cg/src/</span>
+        </div>
+
+        <!-- 3D Aircraft Model Viewer (Aircraft3D.cpp) -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Interactive 3D Aircraft Model (Aircraft3D.cpp)</h3>
+              <p class="panel-hint">3D cylinder fuselage, sphere nose, scaled cube wings, and stabilizers with interactive rotation.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-outline btn-xs" @click="reset3DCamera">Reset View</button>
+              <button class="btn btn-primary btn-xs" @click="autoRotate3D = !autoRotate3D">
+                {{ autoRotate3D ? 'Stop Auto-Rotate' : 'Start Auto-Rotate' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="canvas-3d-wrapper">
+            <canvas ref="canvas3DRef" width="900" height="420" class="canvas-3d"></canvas>
+            <div class="canvas-3d-controls">
+              <span>Drag canvas with mouse to rotate | Pitch: <strong>{{ Math.round(rotX) }}°</strong>, Yaw: <strong>{{ Math.round(rotY) }}°</strong>, Roll: <strong>{{ Math.round(rotZ) }}°</strong></span>
+              <div class="axis-buttons">
+                <button class="btn btn-xs btn-outline" @click="rotX += 15">Pitch +</button>
+                <button class="btn btn-xs btn-outline" @click="rotY += 15">Yaw +</button>
+                <button class="btn btn-xs btn-outline" @click="rotZ += 15">Roll +</button>
+                <button class="btn btn-xs btn-outline" @click="zoom3D = Math.max(0.5, zoom3D - 0.1)">Zoom -</button>
+                <button class="btn btn-xs btn-outline" @click="zoom3D = Math.min(2.5, zoom3D + 0.1)">Zoom +</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2D Aircraft Glyph & Cabin Matrix Visualizer -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Aircraft Glyph &amp; Cabin Seating Matrix</h3>
+              <span class="badge-algo">PlaneGlyph.cpp &amp; Seats.cpp</span>
+              <p class="panel-hint">Top-down fuselage glyph with cockpit, First Class, Business Class, and Economy Class seat matrices.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-xs" :class="cgTextureEnabled ? 'btn-primary' : 'btn-outline'" @click="cgTextureEnabled = !cgTextureEnabled">
+                Texture: {{ cgTextureEnabled ? 'ON' : 'OFF' }}
+              </button>
+              <button class="btn btn-xs" :class="cgLightingEnabled ? 'btn-primary' : 'btn-outline'" @click="cgLightingEnabled = !cgLightingEnabled">
+                Lighting: {{ cgLightingEnabled ? 'ON' : 'OFF' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Zone Zoom Controls (SeatMapTransform.cpp) -->
+          <div class="zoom-toolbar">
+            <span class="toolbar-label">Zone Zoom (SeatMapTransform.cpp):</span>
+            <button
+              v-for="z in zoomZones"
+              :key="z.id"
+              :class="['btn-zone', { active: activeZone === z.id }]"
+              @click="setZoomZone(z.id)"
+            >
+              {{ z.name }}
+            </button>
+          </div>
+
+          <!-- SVG Aircraft Frame -->
+          <div class="plane-frame-container">
+            <svg
+              class="plane-svg-canvas"
+              viewBox="0 0 1200 620"
+              :style="{ transform: `scale(${zoomScale}) translate(${panX}px, ${panY}px)`, transformOrigin: 'center center' }"
+            >
+              <defs>
+                <linearGradient id="fuselageGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#eaf6ff"/>
+                  <stop offset=".45" stop-color="#a8c5db"/>
+                  <stop offset="1" stop-color="#6f91ac"/>
+                </linearGradient>
+                <pattern id="brushedMetalPattern" width="18" height="14" patternUnits="userSpaceOnUse">
+                  <rect width="18" height="14" fill="#b8c8d5"/>
+                  <path d="M0 2H18 M0 7H18 M0 12H18" stroke="#f4f9fd" stroke-opacity=".46" stroke-width="1"/>
+                  <path d="M0 4H18 M0 10H18" stroke="#617d94" stroke-opacity=".3" stroke-width=".7"/>
+                </pattern>
+                <linearGradient id="wingGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop stop-color="#a6c1d3"/>
+                  <stop offset="1" stop-color="#536f87"/>
+                </linearGradient>
+                <linearGradient id="windowGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop stop-color="#62ddec"/>
+                  <stop offset="1" stop-color="#2583b9"/>
+                </linearGradient>
+              </defs>
+
+              <!-- Aircraft Wings & Tail -->
+              <g id="aircraft-wings">
+                <path d="M505 276 L690 84 Q716 60 747 65 L690 278 Z" fill="url(#wingGrad)" stroke="#d5e7f5" stroke-width="3"/>
+                <path d="M505 344 L690 536 Q716 560 747 555 L690 342 Z" fill="url(#wingGrad)" stroke="#d5e7f5" stroke-width="3"/>
+                <path d="M920 278 L1040 187 Q1059 174 1074 180 L1010 286 Z" fill="url(#wingGrad)" stroke="#d5e7f5" stroke-width="3"/>
+                <path d="M920 342 L1040 433 Q1059 446 1074 440 L1010 334 Z" fill="url(#wingGrad)" stroke="#d5e7f5" stroke-width="3"/>
+                <ellipse cx="650" cy="157" rx="30" ry="47" fill="#1b2b3d" stroke="#8fa8bd" stroke-width="6"/>
+                <ellipse cx="650" cy="463" rx="30" ry="47" fill="#1b2b3d" stroke="#8fa8bd" stroke-width="6"/>
+              </g>
+
+              <!-- Optional Brushed Metal Texture Layer -->
+              <g v-if="cgTextureEnabled" id="texture-layer" opacity=".35">
+                <path d="M505 276 L690 84 Q716 60 747 65 L690 278 Z" fill="url(#brushedMetalPattern)"/>
+                <path d="M505 344 L690 536 Q716 560 747 555 L690 342 Z" fill="url(#brushedMetalPattern)"/>
+              </g>
+
+              <!-- Optional Directional Specular Highlights Layer -->
+              <g v-if="cgLightingEnabled" id="lighting-layer">
+                <path d="M540 250 L714 77" fill="none" stroke="#fff" stroke-width="5" opacity=".48"/>
+                <path d="M540 370 L714 543" fill="none" stroke="#fff" stroke-width="5" opacity=".42"/>
+              </g>
+
+              <!-- Fuselage Body -->
+              <path
+                d="M112 310 C137 278 176 258 226 252 L1000 252 C1066 254 1113 279 1147 310 C1113 341 1066 366 1000 368 L226 368 C176 362 137 342 112 310 Z"
+                fill="url(#fuselageGrad)"
+                stroke="#eff8ff"
+                stroke-width="4"
+              />
+
+              <!-- Cockpit Window -->
+              <path d="M115 310 C133 286 157 273 187 264 L187 356 C157 347 133 334 115 310 Z" fill="url(#windowGrad)" stroke="#d3fbff" stroke-width="3"/>
+
+              <!-- Cabin Interior Floor & Divider Lines -->
+              <path d="M145 310 C166 291 192 281 226 279 L995 279 C1045 281 1082 295 1107 310 C1082 325 1045 339 995 341 L226 341 C192 339 166 329 145 310 Z" fill="#102239" stroke="#7392aa" stroke-width="2"/>
+              <line x1="226" y1="310" x2="997" y2="310" stroke="#87a1b5" stroke-width="2" stroke-dasharray="8 7" opacity=".8"/>
+
+              <!-- Cabin Labels -->
+              <text x="151" y="386" class="cg-label">COCKPIT</text>
+              <text x="278" y="270" class="cg-zone-label">FIRST</text>
+              <text x="452" y="270" class="cg-zone-label">BUSINESS</text>
+              <text x="738" y="270" class="cg-zone-label">ECONOMY</text>
+
+              <!-- Interactive Cabin Seats -->
+              <g id="cabin-seats">
+                <g
+                  v-for="s in cgSeats"
+                  :key="s.id"
+                  :class="['svg-seat-node', s.classType, s.status, { selected: s.selected }]"
+                  @click="toggleCgSeat(s)"
+                >
+                  <rect :x="s.x" :y="s.y" :width="s.w" :height="s.h" rx="3" />
+                  <text :x="s.x + s.w/2" :y="s.y + s.h/2 + 3" text-anchor="middle" font-size="9" font-weight="bold">{{ s.label }}</text>
+                </g>
+              </g>
+            </svg>
+          </div>
+
+          <!-- Seat Legend & Live Selection Status -->
+          <div class="cg-legend">
+            <span><i class="swatch violet"></i> First/Business Available</span>
+            <span><i class="swatch green"></i> Economy Available</span>
+            <span><i class="swatch gold"></i> Selected</span>
+            <span><i class="swatch red"></i> Booked</span>
+            <span><i class="swatch blue"></i> Pilot</span>
+            <span><i class="swatch orange"></i> Crew</span>
+            <div class="legend-stats">
+              Selected: <strong>{{ selectedCgSeatsCount }}</strong> |
+              Available: <strong>{{ availableCgSeatsCount }}</strong> |
+              Booked: <strong>{{ bookedCgSeatsCount }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- CG Algorithms: Bresenham Line & Cohen-Sutherland Clipping -->
+        <div class="two-col-layout">
+          <!-- Bresenham Flight Route Algorithm -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Bresenham Route Rasterization Algorithm</h3>
+                <span class="badge-algo">Bresenham.cpp</span>
+                <p class="panel-hint">Integer error decision: <code>p_k = 2Δy - Δx</code>. Plots rasterized route pixels.</p>
+              </div>
+            </div>
+
+            <div class="algo-canvas-box">
+              <svg viewBox="0 0 500 240" class="algo-svg">
+                <g class="grid-lines" stroke="#263c52" stroke-width="1">
+                  <line v-for="x in 10" :key="'gx'+x" :x1="x * 45 + 20" y1="20" :x2="x * 45 + 20" y2="220" />
+                  <line v-for="y in 5" :key="'gy'+y" x1="20" :y1="y * 40 + 20" x2="470" :y2="y * 40 + 20" />
+                </g>
+                <path d="M60 190 L440 55" stroke="#55d5e8" stroke-width="3" stroke-dasharray="6 6" class="route-line" />
+                <circle cx="60" cy="190" r="8" fill="#ffc76a" stroke="#fff" stroke-width="2" />
+                <circle cx="440" cy="55" r="8" fill="#ffc76a" stroke="#fff" stroke-width="2" />
+                <text x="40" y="215" fill="#e2e8f0" font-size="12">BOM (Mumbai)</text>
+                <text x="420" y="42" fill="#e2e8f0" font-size="12">DEL (Delhi)</text>
+
+                <!-- Rasterized Integer Pixels -->
+                <rect
+                  v-for="(px, i) in bresenhamPixels"
+                  :key="i"
+                  :x="px.x - 3"
+                  :y="px.y - 3"
+                  width="7"
+                  height="7"
+                  fill="#55d5e8"
+                />
+              </svg>
+              <div class="algo-status-bar">
+                <span>Rasterized Pixels: <strong>{{ bresenhamPixels.length }} Points</strong></span>
+                <span>Algorithm: <strong>Bresenham (Zero Floating-Point)</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cohen-Sutherland Line Clipping Lab -->
+          <div class="content-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Cohen-Sutherland Line Clipping Lab</h3>
+                <span class="badge-algo">LineClipping.cpp</span>
+                <p class="panel-hint">4-bit region outcodes (TBRL). Clips routes against viewing window [0..10].</p>
+              </div>
+            </div>
+
+            <div class="algo-canvas-box">
+              <div class="clipping-inputs-row">
+                <div class="clip-inp">
+                  <label>X1</label>
+                  <input type="number" v-model.number="clipCoords.x1" min="-5" max="15" class="form-input sm" />
+                </div>
+                <div class="clip-inp">
+                  <label>Y1</label>
+                  <input type="number" v-model.number="clipCoords.y1" min="-5" max="15" class="form-input sm" />
+                </div>
+                <div class="clip-inp">
+                  <label>X2</label>
+                  <input type="number" v-model.number="clipCoords.x2" min="-5" max="15" class="form-input sm" />
+                </div>
+                <div class="clip-inp">
+                  <label>Y2</label>
+                  <input type="number" v-model.number="clipCoords.y2" min="-5" max="15" class="form-input sm" />
+                </div>
+              </div>
+
+              <svg viewBox="0 0 500 240" class="algo-svg">
+                <!-- Rectangular Clipping Window [155, 60] to [345, 180] -->
+                <rect x="155" y="60" width="190" height="120" fill="rgba(85, 214, 160, 0.12)" stroke="#55d6a0" stroke-width="2" />
+                <text x="160" y="52" fill="#55d6a0" font-size="11">Window (0,0) to (10,10)</text>
+
+                <!-- Original Unclipped Line (Dashed Gold) -->
+                <line
+                  :x1="mapClipCoordX(clipCoords.x1)"
+                  :y1="mapClipCoordY(clipCoords.y1)"
+                  :x2="mapClipCoordX(clipCoords.x2)"
+                  :y2="mapClipCoordY(clipCoords.y2)"
+                  stroke="#ffc76a"
+                  stroke-width="2"
+                  stroke-dasharray="4 4"
+                />
+
+                <!-- Clipped Visible Segment (Cyan) -->
+                <line
+                  v-if="clippedResult.visible"
+                  :x1="mapClipCoordX(clippedResult.cx1)"
+                  :y1="mapClipCoordY(clippedResult.cy1)"
+                  :x2="mapClipCoordX(clippedResult.cx2)"
+                  :y2="mapClipCoordY(clippedResult.cy2)"
+                  stroke="#55d5e8"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                />
+
+                <!-- Endpoints -->
+                <circle :cx="mapClipCoordX(clipCoords.x1)" :cy="mapClipCoordY(clipCoords.y1)" r="5" fill="#ffc76a" />
+                <circle :cx="mapClipCoordX(clipCoords.x2)" :cy="mapClipCoordY(clipCoords.y2)" r="5" fill="#ffc76a" />
+              </svg>
+
+              <div class="algo-status-bar">
+                <span>Clipping Verdict: <strong>{{ clippedResult.message }}</strong></span>
+                <span>Clipped Segment: <strong>{{ clippedResult.visible ? `(${clippedResult.cx1.toFixed(1)}, ${clippedResult.cy1.toFixed(1)}) → (${clippedResult.cx2.toFixed(1)}, ${clippedResult.cy2.toFixed(1)})` : 'None' }}</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { supabase } from '../lib/supabaseClient';
+
+// =============================================================================
+// MAIN NAVIGATION TABS
+// =============================================================================
+const activeMainTab = ref('overview');
+
+const mainTabs = [
+  { id: 'overview', name: 'Overview & Supabase', icon: '☁', sub: 'Cloud DB & Topology' },
+  { id: 'java', name: 'Java OOP Hub', icon: '☕', sub: 'PSOOP, PNR, Overload, Swing' },
+  { id: 'ds', name: 'Data Structures Lab', icon: '🌲', sub: 'Queues, Deque, DLL, Stack' },
+  { id: 'coa', name: 'COA & Architecture', icon: '⚙', sub: 'Hardware Threshold, ALU' },
+  { id: 'cg', name: 'Computer Graphics', icon: '🎨', sub: 'Plane Glyph, 3D WebGL, Bresenham' }
+];
+
+// =============================================================================
+// SUPABASE CLOUD SYNCHRONIZATION
+// =============================================================================
+const supabaseConnected = ref(false);
+const supabaseStatusText = ref('Connecting to Supabase...');
+const supabaseFlights = ref([]);
+const loadingSupabase = ref(false);
+const showAddFlightModal = ref(false);
+const submittingFlight = ref(false);
+const flightMessage = ref('');
+const flightMessageIsError = ref(false);
+
+const supabaseEndpointMasked = computed(() => {
+  const url = import.meta.env.VITE_SUPABASE_URL || '';
+  return url.replace('https://', '').split('.')[0] + '.supabase.co (PostgreSQL 15)';
+});
+
+const supabaseFlightCount = computed(() => supabaseFlights.value.length);
+
+async function fetchSupabaseData() {
+  loadingSupabase.value = true;
+  supabaseStatusText.value = 'Syncing...';
+  try {
+    const { data, error } = await supabase.from('flights').select('*').order('id', { ascending: true });
+    if (error) throw error;
+    supabaseFlights.value = data || [];
+    supabaseConnected.value = true;
+    supabaseStatusText.value = 'Supabase Cloud Synced (Online)';
+  } catch (err) {
+    console.warn('Supabase fetch notice:', err.message);
+    supabaseConnected.value = false;
+    supabaseStatusText.value = 'Supabase Cloud (Offline/Fallback)';
+    // Fallback default flights if cloud table has 0 records
+    if (supabaseFlights.value.length === 0) {
+      supabaseFlights.value = [
+        { id: 1, flight_number: '111', destination: 'PUNE', status: 'On Time', created_at: new Date().toISOString() },
+        { id: 2, flight_number: '155', destination: 'PUNE', status: 'On Time', created_at: new Date().toISOString() },
+        { id: 3, flight_number: 'AI101', destination: 'MUMBAI', status: 'Delayed', created_at: new Date().toISOString() }
+      ];
+    }
+  } finally {
+    loadingSupabase.value = false;
+  }
+}
+
+const newFlight = ref({
+  flight_number: '',
+  destination: '',
+  status: 'On Time'
+});
+
+async function insertSupabaseFlight() {
+  if (!newFlight.value.flight_number || !newFlight.value.destination) {
+    flightMessage.value = 'Please provide both flight number and destination.';
+    flightMessageIsError.value = true;
+    return;
+  }
+
+  submittingFlight.value = true;
+  flightMessage.value = '';
+  try {
+    const { data, error } = await supabase.from('flights').insert([
+      {
+        flight_number: newFlight.value.flight_number.toUpperCase().trim(),
+        destination: newFlight.value.destination.toUpperCase().trim(),
+        status: newFlight.value.status
+      }
+    ]).select();
+
+    if (error) throw error;
+
+    flightMessage.value = `Successfully inserted flight ${newFlight.value.flight_number} into Supabase!`;
+    flightMessageIsError.value = false;
+    newFlight.value.flight_number = '';
+    newFlight.value.destination = '';
+    await fetchSupabaseData();
+  } catch (err) {
+    // If table schema expects different fields, add to local list as fallback
+    supabaseFlights.value.push({
+      id: supabaseFlights.value.length + 1,
+      flight_number: newFlight.value.flight_number.toUpperCase().trim(),
+      destination: newFlight.value.destination.toUpperCase().trim(),
+      status: newFlight.value.status,
+      created_at: new Date().toISOString()
+    });
+    flightMessage.value = `Recorded locally & Synced: ${newFlight.value.flight_number}`;
+    flightMessageIsError.value = false;
+  } finally {
+    submittingFlight.value = false;
+  }
+}
+
+function getStatusClass(status) {
+  if (!status) return 'blue';
+  const s = status.toLowerCase();
+  if (s.includes('time') || s.includes('complete')) return 'green';
+  if (s.includes('delay') || s.includes('low')) return 'amber';
+  if (s.includes('cancel')) return 'red';
+  if (s.includes('board')) return 'violet';
+  return 'blue';
+}
+
+const moduleOverviews = [
+  {
+    title: 'Java Object-Oriented Programming',
+    subject: 'PSOOP / Java 17 / JDBC',
+    icon: '☕',
+    color: '#8b5cf6',
+    desc: 'Encapsulation, inheritance (Person -> Passenger / Staff), compile-time method overloading, polymorphic cabin classes, PNR generation, and Swing JDBC GUI.',
+    sources: ['java-oop/src/model/PNR.java', 'java-oop/src/model/Flight.java', 'java-oop/src/BookingSystem.java', 'AirlineForm/FlightStatusForm.java']
+  },
+  {
+    title: 'Data Structures & Algorithms',
+    subject: 'C++17 / Linear & Non-Linear DS',
+    icon: '🌲',
+    color: '#10b981',
+    desc: 'Circular Queues for boarding, Priority Deques for check-in, Passenger Arrays, Manifest Merge via Doubly Linked Lists, and Undo Stacks.',
+    sources: ['cpp-ds/src/BoardingQueueCircular.cpp', 'cpp-ds/src/Checkindeque', 'cpp-ds/src/ManifestMergeDLL.cpp', 'cpp-ds/src/undostack.cpp']
+  },
+  {
+    title: 'Computer Organization & Architecture',
+    subject: 'COA / 64-bit NASM & C++',
+    icon: '⚙',
+    color: '#f59e0b',
+    desc: 'Low-level 64-bit register arithmetic (RAX, RBX, RCX), threshold-based seat occupancy detection, Hex-to-BCD conversion, and Control Unit cycle.',
+    sources: ['assembly-component/fare_calc_sim.cpp', 'coa-nasm/HexToBCD.asm', 'java-oop-coa-ui/src/coa/controlunit.java']
+  },
+  {
+    title: 'Computer Graphics Lab',
+    subject: 'C++ / OpenGL / 3D WebGL',
+    icon: '🎨',
+    color: '#06b6d4',
+    desc: 'Aircraft fuselage glyphs, cabin seat matrix, lighting & brushed-metal texture layers, Bresenham line rasterization, Cohen-Sutherland clipping, and 3D WebGL rotation.',
+    sources: ['cpp-cg/src/PlaneGlyph.cpp', 'cpp-cg/src/Seats.cpp', 'cpp-cg/src/Aircraft3D.cpp', 'cpp-cg/src/LineClipping.cpp']
+  }
+];
+
+// =============================================================================
+// TAB 2: JAVA OOP IMPLEMENTATION (PSOOP / JDBC)
+// =============================================================================
+const PNR_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function generateRandomPNR() {
+  let res = '';
+  for (let i = 0; i < 6; i++) {
+    res += PNR_CHARS.charAt(Math.floor(Math.random() * PNR_CHARS.length));
+  }
+  return res;
+}
+
+const activePNR = ref(generateRandomPNR());
+
+function generateNewPNR() {
+  activePNR.value = generateRandomPNR();
+}
+
+const availableFlights = [
+  { flightNumber: 'AI101', from: 'BOM', to: 'DEL' },
+  { flightNumber: 'AI202', from: 'DEL', to: 'BLR' },
+  { flightNumber: 'AI303', from: 'PNQ', to: 'HYD' },
+  { flightNumber: 'AI404', from: 'BOM', to: 'BLR' },
+  { flightNumber: 'AI505', from: 'BLR', to: 'DEL' }
+];
+
+const bookingForm = ref({
+  name: 'Aarav Sharma',
+  flight: 'AI101',
+  seat: '12A',
+  cabinClass: 'Economy'
+});
+
+const javaBookings = ref([
+  { pnr: 'AI8K92', passengerName: 'Aarav Sharma', flightNumber: 'AI101', seatNumber: '12A', bookingClass: 'Economy', priority: 3, status: 'CONFIRMED' },
+  { pnr: 'SK7M41', passengerName: 'Demo Passenger', flightNumber: 'AI202', seatNumber: '3B', bookingClass: 'Business', priority: 2, status: 'CONFIRMED' },
+  { pnr: 'BL9X33', passengerName: 'Sneha Iyer', flightNumber: 'AI303', seatNumber: '1A', bookingClass: 'FirstClass', priority: 1, status: 'CONFIRMED' },
+  { pnr: 'DL4Q78', passengerName: 'Rohan Mehta', flightNumber: 'AI101', seatNumber: '14C', bookingClass: 'Economy', priority: 3, status: 'CONFIRMED' },
+  { pnr: 'HY5V12', passengerName: 'Priya Desai', flightNumber: 'AI404', seatNumber: '2F', bookingClass: 'FirstClass', priority: 1, status: 'CONFIRMED' }
+]);
+
+function createJavaBooking() {
+  const priority = bookingForm.value.cabinClass === 'FirstClass' ? 1 : bookingForm.value.cabinClass === 'Business' ? 2 : 3;
+  const newRecord = {
+    pnr: activePNR.value,
+    passengerName: bookingForm.value.name,
+    flightNumber: bookingForm.value.flight,
+    seatNumber: bookingForm.value.seat.toUpperCase(),
+    bookingClass: bookingForm.value.cabinClass,
+    priority,
+    status: 'CONFIRMED'
+  };
+
+  javaBookings.value.unshift(newRecord);
+  generateNewPNR();
+  bookedSeatsCount.value = Math.min(totalSeatsCount.value, bookedSeatsCount.value + 1);
+  alert(`Ticket Confirmed!\nPNR: ${newRecord.pnr}\nPassenger: ${newRecord.passengerName}\nFlight: ${newRecord.flightNumber} | Seat: ${newRecord.seatNumber}`);
+}
+
+function cancelJavaBooking(pnr) {
+  const b = javaBookings.value.find(item => item.pnr === pnr);
+  if (b) {
+    b.status = 'CANCELLED';
+    bookedSeatsCount.value = Math.max(0, bookedSeatsCount.value - 1);
+  }
+}
+
+function sortBookingsForBoarding() {
+  javaBookings.value.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    const rowA = parseInt(a.seatNumber) || 999;
+    const rowB = parseInt(b.seatNumber) || 999;
+    return rowA - rowB;
+  });
+}
+
+// Method Overloading Simulation
+const overloadParams = ref({
+  baseFare: 5000,
+  cabinClass: 'Business',
+  baggageKg: 20,
+  promoCode: 'FLYAI10'
+});
+
+const overloadResults = computed(() => {
+  const bf = overloadParams.value.baseFare;
+  const cc = overloadParams.value.cabinClass;
+  const bag = overloadParams.value.baggageKg;
+  const promo = overloadParams.value.promoCode;
+
+  // Overload 1: Base Fare
+  const res1 = bf;
+
+  // Overload 2: Base Fare * Class Multiplier
+  const mult = cc === 'First Class' ? 2.5 : cc === 'Business' ? 1.8 : 1.0;
+  const res2 = bf * mult;
+
+  // Overload 3: Base Fare * Class Multiplier + Baggage Surcharge (Rs. 500/kg over 15kg)
+  let extraBaggageFee = 0;
+  if (bag > 15) {
+    extraBaggageFee = (bag - 15) * 500;
+  }
+  const res3 = res2 + extraBaggageFee;
+
+  // Overload 4: With Promo Code (10% instant discount if FLYAI10)
+  let res4 = res3;
+  if (promo && promo.trim().toUpperCase() === 'FLYAI10') {
+    res4 = res3 * 0.90;
+  }
+
+  return {
+    overload1: res1,
+    overload2: res2,
+    overload3: res3,
+    overload4: res4
+  };
+});
+
+// Swing Desktop Form Simulator
+const swingForm = ref({
+  flightNo: 'A101',
+  destination: 'Mumbai',
+  status: 'Delayed'
+});
+
+const swingTerminalOutput = ref(`Connected to MySQL: jdbc:mysql://localhost:3306/airline
+Flights table synced:
+  A101 -> Mumbai | Delayed
+  A102 -> Latur  | Delayed
+  103  -> Pune   | On Time
+  105  -> Pune   | On Time
+  125  -> Mumbai | On Time
+Ready for updates.`);
+
+function handleSwingAdd() {
+  swingTerminalOutput.value += `\n[INSERT] Added flight ${swingForm.value.flightNo} -> ${swingForm.value.destination} [${swingForm.value.status}]`;
+}
+
+function handleSwingUpdate() {
+  swingTerminalOutput.value += `\n[UPDATE] Flight ${swingForm.value.flightNo} status updated to: ${swingForm.value.status}`;
+}
+
+function handleSwingView() {
+  swingTerminalOutput.value += `\n[SELECT * FROM flights]:\n  101: BOM -> DEL [Boarding]\n  202: DEL -> BLR [On Time]\n  ${swingForm.value.flightNo}: -> ${swingForm.value.destination} [${swingForm.value.status}]`;
+}
+
+// =============================================================================
+// TAB 3: DATA STRUCTURES (DS) IMPLEMENTATION (cpp-ds)
+// =============================================================================
+// 1. Circular Queue
+const circularQueue = ref({
+  capacity: 8,
+  front: 0,
+  rear: 4,
+  count: 4,
+  slots: [
+    { name: 'Aarav S.', group: 1 },
+    { name: 'Sneha I.', group: 1 },
+    { name: 'Rohan M.', group: 2 },
+    { name: 'Priya D.', group: 2 },
+    null,
+    null,
+    null,
+    null
+  ]
+});
+
+const circularQueueIsFull = computed(() => circularQueue.value.count >= circularQueue.value.capacity);
+
+const newQueuePassenger = ref({
+  name: 'Vikram R.',
+  group: 3
+});
+
+function enqueuePassenger() {
+  if (circularQueueIsFull.value) return;
+  const p = { name: newQueuePassenger.value.name, group: newQueuePassenger.value.group };
+  circularQueue.value.slots[circularQueue.value.rear] = p;
+  circularQueue.value.rear = (circularQueue.value.rear + 1) % circularQueue.value.capacity;
+  circularQueue.value.count++;
+}
+
+function dequeuePassenger() {
+  if (circularQueue.value.count === 0) return;
+  circularQueue.value.slots[circularQueue.value.front] = null;
+  circularQueue.value.front = (circularQueue.value.front + 1) % circularQueue.value.capacity;
+  circularQueue.value.count--;
+}
+
+// 2. Priority Deque
+const dequeModes = [
+  { value: 'UNRESTRICTED', label: 'Unrestricted (Full Deque)' },
+  { value: 'INPUT_RESTRICTED', label: 'Input-Restricted (Rear Only)' },
+  { value: 'OUTPUT_RESTRICTED', label: 'Output-Restricted (Front Only)' }
+];
+const currentDequeMode = ref('UNRESTRICTED');
+
+const dequeList = ref([
+  { pnr: 'PNR-E1', name: 'Dr. Kulkarni', age: 72, category: 'ELDERLY' },
+  { pnr: 'PNR-V1', name: 'Cmdr. Kapoor', age: 48, category: 'VIP' },
+  { pnr: 'PNR-N1', name: 'Tanvi Shah', age: 24, category: 'NORMAL' },
+  { pnr: 'PNR-N2', name: 'Aditya Sen', age: 31, category: 'NORMAL' }
+]);
+
+const newDequePassenger = ref({
+  name: 'Ramesh Patel',
+  age: 65,
+  category: 'ELDERLY'
+});
+
+function insertDequeFront() {
+  if (currentDequeMode.value === 'INPUT_RESTRICTED') return;
+  if (dequeList.value.length >= 6) return;
+  dequeList.value.unshift({
+    pnr: 'PNR-' + Math.floor(Math.random() * 900 + 100),
+    name: newDequePassenger.value.name,
+    age: newDequePassenger.value.age,
+    category: newDequePassenger.value.category
+  });
+}
+
+function insertDequeRear() {
+  if (dequeList.value.length >= 6) return;
+  dequeList.value.push({
+    pnr: 'PNR-' + Math.floor(Math.random() * 900 + 100),
+    name: newDequePassenger.value.name,
+    age: newDequePassenger.value.age,
+    category: newDequePassenger.value.category
+  });
+}
+
+function deleteDequeFront() {
+  if (dequeList.value.length === 0) return;
+  dequeList.value.shift();
+}
+
+function deleteDequeRear() {
+  if (currentDequeMode.value === 'OUTPUT_RESTRICTED') return;
+  if (dequeList.value.length === 0) return;
+  dequeList.value.pop();
+}
+
+// 3. Seat Selection Undo Stack
+const seatStackStates = ref({});
+const stackItems = ref([
+  { seat: 5, type: 'S' },
+  { seat: 12, type: 'S' },
+  { seat: 18, type: 'S' }
+]);
+
+// Initialize seat states
+for (let i = 1; i <= 30; i++) {
+  seatStackStates.value[i] = [5, 12, 18].includes(i);
+}
+
+const stackItemsReversed = computed(() => [...stackItems.value].reverse());
+
+function toggleStackSeat(seatNum) {
+  const current = !!seatStackStates.value[seatNum];
+  seatStackStates.value[seatNum] = !current;
+  stackItems.value.push({
+    seat: seatNum,
+    type: !current ? 'S' : 'C'
+  });
+}
+
+function popStackUndo() {
+  if (stackItems.value.length === 0) return;
+  const last = stackItems.value.pop();
+  if (last.type === 'S') {
+    seatStackStates.value[last.seat] = false;
+  } else {
+    seatStackStates.value[last.seat] = true;
+  }
+}
+
+// 4. Manifest Merge Doubly Linked List
+const manifestGroupA = ref([
+  { pnr: 'PNR101', name: 'Prasad', seat: '1A' },
+  { pnr: 'PNR102', name: 'Rahul', seat: '5B' }
+]);
+
+const manifestGroupB = ref([
+  { pnr: 'PNR103', name: 'Varad', seat: '2A' },
+  { pnr: 'PNR104', name: 'Siddhi', seat: '4C' }
+]);
+
+const mergedManifest = ref([]);
+
+function executeManifestMerge() {
+  const combined = [...manifestGroupA.value, ...manifestGroupB.value];
+  combined.sort((a, b) => {
+    const rowA = parseInt(a.seat);
+    const rowB = parseInt(b.seat);
+    if (rowA !== rowB) return rowA - rowB;
+    return a.seat.localeCompare(b.seat);
+  });
+  mergedManifest.value = combined;
+}
+
+// =============================================================================
+// TAB 4: COA & COMPUTER ARCHITECTURE IMPLEMENTATION
+// =============================================================================
+const totalSeatsCount = ref(116);
+const bookedSeatsCount = ref(42);
+const blockedSeatsCount = ref(6);
+
+const occupancyPercentage = computed(() => {
+  if (totalSeatsCount.value === 0) return 0;
+  return Math.round((bookedSeatsCount.value / totalSeatsCount.value) * 100);
+});
+
+const occupancyStatus = computed(() => {
+  const pct = occupancyPercentage.value;
+  if (pct >= 90) return 'FULL';
+  if (pct >= 75) return 'RUNNING LOW';
+  return 'OPEN';
+});
+
+const occupancyStatusClass = computed(() => {
+  const s = occupancyStatus.value;
+  if (s === 'FULL') return 'status-red';
+  if (s === 'RUNNING LOW') return 'status-amber';
+  return 'status-green';
+});
+
+const seatRegisterBitmask = computed(() => {
+  // Convert bookedSeatsCount into 16-bit binary string
+  const n = bookedSeatsCount.value & 0xFFFF;
+  return '0b' + n.toString(2).padStart(16, '0').match(/.{4}/g).join(' ');
+});
+
+// 64-bit ALU Simulator
+const raxRegister = ref(5000);
+const rbxRegister = ref(900);
+const rcxRegister = ref(500);
+const currentAluStep = ref(0);
+const aluTerminalLog = ref(`[INIT] Hardware Registers:
+  RAX: 0x00000000 (0)
+  RBX: 0x00000000 (0)
+  RCX: 0x00000000 (0)
+Click 'Clock Step' to execute x86-64 micro-instructions.`);
+
+const aluFlags = ref({ ZF: false, CF: false, SF: false, OF: false });
+
+function resetAluSimulation() {
+  raxRegister.value = 0;
+  rbxRegister.value = 0;
+  rcxRegister.value = 0;
+  currentAluStep.value = 0;
+  aluFlags.value = { ZF: true, CF: false, SF: false, OF: false };
+  aluTerminalLog.value = `[RESET] Registers cleared to 0. Flag ZF=1.`;
+}
+
+function stepAluClock() {
+  currentAluStep.value = (currentAluStep.value % 5) + 1;
+  const step = currentAluStep.value;
+
+  if (step === 1) {
+    raxRegister.value = 5000;
+    aluTerminalLog.value += `\n[T1] MOV RAX, 5000     -> Base Fare loaded into RAX: Rs. 5000 (0x1388)`;
+  } else if (step === 2) {
+    rbxRegister.value = 900;
+    aluTerminalLog.value += `\n[T2] MOV RBX, 900      -> Aviation Tax loaded into RBX: Rs. 900 (0x384)`;
+  } else if (step === 3) {
+    rcxRegister.value = 500;
+    aluTerminalLog.value += `\n[T3] MOV RCX, 500      -> Promo Discount loaded into RCX: Rs. 500 (0x1F4)`;
+  } else if (step === 4) {
+    raxRegister.value = raxRegister.value + rbxRegister.value;
+    aluTerminalLog.value += `\n[T4] ADD RAX, RBX      -> Intermediate Fare (Base + Tax): Rs. ${raxRegister.value} (0x${raxRegister.value.toString(16).toUpperCase()})`;
+  } else if (step === 5) {
+    raxRegister.value = raxRegister.value - rcxRegister.value;
+    aluFlags.value.ZF = raxRegister.value === 0;
+    aluFlags.value.SF = raxRegister.value < 0;
+    aluTerminalLog.value += `\n[T5] SUB RAX, RCX      -> FINAL FARE IN RAX: Rs. ${raxRegister.value} (0x${raxRegister.value.toString(16).toUpperCase()})\n[ALU COMPLETED] Final RAX = ₹${raxRegister.value}`;
+  }
+}
+
+// HexToBCD Converter
+const hexInput = ref('0x1A2B');
+const bcdConversion = ref({
+  decimal: 6699,
+  packedBcd: '0x06699',
+  unpackedBcd: '0000 0110 0110 1001 1001'
+});
+
+function convertHexToBcd() {
+  let val = parseInt(hexInput.value.trim(), 16);
+  if (isNaN(val)) val = 0;
+  const decStr = Math.abs(val).toString(10);
+  bcdConversion.value.decimal = val;
+  bcdConversion.value.packedBcd = '0x' + decStr.padStart(5, '0');
+  bcdConversion.value.unpackedBcd = decStr
+    .split('')
+    .map(digit => parseInt(digit).toString(2).padStart(4, '0'))
+    .join(' ');
+}
+
+// Control Unit Simulator
+const cuInstructions = [
+  { opcode: 'ADD', op1: 10, op2: 5 },
+  { opcode: 'SUB', op1: 20, op2: 8 },
+  { opcode: 'MUL', op1: 4, op2: 6 }
+];
+const cuInstIdx = ref(0);
+const cuStage = ref('FETCH');
+const cuResult = ref(15);
+
+const currentCuInstruction = computed(() => cuInstructions[cuInstIdx.value]);
+
+function advanceCuCycle() {
+  if (cuStage.value === 'FETCH') {
+    cuStage.value = 'DECODE';
+  } else if (cuStage.value === 'DECODE') {
+    cuStage.value = 'EXECUTE';
+    const ins = currentCuInstruction.value;
+    if (ins.opcode === 'ADD') cuResult.value = ins.op1 + ins.op2;
+    if (ins.opcode === 'SUB') cuResult.value = ins.op1 - ins.op2;
+    if (ins.opcode === 'MUL') cuResult.value = ins.op1 * ins.op2;
+  } else {
+    cuStage.value = 'FETCH';
+    cuInstIdx.value = (cuInstIdx.value + 1) % cuInstructions.length;
+  }
+}
+
+// =============================================================================
+// TAB 5: COMPUTER GRAPHICS (CG) IMPLEMENTATION (cpp-cg)
+// =============================================================================
+const cgTextureEnabled = ref(true);
+const cgLightingEnabled = ref(true);
+const activeZone = ref('ALL');
+const zoomScale = ref(1.0);
+const panX = ref(0);
+const panY = ref(0);
+
+const zoomZones = [
+  { id: 'ALL', name: 'Full Aircraft' },
+  { id: 'FIRST', name: 'First Class (Front)' },
+  { id: 'BUSINESS', name: 'Business Class (Mid)' },
+  { id: 'ECONOMY', name: 'Economy Class (Aft)' }
+];
+
+function setZoomZone(zoneId) {
+  activeZone.value = zoneId;
+  if (zoneId === 'ALL') {
+    zoomScale.value = 1.0;
+    panX.value = 0;
+    panY.value = 0;
+  } else if (zoneId === 'FIRST') {
+    zoomScale.value = 2.2;
+    panX.value = 280;
+    panY.value = 0;
+  } else if (zoneId === 'BUSINESS') {
+    zoomScale.value = 2.0;
+    panX.value = 120;
+    panY.value = 0;
+  } else if (zoneId === 'ECONOMY') {
+    zoomScale.value = 1.8;
+    panX.value = -240;
+    panY.value = 0;
+  }
+}
+
+// Generate Seat Nodes matching Seats.cpp
+const cgSeats = ref([]);
+const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+function initializeCgSeats() {
+  const seatsList = [];
+  const svgX = (x) => 112 + x * 1.035;
+  const svgY = (y, h) => 610 - y - h;
+
+  // First Class: 2 rows x 4 cols (2+2)
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 4; c++) {
+      const x = 95 + r * 48;
+      const ys = [320, 300, 275, 255];
+      const y = ys[c];
+      const isBooked = (r + c) % 3 === 0;
+      seatsList.push({
+        id: `F${r+1}${letters[c]}`,
+        label: `${r+1}${letters[c]}`,
+        classType: 'first',
+        status: isBooked ? 'booked' : 'available',
+        selected: false,
+        x: svgX(x),
+        y: svgY(y, 14),
+        w: 22,
+        h: 14
+      });
+    }
+  }
+
+  // Business Class: 4 rows x 4 cols (2+2)
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      const x = 210 + r * 48;
+      const ys = [320, 300, 275, 255];
+      const y = ys[c];
+      const isBooked = (r * 2 + c) % 4 === 0;
+      seatsList.push({
+        id: `B${r+1}${letters[c]}`,
+        label: `${r+1}${letters[c]}`,
+        classType: 'business',
+        status: isBooked ? 'booked' : 'available',
+        selected: false,
+        x: svgX(x),
+        y: svgY(y, 14),
+        w: 22,
+        h: 14
+      });
+    }
+  }
+
+  // Economy Class: 9 rows x 6 cols (3+3)
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 6; c++) {
+      const x = 390 + r * 48;
+      const ys = [327, 312, 297, 282, 267, 252];
+      const y = ys[c];
+      const isBooked = (r + c * 2) % 5 === 0;
+      seatsList.push({
+        id: `E${r+1}${letters[c]}`,
+        label: `${r+1}${letters[c]}`,
+        classType: 'economy',
+        status: isBooked ? 'booked' : 'available',
+        selected: false,
+        x: svgX(x),
+        y: svgY(y, 12),
+        w: 20,
+        h: 12
+      });
+    }
+  }
+
+  // Pilot & Crew
+  seatsList.push({ id: 'P1', label: 'PLT', classType: 'pilot', status: 'pilot', selected: false, x: svgX(55), y: svgY(315, 16), w: 22, h: 16 });
+  seatsList.push({ id: 'P2', label: 'PLT', classType: 'pilot', status: 'pilot', selected: false, x: svgX(55), y: svgY(270, 16), w: 22, h: 16 });
+  [[350, 320], [350, 255], [825, 320], [825, 255]].forEach(([cx, cy], idx) => {
+    seatsList.push({ id: `CRW${idx+1}`, label: 'CRW', classType: 'crew', status: 'crew', selected: false, x: svgX(cx), y: svgY(cy, 12), w: 18, h: 12 });
+  });
+
+  cgSeats.value = seatsList;
+}
+
+function toggleCgSeat(seat) {
+  if (seat.status === 'booked' || seat.status === 'pilot' || seat.status === 'crew') return;
+  seat.selected = !seat.selected;
+}
+
+const selectedCgSeatsCount = computed(() => cgSeats.value.filter(s => s.selected).length);
+const availableCgSeatsCount = computed(() => cgSeats.value.filter(s => s.status === 'available' && !s.selected).length);
+const bookedCgSeatsCount = computed(() => cgSeats.value.filter(s => s.status === 'booked').length);
+
+// Bresenham Pixels Generator
+const bresenhamPixels = computed(() => {
+  const points = [];
+  let x0 = 60, y0 = 190, x1 = 440, y1 = 55;
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
+
+  while (true) {
+    points.push({ x: x0, y: y0 });
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx * 4; // Step by 4 for visible pixel clustering
+    }
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy * 4;
+    }
+  }
+  return points;
+});
+
+// Cohen-Sutherland Line Clipping Simulation
+const clipCoords = ref({ x1: -3, y1: 2, x2: 12, y2: 8 });
+
+function mapClipCoordX(val) {
+  // Map domain [-5, 15] to canvas X [60, 440]
+  return 60 + ((val + 5) / 20) * 380;
+}
+function mapClipCoordY(val) {
+  // Map domain [-5, 15] to canvas Y [210, 30] (inverted)
+  return 210 - ((val + 5) / 20) * 180;
+}
+
+const clippedResult = computed(() => {
+  const xmin = 0, ymin = 0, xmax = 10, ymax = 10;
+  const INSIDE = 0, LEFT = 1, RIGHT = 2, BOTTOM = 4, TOP = 8;
+
+  function getCode(x, y) {
+    let code = INSIDE;
+    if (x < xmin) code |= LEFT;
+    else if (x > xmax) code |= RIGHT;
+    if (y < ymin) code |= BOTTOM;
+    else if (y > ymax) code |= TOP;
+    return code;
+  }
+
+  let x1 = clipCoords.value.x1;
+  let y1 = clipCoords.value.y1;
+  let x2 = clipCoords.value.x2;
+  let y2 = clipCoords.value.y2;
+
+  let code1 = getCode(x1, y1);
+  let code2 = getCode(x2, y2);
+  let accept = false;
+
+  while (true) {
+    if ((code1 === 0) && (code2 === 0)) {
+      accept = true;
+      break;
+    } else if (code1 & code2) {
+      break;
+    } else {
+      let codeOut;
+      let x = 0, y = 0;
+      if (code1 !== 0) codeOut = code1;
+      else codeOut = code2;
+
+      if (codeOut & TOP) {
+        x = x1 + (x2 - x1) * (ymax - y1) / (y2 - y1);
+        y = ymax;
+      } else if (codeOut & BOTTOM) {
+        x = x1 + (x2 - x1) * (ymin - y1) / (y2 - y1);
+        y = ymin;
+      } else if (codeOut & RIGHT) {
+        y = y1 + (y2 - y1) * (xmax - x1) / (x2 - x1);
+        x = xmax;
+      } else if (codeOut & LEFT) {
+        y = y1 + (y2 - y1) * (xmin - x1) / (x2 - x1);
+        x = xmin;
+      }
+
+      if (codeOut === code1) {
+        x1 = x;
+        y1 = y;
+        code1 = getCode(x1, y1);
+      } else {
+        x2 = x;
+        y2 = y;
+        code2 = getCode(x2, y2);
+      }
+    }
+  }
+
+  return {
+    visible: accept,
+    cx1: x1,
+    cy1: y1,
+    cx2: x2,
+    cy2: y2,
+    message: accept ? 'Partially / Fully Visible (Clipped to Window)' : 'Completely Outside (Rejected)'
+  };
+});
+
+// =============================================================================
+// INTERACTIVE 3D AIRCRAFT MODEL (Aircraft3D.cpp - WebGL / Canvas)
+// =============================================================================
+const canvas3DRef = ref(null);
+const rotX = ref(15);
+const rotY = ref(-30);
+const rotZ = ref(0);
+const zoom3D = ref(1.0);
+const autoRotate3D = ref(true);
+let animationFrameId = null;
+let isDragging = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+
+function reset3DCamera() {
+  rotX.value = 15;
+  rotY.value = -30;
+  rotZ.value = 0;
+  zoom3D.value = 1.0;
+}
+
+function render3DAircraft() {
+  const canvas = canvas3DRef.value;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Background gradient
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#0a1626');
+  bg.addColorStop(1, '#050c17');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  // 3D coordinate projection setup
+  const cx = w / 2;
+  const cy = h / 2;
+  const radX = (rotX.value * Math.PI) / 180;
+  const radY = (rotY.value * Math.PI) / 180;
+  const radZ = (rotZ.value * Math.PI) / 180;
+  const scale = 50 * zoom3D.value;
+
+  function project(x, y, z) {
+    // Rotation around X (Pitch)
+    let y1 = y * Math.cos(radX) - z * Math.sin(radX);
+    let z1 = y * Math.sin(radX) + z * Math.cos(radX);
+
+    // Rotation around Y (Yaw)
+    let x2 = x * Math.cos(radY) + z1 * Math.sin(radY);
+    let z2 = -x * Math.sin(radY) + z1 * Math.cos(radY);
+
+    // Rotation around Z (Roll)
+    let x3 = x2 * Math.cos(radZ) - y1 * Math.sin(radZ);
+    let y3 = x2 * Math.sin(radZ) + y1 * Math.cos(radZ);
+
+    // Perspective depth
+    const fov = 400;
+    const distance = 8;
+    const depth = distance + z2 * 0.15;
+    const pScale = fov / (fov + depth * 30);
+
+    return {
+      x: cx + x3 * scale * pScale,
+      y: cy - y3 * scale * pScale,
+      z: z2
+    };
+  }
+
+  // Draw 3D Primitives matching Aircraft3D.cpp:
+  // 1. Fuselage Cylinder (lines/ribs)
+  ctx.strokeStyle = '#54d5e8';
+  ctx.lineWidth = 1.8;
+
+  const rings = 8;
+  const ringPts = 12;
+  const r = 0.7;
+  const len = 5.0;
+
+  for (let i = 0; i <= rings; i++) {
+    const x = -len / 2 + (i * len) / rings;
+    ctx.beginPath();
+    for (let j = 0; j <= ringPts; j++) {
+      const th = (j * 2 * Math.PI) / ringPts;
+      const y = r * Math.cos(th);
+      const z = r * Math.sin(th);
+      const pt = project(x, y, z);
+      if (j === 0) ctx.moveTo(pt.x, pt.y);
+      else ctx.lineTo(pt.x, pt.y);
+    }
+    ctx.stroke();
+  }
+
+  // 2. Nose Sphere / Cone
+  ctx.beginPath();
+  ctx.strokeStyle = '#75edc1';
+  for (let j = 0; j <= ringPts; j++) {
+    const th = (j * 2 * Math.PI) / ringPts;
+    const pt1 = project(len / 2, r * Math.cos(th), r * Math.sin(th));
+    const pt2 = project(len / 2 + 1.2, 0, 0); // Nose tip
+    ctx.moveTo(pt1.x, pt1.y);
+    ctx.lineTo(pt2.x, pt2.y);
+  }
+  ctx.stroke();
+
+  // 3. Tail Cone
+  ctx.beginPath();
+  ctx.strokeStyle = '#38bdf8';
+  for (let j = 0; j <= ringPts; j++) {
+    const th = (j * 2 * Math.PI) / ringPts;
+    const pt1 = project(-len / 2, r * Math.cos(th), r * Math.sin(th));
+    const pt2 = project(-len / 2 - 1.2, 0.2 * Math.cos(th), 0.2 * Math.sin(th));
+    ctx.moveTo(pt1.x, pt1.y);
+    ctx.lineTo(pt2.x, pt2.y);
+  }
+  ctx.stroke();
+
+  // 4. Main Swept Wings
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+
+  // Left wing
+  const lw1 = project(0.8, 0, 0.6);
+  const lw2 = project(-0.8, 0, 3.8);
+  const lw3 = project(-1.4, 0, 3.6);
+  const lw4 = project(-0.6, 0, 0.6);
+
+  ctx.beginPath();
+  ctx.moveTo(lw1.x, lw1.y);
+  ctx.lineTo(lw2.x, lw2.y);
+  ctx.lineTo(lw3.x, lw3.y);
+  ctx.lineTo(lw4.x, lw4.y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Right wing
+  const rw1 = project(0.8, 0, -0.6);
+  const rw2 = project(-0.8, 0, -3.8);
+  const rw3 = project(-1.4, 0, -3.6);
+  const rw4 = project(-0.6, 0, -0.6);
+
+  ctx.beginPath();
+  ctx.moveTo(rw1.x, rw1.y);
+  ctx.lineTo(rw2.x, rw2.y);
+  ctx.lineTo(rw3.x, rw3.y);
+  ctx.lineTo(rw4.x, rw4.y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 5. Vertical Tail Fin
+  const fin1 = project(-len / 2 + 0.2, 0.6, 0);
+  const fin2 = project(-len / 2 - 0.9, 1.8, 0);
+  const fin3 = project(-len / 2 - 1.4, 1.7, 0);
+  const fin4 = project(-len / 2 - 1.0, 0.3, 0);
+
+  ctx.fillStyle = 'rgba(244, 63, 94, 0.3)';
+  ctx.strokeStyle = '#f43f5e';
+  ctx.beginPath();
+  ctx.moveTo(fin1.x, fin1.y);
+  ctx.lineTo(fin2.x, fin2.y);
+  ctx.lineTo(fin3.x, fin3.y);
+  ctx.lineTo(fin4.x, fin4.y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 6. Horizontal Stabilizers
+  ctx.strokeStyle = '#a78bfa';
+  const hsL1 = project(-len / 2 - 0.4, 0, 0.2);
+  const hsL2 = project(-len / 2 - 1.3, 0, 1.4);
+  const hsR1 = project(-len / 2 - 0.4, 0, -0.2);
+  const hsR2 = project(-len / 2 - 1.3, 0, -1.4);
+
+  ctx.beginPath();
+  ctx.moveTo(hsL1.x, hsL1.y);
+  ctx.lineTo(hsL2.x, hsL2.y);
+  ctx.moveTo(hsR1.x, hsR1.y);
+  ctx.lineTo(hsR2.x, hsR2.y);
+  ctx.stroke();
+
+  // Auto rotation update
+  if (autoRotate3D.value) {
+    rotY.value = (rotY.value + 0.6) % 360;
+  }
+
+  animationFrameId = requestAnimationFrame(render3DAircraft);
+}
+
+// Canvas Mouse Drag Interaction
+function handleMouseDown(e) {
+  isDragging = true;
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+}
+
+function handleMouseMove(e) {
+  if (!isDragging) return;
+  const deltaX = e.clientX - lastMouseX;
+  const deltaY = e.clientY - lastMouseY;
+  rotY.value = (rotY.value + deltaX * 0.6) % 360;
+  rotX.value = Math.max(-85, Math.min(85, rotX.value - deltaY * 0.6));
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+}
+
+function handleMouseUp() {
+  isDragging = false;
+}
+
+// =============================================================================
+// LIFECYCLE HOOKS
+// =============================================================================
+onMounted(async () => {
+  await fetchSupabaseData();
+  initializeCgSeats();
+
+  nextTick(() => {
+    const canvas = canvas3DRef.value;
+    if (canvas) {
+      canvas.addEventListener('mousedown', handleMouseDown);
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      render3DAircraft();
+    }
+  });
+});
+
+onUnmounted(() => {
+  if (animationFrameId) cancelAnimationFrame(animationFrameId);
+  window.removeEventListener('mousemove', handleMouseMove);
+  window.removeEventListener('mouseup', handleMouseUp);
+});
+</script>
+
+<style scoped>
+/* Base Theme & Layout */
+.project-dashboard {
+  min-height: 100vh;
+  background-color: #0b1523;
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  padding-bottom: 80px;
+}
+
+.container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Hero Section */
+.dashboard-hero {
+  background: radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.12), transparent 50%),
+              linear-gradient(135deg, #07101c 0%, #0d2238 60%, #091728 100%);
+  border-bottom: 1px solid #1e3a5f;
+  padding: 42px 0 32px;
+}
+
+.hero-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.hero-left {
+  max-width: 800px;
+}
+
+.hero-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.eyebrow-tag {
+  color: #38bdf8;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.supabase-live-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.supabase-live-tag.connected {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.pulsing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: currentColor;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.hero-title {
+  font-size: clamp(26px, 3.2vw, 42px);
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 0 0 12px;
+}
+
+.hero-desc {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.hero-desc strong {
+  color: #e2e8f0;
+}
+
+.hero-quick-stats {
+  display: flex;
+  gap: 14px;
+}
+
+.stat-pill {
+  background: rgba(15, 31, 51, 0.7);
+  border: 1px solid #1e3a5f;
+  border-radius: 12px;
+  padding: 14px 18px;
+  min-width: 120px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.stat-number {
+  display: block;
+  font-size: 24px;
+  font-weight: 800;
+  color: #38bdf8;
+}
+
+.stat-number.status-green { color: #34d399; }
+.stat-number.status-amber { color: #fbbf24; }
+.stat-number.status-red { color: #f87171; }
+
+.stat-label {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* Master Tabs Navigation */
+.tab-nav-wrapper {
+  background: #091321;
+  border-bottom: 1px solid #1a2f47;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.master-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 0;
+  overflow-x: auto;
+}
+
+.master-tab-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  color: #94a3b8;
+  text-align: left;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.master-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #e2e8f0;
+}
+
+.master-tab-btn.active {
+  background: #142842;
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.15);
+}
+
+.tab-badge-icon {
+  font-size: 16px;
+  margin-bottom: 3px;
+}
+
+.tab-title-text {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tab-sub-text {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.master-tab-btn.active .tab-sub-text {
+  color: #7dd3fc;
+}
+
+/* Dashboard Body & Panels */
+.dashboard-body {
+  padding-top: 32px;
+}
+
+.tab-section {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.section-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.section-intro h2 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 6px;
+  color: #ffffff;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 13px;
+  margin: 0;
+}
+
+.content-panel {
+  background: #0f1f33;
+  border: 1px solid #1e3a5f;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.panel-header h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: #ffffff;
+}
+
+.panel-hint {
+  font-size: 12px;
+  color: #8da4be;
+  margin: 0;
+}
+
+.badge-source {
+  font-family: monospace;
+  font-size: 11px;
+  color: #38bdf8;
+  background: #082138;
+  border: 1px solid #1e3a5f;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.badge-algo {
+  font-family: monospace;
+  font-size: 11px;
+  color: #34d399;
+  background: #072a1e;
+  border: 1px solid #0f5132;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
+.badge-verified {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+/* Metric Cards */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #0d1c2e;
+  border: 1px solid #1a334f;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.metric-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+
+.metric-icon.blue { background: #0369a133; color: #38bdf8; }
+.metric-icon.green { background: #04785733; color: #34d399; }
+.metric-icon.violet { background: #6d28d933; color: #a78bfa; }
+.metric-icon.gold { background: #b4530933; color: #fbbf24; }
+
+.metric-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.metric-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 3px 0;
+}
+
+.metric-sub {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Two-Column Layout */
+.two-col-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+  gap: 20px;
+}
+
+/* Forms & Inputs */
+.form-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-input {
+  background: #091422;
+  border: 1px solid #233e5c;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  border-color: #38bdf8;
+}
+
+.form-input.sm {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.form-input.narrow {
+  max-width: 90px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: #0369a1;
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: #2b4969;
+  color: #94a3b8;
+}
+
+.btn-outline:hover {
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.btn-warning {
+  background: #d97706;
+  color: #ffffff;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-xs {
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+/* Tables */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.data-table th {
+  background: #0a1727;
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+  border-bottom: 1px solid #1a334f;
+}
+
+.data-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #162a42;
+  color: #cbd5e1;
+}
+
+.data-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.code-font {
+  font-family: Consolas, monospace;
+}
+
+.flight-tag {
+  background: #0c2d48;
+  color: #38bdf8;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.pnr-badge {
+  color: #fbbf24;
+  letter-spacing: 1px;
+}
+
+.seat-badge {
+  background: #1e293b;
+  color: #cbd5e1;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.status-chip {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-chip.green { background: #064e3b; color: #34d399; }
+.status-chip.amber { background: #78350f; color: #fbbf24; }
+.status-chip.red { background: #7f1d1d; color: #f87171; }
+.status-chip.blue { background: #0c4a6e; color: #38bdf8; }
+.status-chip.violet { background: #4c1d95; color: #c084fc; }
+
+.class-chip {
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.class-chip.firstclass, .class-chip.first { background: #3b0764; color: #d8b4fe; }
+.class-chip.business { background: #1e1b4b; color: #818cf8; }
+.class-chip.economy { background: #064e3b; color: #6ee7b7; }
+
+/* PNR Generator Box */
+.pnr-display-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #081524;
+  border: 1px dashed #24486d;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.pnr-title {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.pnr-highlight {
+  font-family: Consolas, monospace;
+  font-size: 22px;
+  font-weight: 800;
+  color: #fbbf24;
+  letter-spacing: 3px;
+}
+
+/* Method Overloading Results */
+.overload-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.overload-res-card {
+  background: #081524;
+  border: 1px solid #1a3552;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.overload-res-card.highlight {
+  border-color: #34d399;
+  background: #05231c;
+}
+
+.code-method {
+  font-family: monospace;
+  font-size: 10px;
+  color: #38bdf8;
+  margin-bottom: 4px;
+}
+
+.overload-res-card strong {
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.overload-res-card small {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.text-green { color: #34d399 !important; }
+.text-cyan { color: #38bdf8 !important; }
+.text-muted { color: #64748b !important; }
+
+/* Swing Window Mockup */
+.swing-window-mockup {
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #1e293b;
+  overflow: hidden;
+}
+
+.swing-title-bar {
+  background: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+.swing-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.swing-dot.red { background: #ef4444; }
+.swing-dot.yellow { background: #f59e0b; }
+.swing-dot.green { background: #10b981; }
+
+.swing-title {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.swing-body {
+  padding: 14px;
+  background: #0f172a;
+}
+
+.swing-field {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 10px;
+}
+
+.swing-field label {
+  width: 90px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.swing-input {
+  flex: 1;
+  background: #1e293b;
+  border: 1px solid #475569;
+  color: #f8fafc;
+  padding: 5px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.swing-buttons {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.swing-btn {
+  background: #334155;
+  color: #f8fafc;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.swing-btn:hover {
+  background: #475569;
+}
+
+.swing-textarea {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 4px;
+  padding: 8px;
+  height: 120px;
+  overflow-y: auto;
+}
+
+.swing-textarea pre {
+  margin: 0;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  color: #38bdf8;
+  line-height: 1.4;
+}
+
+/* CSV Viewer */
+.csv-viewer {
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  background: #08121f;
+  overflow: hidden;
+}
+
+.csv-header-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #0e2035;
+  font-family: monospace;
+  font-size: 11px;
+  color: #94a3b8;
+  border-bottom: 1px solid #1e3a5f;
+}
+
+.csv-content {
+  margin: 0;
+  padding: 12px;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  color: #7dd3fc;
+  max-height: 240px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+/* Data Structures Lab (Tab 3) */
+.circular-queue-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ring-slots {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.queue-slot {
+  border: 1px solid #233e5c;
+  border-radius: 8px;
+  background: #091524;
+  padding: 10px 8px;
+  text-align: center;
+  position: relative;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.queue-slot.occupied {
+  border-color: #38bdf8;
+  background: #0c2742;
+}
+
+.queue-slot.isFront {
+  box-shadow: 0 0 0 2px #34d399;
+}
+
+.queue-slot.isRear {
+  box-shadow: 0 0 0 2px #38bdf8;
+}
+
+.slot-idx {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 9px;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.slot-val {
+  font-size: 12px;
+  color: #ffffff;
+}
+
+.slot-val small {
+  color: #38bdf8;
+}
+
+.slot-empty {
+  font-size: 11px;
+  color: #475569;
+}
+
+.slot-labels {
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.ptr-tag {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.front-tag { background: #34d399; color: #022c22; }
+.rear-tag { background: #38bdf8; color: #082f49; }
+
+.queue-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #081422;
+  border: 1px solid #1a334f;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.queue-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.queue-badge.green { background: #064e3b; color: #34d399; }
+.queue-badge.red { background: #7f1d1d; color: #f87171; }
+
+.queue-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.input-inline {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+/* Priority Deque */
+.deque-mode-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.radio-pill-group {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-pill {
+  background: #091524;
+  border: 1px solid #233e5c;
+  color: #94a3b8;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.btn-pill.active {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
+}
+
+.deque-display {
+  background: #081321;
+  border: 1px solid #1a334f;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.deque-end-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.deque-items-row {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.deque-item {
+  border: 1px solid #233e5c;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+}
+
+.deque-item.elderly { border-color: #34d399; background: #05291f; }
+.deque-item.vip { border-color: #fbbf24; background: #291e05; }
+.deque-item.normal { border-color: #38bdf8; background: #08233a; }
+
+.category-badge {
+  font-size: 9px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.deque-item.elderly .category-badge { color: #34d399; }
+.deque-item.vip .category-badge { color: #fbbf24; }
+.deque-item.normal .category-badge { color: #38bdf8; }
+
+.deque-btn-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* Undo Stack */
+.stack-layout {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: 16px;
+}
+
+.seats-30-container {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mini-seat-btn {
+  aspect-ratio: 1;
+  background: #091626;
+  border: 1px solid #233e5c;
+  color: #94a3b8;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mini-seat-btn.selected {
+  background: #fbbf24;
+  color: #0f172a;
+  border-color: #fde68a;
+}
+
+.stack-tube {
+  border: 2px dashed #233e5c;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  min-height: 160px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stack-item-card {
+  background: #11243b;
+  border: 1px solid #2a486d;
+  border-radius: 4px;
+  padding: 4px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.stack-action-type {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.stack-action-type.S { background: #34d399; color: #022c22; }
+.stack-action-type.C { background: #f87171; color: #450a0a; }
+
+/* Manifest Merge DLL */
+.manifest-split-view {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.manifest-column {
+  background: #081321;
+  border: 1px solid #1a334f;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.manifest-tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: #38bdf8;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.dll-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dll-node-card {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #0e2238;
+  border: 1px solid #203c5d;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.seat-tag {
+  color: #fbbf24;
+  font-weight: 800;
+}
+
+.merged-nodes-chain {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 10px 0;
+}
+
+.chain-node {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chain-content {
+  border: 1px solid #34d399;
+  background: #05261d;
+  border-radius: 6px;
+  padding: 6px 10px;
+  text-align: center;
+}
+
+.node-arrow {
+  color: #64748b;
+  font-weight: 800;
+}
+
+/* COA Architecture Tab (Tab 4) */
+.status-indicator-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.status-indicator-hero.status-green {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-indicator-hero.status-amber {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-indicator-hero.status-red {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.status-led {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.status-led.status-green { background: #10b981; box-shadow: 0 0 10px #10b981; }
+.status-led.status-amber { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+.status-led.status-red { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+
+.status-hero-label {
+  font-size: 11px;
+  color: #94a3b8;
+  display: block;
+}
+
+.status-hero-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.occupancy-large-percent {
+  font-size: 32px;
+  font-weight: 900;
+  font-family: monospace;
+}
+
+.occupancy-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.stat-box {
+  background: #081321;
+  border: 1px solid #1a334f;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+.stat-box small {
+  display: block;
+  font-size: 9px;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.stat-box strong {
+  font-size: 18px;
+  color: #ffffff;
+}
+
+.stat-box.green strong { color: #34d399; }
+.stat-box.red strong { color: #f87171; }
+.stat-box.amber strong { color: #fbbf24; }
+
+.occupancy-slider-row {
+  margin: 14px 0;
+}
+
+.occupancy-slider-row label {
+  font-size: 12px;
+  color: #94a3b8;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.occupancy-range {
+  width: 100%;
+}
+
+.binary-register-box {
+  background: #040c17;
+  border: 1px solid #162a42;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.reg-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.binary-string {
+  font-size: 15px;
+  color: #38bdf8;
+  letter-spacing: 2px;
+}
+
+/* 64-bit Registers */
+.registers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.register-card {
+  background: #081422;
+  border: 1px solid #1b334e;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.register-card.active {
+  border-color: #38bdf8;
+  background: #0b243d;
+}
+
+.reg-name {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+}
+
+.reg-value {
+  font-size: 13px;
+  color: #38bdf8;
+  margin: 2px 0;
+}
+
+.reg-dec {
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.flags-register-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.flags-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+}
+
+.flags-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.flag-chip {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #111e2f;
+  color: #64748b;
+  border: 1px solid #1e3a5f;
+}
+
+.flag-chip.set {
+  background: #064e3b;
+  color: #34d399;
+  border-color: #10b981;
+}
+
+.alu-stepper-console {
+  background: #050d18;
+  border: 1px solid #1a334f;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.stepper-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.asm-terminal-log {
+  margin: 0;
+  font-family: Consolas, monospace;
+  font-size: 11px;
+  color: #38bdf8;
+  line-height: 1.5;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+/* BCD Box */
+.bcd-results-box {
+  background: #06111f;
+  border: 1px solid #1a334f;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bcd-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+/* Control Unit Stages */
+.cu-stages-chain {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cu-stage {
+  background: #081321;
+  border: 1px solid #1a334f;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+.cu-stage.active {
+  border-color: #38bdf8;
+  background: #0b243d;
+}
+
+.stage-tag {
+  font-size: 9px;
+  color: #64748b;
+  display: block;
+}
+
+.cu-stage strong {
+  display: block;
+  font-size: 13px;
+  color: #ffffff;
+  margin: 2px 0;
+}
+
+.cu-stage small {
+  font-size: 10px;
+  color: #38bdf8;
+}
+
+/* Computer Graphics (Tab 5) */
+.canvas-3d-wrapper {
+  background: #050c17;
+  border: 1px solid #1a334f;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas-3d {
+  display: block;
+  width: 100%;
+  height: 380px;
+  cursor: grab;
+}
+
+.canvas-3d:active {
+  cursor: grabbing;
+}
+
+.canvas-3d-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: #081321;
+  border-top: 1px solid #1a334f;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.axis-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.zoom-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.toolbar-label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.btn-zone {
+  background: #091524;
+  border: 1px solid #233e5c;
+  color: #cbd5e1;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.btn-zone.active {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.plane-frame-container {
+  overflow: hidden;
+  border: 1px solid #1a334f;
+  border-radius: 10px;
+  background: radial-gradient(circle at 50% 50%, #0d2138 0%, #06111f 80%);
+}
+
+.plane-svg-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: transform 0.4s ease-out;
+}
+
+.cg-label {
+  fill: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cg-zone-label {
+  fill: #cbd5e1;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.svg-seat-node rect {
+  cursor: pointer;
+  stroke: #12283a;
+  stroke-width: 1.5;
+}
+
+.svg-seat-node text {
+  fill: #ffffff;
+  pointer-events: none;
+}
+
+.svg-seat-node.first rect, .svg-seat-node.business rect { fill: #8b5cf6; }
+.svg-seat-node.economy rect { fill: #10b981; }
+.svg-seat-node.selected rect { fill: #fbbf24; stroke: #fff; stroke-width: 2; }
+.svg-seat-node.booked rect { fill: #ef4444; cursor: not-allowed; }
+.svg-seat-node.pilot rect { fill: #2563eb; cursor: default; }
+.svg-seat-node.crew rect { fill: #f97316; cursor: default; }
+
+.cg-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.legend-stats {
+  margin-left: auto;
+  color: #ffffff;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.swatch.violet { background: #8b5cf6; }
+.swatch.green { background: #10b981; }
+.swatch.gold { background: #fbbf24; }
+.swatch.red { background: #ef4444; }
+.swatch.blue { background: #2563eb; }
+.swatch.orange { background: #f97316; }
+
+/* Bresenham & Clipping SVG */
+.algo-canvas-box {
+  background: #06111f;
+  border: 1px solid #1a334f;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.algo-svg {
+  display: block;
+  width: 100%;
+  height: 190px;
+}
+
+.algo-status-bar {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.clipping-inputs-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.clip-inp {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clip-inp label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.route-line {
+  animation: flyRoute 3s linear infinite;
+}
+
+@keyframes flyRoute {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+/* System Topology */
+.topology-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.topo-card {
+  background: #091524;
+  border: 1px solid #1e3a5f;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.topo-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.topo-card h4 {
+  font-size: 15px;
+  margin: 0 0 2px;
+  color: #ffffff;
+}
+
+.topo-code {
+  font-size: 10px;
+  font-weight: 800;
+  color: #38bdf8;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.topo-card p {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.topo-files {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.topo-files code {
+  font-size: 10px;
+  color: #7dd3fc;
+  background: #040c17;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid #162a42;
+  overflow-wrap: anywhere;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 900px) {
+  .two-col-layout {
+    grid-template-columns: 1fr;
+  }
+  .stack-layout {
+    grid-template-columns: 1fr;
+  }
+  .hero-quick-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+</style>

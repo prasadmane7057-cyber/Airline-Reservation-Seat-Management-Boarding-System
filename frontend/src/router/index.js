@@ -22,6 +22,7 @@ import MyBookings from '../views/MyBookings.vue';
 import BookingDetails from '../views/BookingDetails.vue';
 import BoardingPass from '../views/BoardingPass.vue';
 import Profile from '../views/Profile.vue';
+import ProjectDashboard from '../views/ProjectDashboard.vue';
 
 // Admin Views
 import AdminDashboard from '../views/admin/AdminDashboard.vue';
@@ -49,7 +50,8 @@ const routes = [
       { path: 'my-bookings', name: 'MyBookings', component: MyBookings, meta: { title: 'My Bookings | SkyWings', requiresAuth: true } },
       { path: 'booking-details/:id', name: 'BookingDetails', component: BookingDetails, meta: { title: 'Booking Details | SkyWings', requiresAuth: true } },
       { path: 'boarding-pass', name: 'BoardingPass', component: BoardingPass, meta: { title: 'Digital Boarding Pass | SkyWings' } },
-      { path: 'profile', name: 'Profile', component: Profile, meta: { title: 'Profile | SkyWings', requiresAuth: true } }
+      { path: 'profile', name: 'Profile', component: Profile, meta: { title: 'Profile | SkyWings', requiresAuth: true } },
+      { path: 'project-dashboard', name: 'ProjectDashboard', component: ProjectDashboard, meta: { title: 'Integrated Project Dashboard | SkyWings' } }
     ]
   },
   {
