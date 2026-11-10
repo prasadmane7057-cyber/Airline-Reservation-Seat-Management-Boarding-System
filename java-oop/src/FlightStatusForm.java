@@ -20,7 +20,7 @@ public class FlightStatusForm extends JFrame implements ActionListener {
     JLabel lblFlight, lblDest, lblStatus;
     JTextField txtFlight, txtDest;
     JComboBox<String> cmbStatus;
-    JButton btnAdd, btnUpdate, btnView, btnTestConnection;
+    JButton btnAdd, btnUpdate, btnView, btnTestConnection, btnBookingFiles;
     JTextArea area;
     private JPanel flightActionsPanel;
     private SupabaseClient supabase;
@@ -47,6 +47,7 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         btnUpdate = new JButton("Update Status");
         btnView = new JButton("View All");
         btnTestConnection = new JButton("Test Supabase");
+        btnBookingFiles = new JButton("Manage Booking Files");
 
         flightActionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         flightActionsPanel.setBorder(BorderFactory.createTitledBorder("Flight Actions"));
@@ -56,6 +57,7 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         JPanel connectionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         connectionPanel.setBorder(BorderFactory.createTitledBorder("Supabase"));
         connectionPanel.add(btnTestConnection);
+        connectionPanel.add(btnBookingFiles);
 
         // Output area
         area = new JTextArea(12, 35);
@@ -84,6 +86,7 @@ public class FlightStatusForm extends JFrame implements ActionListener {
         btnUpdate.addActionListener(this);
         btnView.addActionListener(this);
         btnTestConnection.addActionListener(this);
+        btnBookingFiles.addActionListener(this);
 
         setVisible(true);
     }
@@ -98,6 +101,8 @@ public class FlightStatusForm extends JFrame implements ActionListener {
             viewAll();
         } else if (e.getSource() == btnTestConnection) {
             testDatabaseConnection();
+        } else if (e.getSource() == btnBookingFiles) {
+            new BookingFileSwingForm().setVisible(true);
         }
     }
 

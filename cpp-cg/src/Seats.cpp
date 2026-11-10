@@ -1,4 +1,5 @@
 #include <GL/freeglut.h>
+#include "SeatMapTextureColor.h"
 
 // 0 = Available, 1 = Booked
 int seats[6][6] =
@@ -15,37 +16,26 @@ const int rows = 6;
 const int cols = 6;
 
 // --------------------------------------------------
-// Passenger seat
+// Passenger seat (Finalized Texture & Colour Palette)
 // --------------------------------------------------
-void drawPassengerSeat(float x, float y, int row, int col, bool business)
+void drawPassengerSeat(float x, float y, int row, int col, bool business, bool isFirst)
 {
     float width = 20.0f;
     float height = 12.0f;
 
-    // Red = booked, purple = business, green = economy
-    if (seats[row][col] == 1)
-        glColor3f(0.90f, 0.15f, 0.15f);
-    else if (business)
-        glColor3f(0.65f, 0.30f, 0.90f);
-    else
-        glColor3f(0.20f, 0.75f, 0.30f);
+    SeatClassType cls = isFirst ? CLASS_FIRST : (business ? CLASS_BUSINESS : CLASS_ECONOMY);
+    SeatStatusState state = (seats[row][col] == 1) ? STATUS_BOOKED : STATUS_AVAILABLE;
 
-    glBegin(GL_QUADS);
-        glVertex2f(x, y);
-        glVertex2f(x + width, y);
-        glVertex2f(x + width, y + height);
-        glVertex2f(x, y + height);
-    glEnd();
-
-    glColor3f(0.05f, 0.05f, 0.05f);
-
-    glBegin(GL_LINE_LOOP);
-        glVertex2f(x, y);
-        glVertex2f(x + width, y);
-        glVertex2f(x + width, y + height);
-        glVertex2f(x, y + height);
-    glEnd();
+    // Use finalized textured cabin seat rendering with material lighting & headrest
+    drawTexturedCabinSeat(x, y, width, height, cls, state, true, true);
 }
+
+// Overload for backward compatibility with 5-arg signature
+void drawPassengerSeat(float x, float y, int row, int col, bool business)
+{
+    drawPassengerSeat(x, y, row, col, business, false);
+}
+
 
 // --------------------------------------------------
 // Pilot seat - dark blue
@@ -113,17 +103,17 @@ void drawSeats()
     drawPilotSeat(55.0f, 270.0f);
 
     // ==================================================
-    // 2. FIRST CLASS - 2 + 2
+    // 2. FIRST CLASS - 2 + 2 (Royal Plum with Gold Accents)
     // ==================================================
     for (int row = 0; row < 2; row++)
     {
         float x = 95.0f + row * 48.0f;
         int matrixRow = row;
 
-        drawPassengerSeat(x, 320.0f, matrixRow, 0, true);
-        drawPassengerSeat(x, 300.0f, matrixRow, 1, true);
-        drawPassengerSeat(x, 275.0f, matrixRow, 2, true);
-        drawPassengerSeat(x, 255.0f, matrixRow, 3, true);
+        drawPassengerSeat(x, 320.0f, matrixRow, 0, false, true);
+        drawPassengerSeat(x, 300.0f, matrixRow, 1, false, true);
+        drawPassengerSeat(x, 275.0f, matrixRow, 2, false, true);
+        drawPassengerSeat(x, 255.0f, matrixRow, 3, false, true);
     }
 
     // ==================================================

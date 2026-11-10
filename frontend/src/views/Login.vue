@@ -21,6 +21,10 @@
           </div>
         </div>
 
+        <div v-if="route.query.redirect" class="booking-login-notice" role="status">
+          Sign in is required to continue your booking. After signing in, you will return to seat selection.
+        </div>
+
         <div v-if="errorMessage" class="error-banner">
           ⚠️ {{ errorMessage }}
         </div>
@@ -167,6 +171,18 @@ async function handleLogin() {
   display: flex;
   gap: 8px;
   justify-content: center;
+}
+
+.booking-login-notice {
+  margin-bottom: 20px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #eff6ff;
+  color: var(--primary-700);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
 }
 
 .error-banner {

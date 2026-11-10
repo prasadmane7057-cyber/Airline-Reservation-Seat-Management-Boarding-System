@@ -5,6 +5,7 @@ export const useFlightStore = defineStore('flight', {
   state: () => ({
     flights: [],
     airports: [],
+    airportError: null,
     selectedFlight: null,
     searchParams: {
       from: '',
@@ -23,11 +24,16 @@ export const useFlightStore = defineStore('flight', {
   actions: {
     async fetchAirports() {
       if (this.airports.length > 0) return;
+      this.airportError = null;
       try {
         const res = await airportApi.getAirports();
+        if (!Array.isArray(res.airports)) {
+          throw new Error('The airport service returned an invalid response.');
+        }
         this.airports = res.airports || [];
       } catch (err) {
-        console.error('Failed to load airports', err);
+        this.airportError = err.message || 'Unable to load airports.';
+        throw err;
       }
     },
 
@@ -44,6 +50,7 @@ export const useFlightStore = defineStore('flight', {
         return this.flights;
       } catch (err) {
         this.error = err.message;
+        this.flights = [];
         throw err;
       } finally {
         this.loading = false;

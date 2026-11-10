@@ -6,7 +6,8 @@ package model;
  * Encapsulates passenger, flight, seat allocation, PNR, and calculated fare.
  * Supports overloaded constructors for simple demo as well as full flight management.
  */
-public class Booking implements IBoardable {
+public class Booking implements IBoardable, java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     private String bookingId;
     private String passengerName;
     private String flightNumber;

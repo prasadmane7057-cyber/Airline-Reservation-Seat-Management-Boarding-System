@@ -457,6 +457,100 @@
             </div>
           </div>
         </div>
+
+        <!-- 4. Generic Repository Architecture (repository/GenericRepository.java) -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Generic Repository Architecture (GenericRepository&lt;T, ID&gt;)</h3>
+              <span class="badge-algo">repository/GenericRepository.java</span>
+              <p class="panel-hint">Enterprise Java Generics providing type-safe CRUD operations, lambda predicates, and O(1) in-memory storage.</p>
+            </div>
+            <span class="badge-source">java-oop/src/repository/</span>
+          </div>
+
+          <div class="repo-demo-grid">
+            <div class="repo-actions-box">
+              <label>Select Operation Contract:</label>
+              <div class="repo-buttons-row">
+                <button class="btn btn-sm" :class="activeRepoOp === 'findById' ? 'btn-primary' : 'btn-outline'" @click="activeRepoOp = 'findById'">
+                  findById(ID id)
+                </button>
+                <button class="btn btn-sm" :class="activeRepoOp === 'findByFlight' ? 'btn-primary' : 'btn-outline'" @click="activeRepoOp = 'findByFlight'">
+                  findByFlightNumber(flight)
+                </button>
+                <button class="btn btn-sm" :class="activeRepoOp === 'save' ? 'btn-primary' : 'btn-outline'" @click="activeRepoOp = 'save'">
+                  save(T entity)
+                </button>
+                <button class="btn btn-sm" :class="activeRepoOp === 'deleteById' ? 'btn-primary' : 'btn-outline'" @click="activeRepoOp = 'deleteById'">
+                  deleteById(ID id)
+                </button>
+              </div>
+
+              <div class="repo-interactive-form">
+                <div v-if="activeRepoOp === 'findById'" class="input-inline">
+                  <input v-model="repoQueryPnr" placeholder="Enter PNR to lookup" class="form-input sm" />
+                  <button class="btn btn-primary btn-sm" @click="executeRepoLookup">Query findById()</button>
+                </div>
+                <div v-else-if="activeRepoOp === 'findByFlight'" class="input-inline">
+                  <select v-model="repoQueryFlight" class="form-input sm">
+                    <option value="AI101">AI101</option>
+                    <option value="AI202">AI202</option>
+                    <option value="AI303">AI303</option>
+                  </select>
+                  <button class="btn btn-primary btn-sm" @click="executeRepoFilter">Filter via Predicate Stream</button>
+                </div>
+                <div v-else-if="activeRepoOp === 'save'" class="input-inline">
+                  <input v-model="newRepoPassengerName" placeholder="Passenger Name" class="form-input sm" />
+                  <input v-model="newRepoSeat" placeholder="Seat e.g. 5A" class="form-input sm narrow" />
+                  <button class="btn btn-primary btn-sm" @click="executeRepoSave">Invoke save(Booking)</button>
+                </div>
+                <div v-else-if="activeRepoOp === 'deleteById'" class="input-inline">
+                  <input v-model="repoDeletePnr" placeholder="PNR to delete" class="form-input sm" />
+                  <button class="btn btn-danger btn-sm" @click="executeRepoDelete">Execute deleteById()</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="repo-console-output">
+              <span class="reg-label">GENERIC REPOSITORY LOG TRACE:</span>
+              <pre class="repo-log">{{ repoConsoleTrace }}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. File Save and Load for Bookings (BookingFileService.java) -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Booking File I/O Persistence (CSV &amp; Binary Serialization)</h3>
+              <span class="badge-algo">service/BookingFileService.java &amp; util/BookingFileManager.java</span>
+              <p class="panel-hint">Atomic file writes with temporary buffers, RFC 4180 standard CSV roundtrips, and binary object serialization.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-outline btn-xs" @click="exportBookingsToCsv">Generate CSV</button>
+              <button class="btn btn-outline btn-xs" @click="downloadCsvFile">Download .csv</button>
+              <button class="btn btn-primary btn-xs" @click="importBookingsFromCsv">Load from CSV</button>
+            </div>
+          </div>
+
+          <div class="file-io-grid">
+            <div class="file-editor-box">
+              <label>Active CSV File Buffer (RFC 4180 Format):</label>
+              <textarea v-model="csvFileContent" class="file-textarea" rows="6" placeholder="CSV content appears here..."></textarea>
+              <div v-if="fileStatusMessage" class="form-feedback" style="margin-top: 6px;">{{ fileStatusMessage }}</div>
+            </div>
+
+            <div class="file-info-box">
+              <h4>I/O Engine Features:</h4>
+              <ul class="file-features-list">
+                <li><strong>Atomic File Commit:</strong> Writes to temporary <code>bookings_*.tmp</code> buffer then moves atomically to prevent partial corruption.</li>
+                <li><strong>Corrupt Row Resilience:</strong> Malformed rows missing fields or invalid numeric fares are logged to standard error and safely bypassed.</li>
+                <li><strong>Dual Format Support:</strong> Human-readable RFC 4180 CSV export as well as compact Java binary <code>.dat</code> stream.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- =================================================================== -->
@@ -696,6 +790,134 @@
             </div>
           </div>
         </div>
+
+        <!-- 5. PNR Hash Table with Collision Handling (Separate Chaining) -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>PNR Hash Table with Collision Handling (Separate Chaining)</h3>
+              <span class="badge-algo">cpp-ds/src/PNRHashTable.cpp</span>
+              <p class="panel-hint">Polynomial rolling hash with prime modulo (capacity = 7). Visualizes collision linked lists and O(1) average lookup.</p>
+            </div>
+            <div class="hash-metrics-chips">
+              <span class="flag-chip set">Capacity: {{ hashTableCapacity }} Buckets</span>
+              <span class="flag-chip set">Records: {{ hashTableRecordsCount }}</span>
+              <span class="flag-chip" :class="{ set: hashTableCollisionCount > 0 }">Collisions: {{ hashTableCollisionCount }}</span>
+              <span class="flag-chip set">Load Factor (λ): {{ (hashTableRecordsCount / hashTableCapacity).toFixed(2) }}</span>
+            </div>
+          </div>
+
+          <div class="hash-table-visualizer">
+            <div class="hash-buckets-list">
+              <div v-for="(bucket, bIdx) in hashTableBuckets" :key="bIdx" class="hash-bucket-row">
+                <span class="bucket-idx-badge">Bucket [{{ bIdx }}]</span>
+                <div class="bucket-chain">
+                  <template v-if="bucket.length === 0">
+                    <span class="empty-bucket-tag">-- (empty)</span>
+                  </template>
+                  <template v-else>
+                    <div v-for="(node, nIdx) in bucket" :key="node.pnr" class="hash-chain-node">
+                      <span v-if="nIdx > 0" class="chain-arrow">&rarr;</span>
+                      <div class="hash-node-box" :class="{ collision: nIdx > 0 }">
+                        <strong>{{ node.pnr }}</strong>
+                        <small>{{ node.name }} ({{ node.flight }} {{ node.seat }})</small>
+                      </div>
+                    </div>
+                    <span class="chain-arrow">&rarr;</span>
+                    <span class="chain-null">NULL</span>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <div class="hash-search-panel">
+              <div class="input-inline">
+                <input v-model="hashSearchQuery" placeholder="Search PNR (e.g. BL9X33, PNR101, SK7M41)" class="form-input sm" />
+                <button class="btn btn-primary btn-sm" @click="executeHashSearch">Search Table O(1)</button>
+              </div>
+              <p v-if="hashSearchResult" class="form-feedback" style="margin-top: 8px;">{{ hashSearchResult }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Binary Search vs Linear Search Live Comparison -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Binary Search vs Linear Search Comparison</h3>
+              <span class="badge-algo">cpp-ds/src/SearchComparison.cpp</span>
+              <p class="panel-hint">Side-by-side benchmark: Linear Search O(n) sequential scan vs Binary Search O(log n) divide-and-conquer on sorted PNR records.</p>
+            </div>
+            <div class="header-actions">
+              <div class="input-inline">
+                <input v-model="searchBenchmarkQuery" placeholder="Search PNR (e.g. SK7M41, PNR101, HY5V12)" class="form-input sm" />
+                <button class="btn btn-primary btn-sm" @click="executeSearchComparison">Compare Algorithms</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="search-compare-grid">
+            <!-- Linear Search Card -->
+            <div class="search-card">
+              <div class="search-card-header">
+                <h4>Linear Search (Sequential Scan)</h4>
+                <span class="badge-source">O(n) Time | O(1) Space</span>
+              </div>
+              <div class="search-stats-row">
+                <div class="search-stat">
+                  <span>Status:</span>
+                  <strong :class="linearSearchStats.found ? 'text-green' : 'text-red'">
+                    {{ linearSearchStats.found ? 'FOUND at [' + linearSearchStats.index + ']' : 'NOT FOUND' }}
+                  </strong>
+                </div>
+                <div class="search-stat">
+                  <span>Comparisons:</span>
+                  <strong>{{ linearSearchStats.comparisons }} comps</strong>
+                </div>
+                <div class="search-stat">
+                  <span>Latency:</span>
+                  <strong>{{ linearSearchStats.timeMicro }} µs</strong>
+                </div>
+              </div>
+              <div class="search-trace-box">
+                <span class="trace-label">Sequential Traversal Step Trace:</span>
+                <ul class="trace-list">
+                  <li v-for="(t, i) in linearSearchStats.trace" :key="i">{{ t }}</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Binary Search Card -->
+            <div class="search-card highlight">
+              <div class="search-card-header">
+                <h4>Binary Search (Divide &amp; Conquer)</h4>
+                <span class="badge-source">O(log n) Time | O(1) Space</span>
+              </div>
+              <div class="search-stats-row">
+                <div class="search-stat">
+                  <span>Status:</span>
+                  <strong :class="binarySearchStats.found ? 'text-green' : 'text-red'">
+                    {{ binarySearchStats.found ? 'FOUND at [' + binarySearchStats.index + ']' : 'NOT FOUND' }}
+                  </strong>
+                </div>
+                <div class="search-stat">
+                  <span>Comparisons:</span>
+                  <strong class="text-cyan">{{ binarySearchStats.comparisons }} comps</strong>
+                </div>
+                <div class="search-stat">
+                  <span>Efficiency Gain:</span>
+                  <strong class="text-gold">{{ (linearSearchStats.comparisons / Math.max(1, binarySearchStats.comparisons)).toFixed(1) }}x fewer</strong>
+                </div>
+              </div>
+              <div class="search-trace-box">
+                <span class="trace-label">Divide &amp; Conquer Interval Probing:</span>
+                <ul class="trace-list">
+                  <li v-for="(t, i) in binarySearchStats.trace" :key="i">{{ t }}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- =================================================================== -->
@@ -894,6 +1116,93 @@
             </div>
           </div>
         </div>
+
+        <!-- 3. Mapping Table: Airline Fare Operations to Processor Components -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Mapping Table: Airline Fare Operations to Processor Hardware Components</h3>
+              <span class="badge-algo">coa-nasm/FareOperationsProcessorMapping.md</span>
+              <p class="panel-hint">Architectural mapping connecting discrete fare calculation operations to CPU execution units, registers, buses, and status flags.</p>
+            </div>
+            <span class="badge-source">coa-nasm/ &amp; assembly-component/</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table mapping-table">
+              <thead>
+                <tr>
+                  <th>Stage</th>
+                  <th>Fare Operation</th>
+                  <th>Assembly Opcode</th>
+                  <th>Primary Processor Component</th>
+                  <th>Secondary Component</th>
+                  <th>Bus &amp; Datapath Activity</th>
+                  <th>Flags Affected</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="st in processorMappingSteps" :key="st.stage">
+                  <td class="bold-text">#{{ st.stage }}</td>
+                  <td><strong>{{ st.operation }}</strong></td>
+                  <td><code class="flight-tag">{{ st.asm }}</code></td>
+                  <td><strong class="text-cyan">{{ st.primaryComponent }}</strong></td>
+                  <td>{{ st.secondaryComponent }}</td>
+                  <td class="code-font" style="font-size: 11px;">{{ st.busActivity }}</td>
+                  <td><span class="flag-chip" :class="{ set: st.flags !== 'None' }">{{ st.flags }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. Control-Flow Demo: Seat-Availability Branches & Branch Prediction -->
+        <div class="content-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Seat-Availability Control Flow &amp; CPU Branch Prediction</h3>
+              <span class="badge-algo">coa-nasm/seat_availability_branches.asm</span>
+              <p class="panel-hint">Hardware condition evaluation: CMP instructions, ALU flags (ZF, CF, SF), and 2-bit dynamic saturating counter branch prediction.</p>
+            </div>
+            <div class="header-actions">
+              <span class="flag-chip set">Predictor: {{ branchPredictorState }}</span>
+            </div>
+          </div>
+
+          <div class="branch-demo-layout">
+            <div class="branch-controls-box">
+              <label>Simulate Occupancy Percentage: <strong>{{ branchOccupancySlider }}%</strong></label>
+              <input type="range" v-model.number="branchOccupancySlider" min="0" max="100" class="branch-range" />
+              <div class="branch-metrics-pills">
+                <span class="flag-chip">Total: {{ branchEvaluationTrace.total }}</span>
+                <span class="flag-chip">Booked: {{ branchEvaluationTrace.booked }}</span>
+                <span class="flag-chip">Blocked: {{ branchEvaluationTrace.blocked }}</span>
+                <span class="flag-chip set">Available: {{ branchEvaluationTrace.avail }}</span>
+              </div>
+            </div>
+
+            <div class="branch-stages-flow">
+              <div v-for="stg in branchEvaluationTrace.stages" :key="stg.stage" class="branch-stage-card" :class="{ 'penalty-miss': !stg.hit }">
+                <div class="branch-stage-top">
+                  <span class="badge-source">Stage {{ stg.stage }}</span>
+                  <code>{{ stg.asm }}</code>
+                  <span class="flags-badge">{{ stg.flags }}</span>
+                </div>
+                <div class="branch-stage-body">
+                  <p><strong>Evaluation:</strong> {{ stg.desc }}</p>
+                  <div class="prediction-row">
+                    <span>Predicted: <strong>{{ stg.predicted }}</strong></span>
+                    <span>Actual: <strong>{{ stg.actual }}</strong></span>
+                    <span :class="stg.hit ? 'text-green' : 'text-red'">
+                      {{ stg.hit ? '✓ PREDICTION HIT (+0 cycles)' : '✕ MISPREDICTION (+3 cycle stall)' }}
+                    </span>
+                  </div>
+                  <p class="action-text">{{ stg.action }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- =================================================================== -->
@@ -908,14 +1217,23 @@
           <span class="badge-source">cpp-cg/src/</span>
         </div>
 
-        <!-- 3D Aircraft Model Viewer (Aircraft3D.cpp) -->
+        <!-- 3D Aircraft Model Viewer (Aircraft3D.cpp & AircraftProjectionViewing.cpp) -->
         <div class="content-panel">
           <div class="panel-header">
             <div>
-              <h3>Interactive 3D Aircraft Model (Aircraft3D.cpp)</h3>
-              <p class="panel-hint">3D cylinder fuselage, sphere nose, scaled cube wings, and stabilizers with interactive rotation.</p>
+              <h3>Interactive 3D Aircraft Model: Projection &amp; Viewing Pipeline</h3>
+              <span class="badge-algo">Aircraft3D.cpp &amp; AircraftProjectionViewing.cpp</span>
+              <p class="panel-hint">Switch between Orthographic parallel rays (glOrtho) and Perspective foreshortening (gluPerspective), with multi-view architectural camera presets.</p>
             </div>
             <div class="header-actions">
+              <div class="btn-group">
+                <button class="btn btn-xs" :class="active3DProjectionMode === 'PERSPECTIVE' ? 'btn-primary' : 'btn-outline'" @click="active3DProjectionMode = 'PERSPECTIVE'">
+                  Perspective
+                </button>
+                <button class="btn btn-xs" :class="active3DProjectionMode === 'ORTHOGRAPHIC' ? 'btn-primary' : 'btn-outline'" @click="active3DProjectionMode = 'ORTHOGRAPHIC'">
+                  Orthographic (glOrtho)
+                </button>
+              </div>
               <button class="btn btn-outline btn-xs" @click="reset3DCamera">Reset View</button>
               <button class="btn btn-primary btn-xs" @click="autoRotate3D = !autoRotate3D">
                 {{ autoRotate3D ? 'Stop Auto-Rotate' : 'Start Auto-Rotate' }}
@@ -923,10 +1241,30 @@
             </div>
           </div>
 
+          <!-- Multi-view Architectural Camera Presets Toolbar -->
+          <div class="preset-view-toolbar">
+            <span class="toolbar-label">Architectural Multi-View (glOrtho):</span>
+            <button class="btn btn-xs" :class="active3DCameraPreset === 'PLAN' ? 'btn-primary' : 'btn-outline'" @click="apply3DPreset('PLAN')">
+              Top / Plan (Cabin Seating)
+            </button>
+            <button class="btn btn-xs" :class="active3DCameraPreset === 'FRONT' ? 'btn-primary' : 'btn-outline'" @click="apply3DPreset('FRONT')">
+              Front Elevation (Nose &amp; Wings)
+            </button>
+            <button class="btn btn-xs" :class="active3DCameraPreset === 'SIDE' ? 'btn-primary' : 'btn-outline'" @click="apply3DPreset('SIDE')">
+              Side Profile (Fuselage &amp; Rudder)
+            </button>
+            <button class="btn btn-xs" :class="active3DCameraPreset === 'ISO' ? 'btn-primary' : 'btn-outline'" @click="apply3DPreset('ISO')">
+              Isometric Axonometric (Technical)
+            </button>
+            <button class="btn btn-xs" :class="active3DCameraPreset === 'FREE' ? 'btn-primary' : 'btn-outline'" @click="apply3DPreset('FREE')">
+              Free 3D Orbit
+            </button>
+          </div>
+
           <div class="canvas-3d-wrapper">
             <canvas ref="canvas3DRef" width="900" height="420" class="canvas-3d"></canvas>
             <div class="canvas-3d-controls">
-              <span>Drag canvas with mouse to rotate | Pitch: <strong>{{ Math.round(rotX) }}°</strong>, Yaw: <strong>{{ Math.round(rotY) }}°</strong>, Roll: <strong>{{ Math.round(rotZ) }}°</strong></span>
+              <span>Projection: <strong class="text-cyan">{{ active3DProjectionMode }}</strong> | Preset: <strong class="text-gold">{{ active3DCameraPreset }}</strong> | Pitch: <strong>{{ Math.round(rotX) }}°</strong>, Yaw: <strong>{{ Math.round(rotY) }}°</strong>, Roll: <strong>{{ Math.round(rotZ) }}°</strong></span>
               <div class="axis-buttons">
                 <button class="btn btn-xs btn-outline" @click="rotX += 15">Pitch +</button>
                 <button class="btn btn-xs btn-outline" @click="rotY += 15">Yaw +</button>
@@ -1048,21 +1386,23 @@
                   :class="['svg-seat-node', s.classType, s.status, { selected: s.selected }]"
                   @click="toggleCgSeat(s)"
                 >
-                  <rect :x="s.x" :y="s.y" :width="s.w" :height="s.h" rx="3" />
-                  <text :x="s.x + s.w/2" :y="s.y + s.h/2 + 3" text-anchor="middle" font-size="9" font-weight="bold">{{ s.label }}</text>
+                  <rect :x="s.x" :y="s.y" :width="s.width" :height="s.height" rx="3" />
+                  <text :x="s.x + s.width/2" :y="s.y + s.height/2 + 3" text-anchor="middle" font-size="9" font-weight="bold">{{ s.label }}</text>
                 </g>
               </g>
             </svg>
           </div>
 
-          <!-- Seat Legend & Live Selection Status -->
+          <!-- Seat Legend & Live Selection Status (Finalized 8-Color Palette & Textures) -->
           <div class="cg-legend">
-            <span><i class="swatch violet"></i> First/Business Available</span>
-            <span><i class="swatch green"></i> Economy Available</span>
-            <span><i class="swatch gold"></i> Selected</span>
-            <span><i class="swatch red"></i> Booked</span>
-            <span><i class="swatch blue"></i> Pilot</span>
-            <span><i class="swatch orange"></i> Crew</span>
+            <span><i class="swatch plum"></i> First Class (Royal Plum / Gold)</span>
+            <span><i class="swatch sapphire"></i> Business (Sapphire Blue)</span>
+            <span><i class="swatch emerald"></i> Economy (Emerald Woven)</span>
+            <span><i class="swatch amber"></i> Selected (Golden Amber)</span>
+            <span><i class="swatch crimson"></i> Booked (Crimson Red)</span>
+            <span><i class="swatch slate"></i> Blocked (Exit Slate)</span>
+            <span><i class="swatch navy"></i> Pilot (Navy)</span>
+            <span><i class="swatch orange"></i> Crew (Safety Orange)</span>
             <div class="legend-stats">
               Selected: <strong>{{ selectedCgSeatsCount }}</strong> |
               Available: <strong>{{ availableCgSeatsCount }}</strong> |
@@ -1191,6 +1531,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { aircraftWorldSeatToSvg } from '../utils/aircraftCoordinates.js';
 import { supabase } from '../lib/supabaseClient';
 
 // =============================================================================
@@ -1314,32 +1655,32 @@ const moduleOverviews = [
     subject: 'PSOOP / Java 17 / JDBC',
     icon: '☕',
     color: '#8b5cf6',
-    desc: 'Encapsulation, inheritance (Person -> Passenger / Staff), compile-time method overloading, polymorphic cabin classes, PNR generation, and Swing JDBC GUI.',
-    sources: ['java-oop/src/model/PNR.java', 'java-oop/src/model/Flight.java', 'java-oop/src/BookingSystem.java', 'AirlineForm/FlightStatusForm.java']
+    desc: 'Encapsulation, inheritance (Person -> Passenger / Staff), booking persistence with explicit file errors, and Swing flight and booking-file screens.',
+    sources: ['java-oop/src/model/PNR.java', 'java-oop/src/model/Flight.java', 'java-oop/src/service/BookingFileService.java', 'java-oop/src/BookingFileSwingForm.java', 'java-oop/src/FlightStatusForm.java']
   },
   {
     title: 'Data Structures & Algorithms',
     subject: 'C++17 / Linear & Non-Linear DS',
     icon: '🌲',
     color: '#10b981',
-    desc: 'Circular Queues for boarding, Priority Deques for check-in, Passenger Arrays, Manifest Merge via Doubly Linked Lists, and Undo Stacks.',
-    sources: ['cpp-ds/src/BoardingQueueCircular.cpp', 'cpp-ds/src/Checkindeque', 'cpp-ds/src/ManifestMergeDLL.cpp', 'cpp-ds/src/undostack.cpp']
+    desc: 'Passenger arrays, queues, stacks, PNR hashing, search comparisons, and quick/merge sort benchmarks across random and ordered datasets.',
+    sources: ['cpp-ds/src/BoardingQueueCircular.cpp', 'cpp-ds/src/ManifestMergeDLL.cpp', 'cpp-ds/src/SearchComparison.cpp', 'cpp-ds/src/SortComparison.cpp', 'cpp-ds/src/undostack.cpp']
   },
   {
     title: 'Computer Organization & Architecture',
     subject: 'COA / 64-bit NASM & C++',
     icon: '⚙',
     color: '#f59e0b',
-    desc: 'Low-level 64-bit register arithmetic (RAX, RBX, RCX), threshold-based seat occupancy detection, Hex-to-BCD conversion, and Control Unit cycle.',
-    sources: ['assembly-component/fare_calc_sim.cpp', 'coa-nasm/HexToBCD.asm', 'java-oop-coa-ui/src/coa/controlunit.java']
+    desc: 'Low-level fare arithmetic, shared-input simulator/assembly parity checks, occupancy branches, and fetch-decode-execute control signals.',
+    sources: ['assembly-component/fare_calc_sim.cpp', 'coa-nasm/run_fare_parity_demo.ps1', 'coa-nasm/HexToBCD.asm', 'coa-nasm/seat_availability_branches.asm']
   },
   {
     title: 'Computer Graphics Lab',
     subject: 'C++ / OpenGL / 3D WebGL',
     icon: '🎨',
     color: '#06b6d4',
-    desc: 'Aircraft fuselage glyphs, cabin seat matrix, lighting & brushed-metal texture layers, Bresenham line rasterization, Cohen-Sutherland clipping, and 3D WebGL rotation.',
-    sources: ['cpp-cg/src/PlaneGlyph.cpp', 'cpp-cg/src/Seats.cpp', 'cpp-cg/src/Aircraft3D.cpp', 'cpp-cg/src/LineClipping.cpp']
+    desc: 'Aircraft fuselage and seat geometry share a tested world-to-SVG coordinate map; projection matrices include numerical precision checks.',
+    sources: ['cpp-cg/src/PlaneGlyph.cpp', 'cpp-cg/src/Seats.cpp', 'cpp-cg/src/AircraftProjectionViewing.cpp', 'cpp-cg/tests/AircraftProjectionViewingTest.cpp', 'frontend/src/utils/aircraftCoordinates.js']
   }
 ];
 
@@ -1489,6 +1830,139 @@ function handleSwingUpdate() {
 function handleSwingView() {
   swingTerminalOutput.value += `\n[SELECT * FROM flights]:\n  101: BOM -> DEL [Boarding]\n  202: DEL -> BLR [On Time]\n  ${swingForm.value.flightNo}: -> ${swingForm.value.destination} [${swingForm.value.status}]`;
 }
+
+// -----------------------------------------------------------------------------
+// Generic Repository Architecture (<T, ID>) Demonstration
+// -----------------------------------------------------------------------------
+const activeRepoOp = ref('findById');
+const repoQueryPnr = ref('AI8K92');
+const repoQueryFlight = ref('AI101');
+const newRepoPassengerName = ref('Vikram Rao');
+const newRepoSeat = ref('5B');
+const repoDeletePnr = ref('SK7M41');
+
+const repoConsoleTrace = ref(`[INIT] GenericRepository<Booking, String> instantiated via InMemoryRepository.
+Storage backend: ConcurrentHashMap<String, Booking>
+Key Extractor: Booking::getPnr
+Loaded 5 seed booking entities.
+Contracts available: save(T), findById(ID), findAll(), findBy(Predicate), deleteById(ID).`);
+
+function executeRepoLookup() {
+  const pnr = repoQueryPnr.value.trim().toUpperCase();
+  const found = javaBookings.value.find(b => b.pnr === pnr);
+  if (found) {
+    repoConsoleTrace.value += `\n[OPTIONAL<BOOKING> findById("${pnr}")] -> SUCCESS:
+  Passenger : ${found.passengerName}
+  Flight    : ${found.flightNumber}
+  Seat      : ${found.seatNumber} (${found.bookingClass})
+  Status    : ${found.status} (Priority ${found.priority})`;
+  } else {
+    repoConsoleTrace.value += `\n[OPTIONAL<BOOKING> findById("${pnr}")] -> Optional.empty() (No entity matching PNR)`;
+  }
+}
+
+function executeRepoFilter() {
+  const flight = repoQueryFlight.value;
+  const filtered = javaBookings.value.filter(b => b.flightNumber === flight);
+  repoConsoleTrace.value += `\n[STREAM findBy(b -> b.getFlightNumber().equals("${flight}"))] -> ${filtered.length} matches:`;
+  filtered.forEach(b => {
+    repoConsoleTrace.value += `\n  * ${b.pnr}: ${b.passengerName} [Seat ${b.seatNumber}]`;
+  });
+}
+
+function executeRepoSave() {
+  const newPnr = generateRandomPNR();
+  const entity = {
+    pnr: newPnr,
+    passengerName: newRepoPassengerName.value || 'New Passenger',
+    flightNumber: 'AI101',
+    seatNumber: newRepoSeat.value.toUpperCase() || '7A',
+    bookingClass: 'Business',
+    priority: 2,
+    status: 'CONFIRMED'
+  };
+  javaBookings.value.unshift(entity);
+  repoConsoleTrace.value += `\n[SAVE(Booking)] -> Saved entity with key PNR "${newPnr}". Total count = ${javaBookings.value.length}`;
+}
+
+function executeRepoDelete() {
+  const pnr = repoDeletePnr.value.trim().toUpperCase();
+  const idx = javaBookings.value.findIndex(b => b.pnr === pnr);
+  if (idx !== -1) {
+    const deleted = javaBookings.value.splice(idx, 1)[0];
+    repoConsoleTrace.value += `\n[DELETE_BY_ID("${pnr}")] -> true (Removed booking for ${deleted.passengerName}). Count = ${javaBookings.value.length}`;
+  } else {
+    repoConsoleTrace.value += `\n[DELETE_BY_ID("${pnr}")] -> false (Entity not present in repository)`;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Booking File Save & Load Service (BookingFileService.java / CSV / Binary)
+// -----------------------------------------------------------------------------
+const fileStatusMessage = ref('');
+const csvFileContent = ref('');
+
+function generateCsvFromBookings() {
+  const header = 'BookingID,PNR,PassengerName,FlightNumber,SeatNumber,BookingDate,Fare,Status';
+  const rows = javaBookings.value.map(b => {
+    const bookingId = 'BK-' + b.pnr;
+    const fare = b.bookingClass === 'FirstClass' ? 20000.0 : b.bookingClass === 'Business' ? 12000.0 : 5000.0;
+    return `${bookingId},${b.pnr},"${b.passengerName}",${b.flightNumber},${b.seatNumber},2026-10-15,${fare.toFixed(2)},${b.status}`;
+  });
+  return [header, ...rows].join('\n');
+}
+
+csvFileContent.value = generateCsvFromBookings();
+
+function exportBookingsToCsv() {
+  csvFileContent.value = generateCsvFromBookings();
+  fileStatusMessage.value = `✓ Generated standard RFC 4180 CSV from ${javaBookings.value.length} booking records.`;
+}
+
+function importBookingsFromCsv() {
+  try {
+    const lines = csvFileContent.value.trim().split('\n');
+    if (lines.length <= 1) {
+      fileStatusMessage.value = '⚠ CSV contains only headers or is empty.';
+      return;
+    }
+    const newBookings = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const parts = line.split(',');
+      if (parts.length >= 8) {
+        newBookings.push({
+          pnr: parts[1].replace(/"/g, '').trim(),
+          passengerName: parts[2].replace(/"/g, '').trim(),
+          flightNumber: parts[3].trim(),
+          seatNumber: parts[4].trim(),
+          bookingClass: 'Economy',
+          priority: 3,
+          status: parts[7].trim() || 'CONFIRMED'
+        });
+      }
+    }
+    if (newBookings.length > 0) {
+      javaBookings.value = newBookings;
+      fileStatusMessage.value = `✓ Successfully loaded ${newBookings.length} booking records into repository.`;
+    }
+  } catch (e) {
+    fileStatusMessage.value = '✕ Error parsing CSV: ' + e.message;
+  }
+}
+
+function downloadCsvFile() {
+  const blob = new Blob([csvFileContent.value], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', 'airline_bookings.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  fileStatusMessage.value = '✓ Downloaded airline_bookings.csv to your device.';
+}
+
 
 // =============================================================================
 // TAB 3: DATA STRUCTURES (DS) IMPLEMENTATION (cpp-ds)
@@ -1644,6 +2118,189 @@ function executeManifestMerge() {
   mergedManifest.value = combined;
 }
 
+// -----------------------------------------------------------------------------
+// PNR Hash Table with Collision Handling (Separate Chaining) Implementation
+// -----------------------------------------------------------------------------
+const hashTableCapacity = ref(7); // Prime modulus
+const hashTableBuckets = ref([
+  [], // 0
+  [{ pnr: 'AI8K92', name: 'Aarav Sharma', flight: 'AI101', seat: '12A' }], // 1
+  [{ pnr: 'DL4Q78', name: 'Rohan Mehta', flight: 'AI101', seat: '14C' }], // 2
+  [
+    { pnr: 'CC2W99', name: 'Vikram Rao', flight: 'AI505', seat: '8D' },
+    { pnr: 'HY5V12', name: 'Priya Desai', flight: 'AI404', seat: '2F' }
+  ], // 3 (Collision chain!)
+  [
+    { pnr: 'PNR101', name: 'Ananya Verma', flight: 'AI101', seat: '10E' },
+    { pnr: 'SK7M41', name: 'Demo Passenger', flight: 'AI202', seat: '3B' }
+  ], // 4 (Collision chain!)
+  [
+    { pnr: 'PNR102', name: 'Karan Malhotra', flight: 'AI202', seat: '5A' },
+    { pnr: 'BL9X33', name: 'Sneha Iyer', flight: 'AI303', seat: '1A' }
+  ], // 5 (Collision chain!)
+  []  // 6
+]);
+
+const hashTableRecordsCount = computed(() => {
+  return hashTableBuckets.value.reduce((acc, b) => acc + b.length, 0);
+});
+
+const hashTableCollisionCount = computed(() => {
+  return hashTableBuckets.value.reduce((acc, b) => acc + (b.length > 1 ? b.length - 1 : 0), 0);
+});
+
+const hashSearchQuery = ref('BL9X33');
+const hashSearchResult = ref('');
+
+function executeHashSearch() {
+  const query = hashSearchQuery.value.trim().toUpperCase();
+  if (!query) {
+    hashSearchResult.value = 'Please enter a PNR to lookup.';
+    return;
+  }
+
+  // Calculate polynomial rolling hash with prime 31 modulo 7
+  let hash = 0;
+  for (let i = 0; i < query.length; i++) {
+    hash = (hash * 31 + query.charCodeAt(i)) % hashTableCapacity.value;
+  }
+
+  const bucket = hashTableBuckets.value[hash] || [];
+  let probes = 0;
+  let found = null;
+
+  for (let node of bucket) {
+    probes++;
+    if (node.pnr === query) {
+      found = node;
+      break;
+    }
+  }
+
+  if (found) {
+    hashSearchResult.value = `✓ FOUND in Bucket [${hash}] after ${probes} probe(s): ${found.pnr} -> ${found.name} (${found.flight} Seat ${found.seat})`;
+  } else {
+    hashSearchResult.value = `✕ NOT FOUND in Bucket [${hash}] (Searched ${probes} chain node(s)). O(1) hash resolution complete.`;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Binary Search vs Linear Search Live Comparison (SearchComparison.cpp)
+// -----------------------------------------------------------------------------
+const searchBenchmarkQuery = ref('SK7M41');
+const searchBenchmarkDataset = ref([
+  { pnr: 'AI1001', name: 'Aarav Sharma', flight: 'AI101', seat: '12A' },
+  { pnr: 'AI1024', name: 'Isha Verma', flight: 'AI101', seat: '5B' },
+  { pnr: 'BL9X33', name: 'Sneha Iyer', flight: 'AI303', seat: '1A' },
+  { pnr: 'CC2W99', name: 'Vikram Rao', flight: 'AI505', seat: '8D' },
+  { pnr: 'DL4Q78', name: 'Rohan Mehta', flight: 'AI101', seat: '14C' },
+  { pnr: 'HY5V12', name: 'Priya Desai', flight: 'AI404', seat: '2F' },
+  { pnr: 'KL3P55', name: 'Tanvi Shah', flight: 'AI202', seat: '19C' },
+  { pnr: 'PNR101', name: 'Ananya Verma', flight: 'AI101', seat: '10E' },
+  { pnr: 'PNR102', name: 'Karan Malhotra', flight: 'AI202', seat: '5A' },
+  { pnr: 'PNR103', name: 'Varad K.', flight: 'AI303', seat: '2A' },
+  { pnr: 'PNR104', name: 'Siddhi P.', flight: 'AI303', seat: '4C' },
+  { pnr: 'SK7M41', name: 'Demo Passenger', flight: 'AI202', seat: '3B' },
+  { pnr: 'UA8901', name: 'Aditya Sen', flight: 'AI404', seat: '22D' },
+  { pnr: 'VA9042', name: 'Ramesh Patel', flight: 'AI505', seat: '16E' },
+  { pnr: 'WA9155', name: 'Pooja Hegde', flight: 'AI101', seat: '7A' },
+  { pnr: 'ZA9999', name: 'Zaid Khan', flight: 'AI202', seat: '11F' }
+]);
+
+const linearSearchStats = ref({
+  found: true,
+  index: 11,
+  comparisons: 12,
+  timeMicro: 18,
+  trace: []
+});
+
+const binarySearchStats = ref({
+  found: true,
+  index: 11,
+  comparisons: 4,
+  timeMicro: 6,
+  trace: []
+});
+
+function executeSearchComparison() {
+  const target = searchBenchmarkQuery.value.trim().toUpperCase();
+  if (!target) return;
+  const list = searchBenchmarkDataset.value;
+  const n = list.length;
+
+  // 1. Linear Search
+  let lComps = 0;
+  let lFound = false;
+  let lIdx = -1;
+  const lTrace = [];
+  const t0 = performance.now();
+
+  for (let i = 0; i < n; i++) {
+    lComps++;
+    const curr = list[i].pnr;
+    if (curr === target) {
+      lFound = true;
+      lIdx = i;
+      lTrace.push(`Index [${i}]: '${curr}' == '${target}' -> MATCH FOUND!`);
+      break;
+    } else {
+      if (lTrace.length < 5 || i === n - 1) {
+        lTrace.push(`Index [${i}]: '${curr}' != '${target}' (No match, continue scan)`);
+      } else if (lTrace.length === 5) {
+        lTrace.push(`... [Sequential scan continues] ...`);
+      }
+    }
+  }
+  const t1 = performance.now();
+  linearSearchStats.value = {
+    found: lFound,
+    index: lIdx,
+    comparisons: lComps,
+    timeMicro: Math.max(1, Math.round((t1 - t0) * 1000)),
+    trace: lTrace
+  };
+
+  // 2. Binary Search (requires sorted array)
+  let bComps = 0;
+  let bFound = false;
+  let bIdx = -1;
+  const bTrace = [];
+  let low = 0;
+  let high = n - 1;
+  let step = 1;
+  const t2 = performance.now();
+
+  while (low <= high) {
+    const mid = Math.floor(low + (high - low) / 2);
+    bComps++;
+    const curr = list[mid].pnr;
+    if (curr === target) {
+      bFound = true;
+      bIdx = mid;
+      bTrace.push(`Step ${step++}: Range [${low}..${high}], Mid = ${mid} ('${curr}') == Target -> FOUND!`);
+      break;
+    } else if (curr < target) {
+      bTrace.push(`Step ${step++}: Range [${low}..${high}], Mid = ${mid} ('${curr}') < Target -> Search RIGHT [${mid + 1}..${high}]`);
+      low = mid + 1;
+    } else {
+      bTrace.push(`Step ${step++}: Range [${low}..${high}], Mid = ${mid} ('${curr}') > Target -> Search LEFT [${low}..${mid - 1}]`);
+      high = mid - 1;
+    }
+  }
+  const t3 = performance.now();
+  binarySearchStats.value = {
+    found: bFound,
+    index: bIdx,
+    comparisons: bComps,
+    timeMicro: Math.max(1, Math.round((t3 - t2) * 1000)),
+    trace: bTrace
+  };
+}
+
+executeSearchComparison();
+
+
 // =============================================================================
 // TAB 4: COA & COMPUTER ARCHITECTURE IMPLEMENTATION
 // =============================================================================
@@ -1769,6 +2426,197 @@ function advanceCuCycle() {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Mapping Table: Airline Fare Operations to Processor Components
+// -----------------------------------------------------------------------------
+const processorMappingSteps = ref([
+  {
+    stage: '01',
+    operation: 'Base Fare Retrieval',
+    asm: 'MOV RAX, [base_fare]',
+    primaryComponent: 'Memory Data Register (MDR) & RAX',
+    secondaryComponent: 'Memory Address Register (MAR), Bus Interface',
+    busActivity: 'Address Bus: Transmits memory address; Data Bus: loads 0x1388 (Rs. 5000); Control: MEM_READ',
+    flags: 'None'
+  },
+  {
+    stage: '02',
+    operation: 'Aviation Tax Loading',
+    asm: 'MOV RBX, 900',
+    primaryComponent: 'Base Register (RBX)',
+    secondaryComponent: 'Instruction Register (IR), Immediate Latch',
+    busActivity: 'Internal CPU Bus: Immediate literal 0x0384 (Rs. 900) gated into RBX',
+    flags: 'None'
+  },
+  {
+    stage: '03',
+    operation: 'Tax Accumulation (ALU Addition)',
+    asm: 'ADD RAX, RBX',
+    primaryComponent: 'ALU 64-bit Parallel Adder',
+    secondaryComponent: 'Accumulator (RAX), Operand Latches',
+    busActivity: 'Datapath: RAX (5000) and RBX (900) summed in ALU; Writeback to RAX: 0x170C (Rs. 5900)',
+    flags: 'ZF=0, CF=0, SF=0'
+  },
+  {
+    stage: '04',
+    operation: 'Class Multiplier Scaling',
+    asm: 'MUL RDX / SHL+ADD',
+    primaryComponent: 'ALU Multiplier / Shifter',
+    secondaryComponent: 'RDX:RAX Register Pair',
+    busActivity: 'Datapath: Multiplier applies 1.0x / 1.8x / 2.5x cabin factor to net fare',
+    flags: 'CF/OF if >64b'
+  },
+  {
+    stage: '05',
+    operation: 'Baggage Surcharge Comparison',
+    asm: 'CMP R8, 15 & JA',
+    primaryComponent: 'ALU Comparator & Flags',
+    secondaryComponent: 'Program Counter (PC), Control Unit (CU)',
+    busActivity: 'ALU subtracts baggage weight (20 - 15); sets CF=0 and branches if weight > 15 kg',
+    flags: 'ZF=0, CF=0'
+  },
+  {
+    stage: '06',
+    operation: 'Excess Baggage Surcharge Addition',
+    asm: 'ADD RAX, R9',
+    primaryComponent: 'ALU Parallel Adder',
+    secondaryComponent: 'Accumulator (RAX), Register R9',
+    busActivity: 'Internal Bus: Excess fee (Rs. 2500) summed into RAX accumulator',
+    flags: 'ZF=0, CF=0'
+  },
+  {
+    stage: '07',
+    operation: 'Promo Discount Loading',
+    asm: 'MOV RCX, 500',
+    primaryComponent: 'Counter Register (RCX)',
+    secondaryComponent: 'Instruction Decoder, Immediate Buffer',
+    busActivity: 'Datapath: Immediate literal 0x01F4 (Rs. 500) loaded into RCX',
+    flags: 'None'
+  },
+  {
+    stage: '08',
+    operation: 'Discount Deduction (2\'s Comp Subtraction)',
+    asm: 'SUB RAX, RCX',
+    primaryComponent: 'ALU 2\'s Complement Subtractor',
+    secondaryComponent: 'Accumulator (RAX), Flags Register',
+    busActivity: 'Datapath: RCX inverted and added to RAX; Final net payable fare committed to RAX',
+    flags: 'ZF=0, CF=0, SF=0'
+  },
+  {
+    stage: '09',
+    operation: 'Zero/Negative Verification',
+    asm: 'TEST RAX, RAX',
+    primaryComponent: 'ALU Bitwise AND Logic',
+    secondaryComponent: 'Condition Code Flags, Branch Logic',
+    busActivity: 'Non-destructive bitwise test to verify net payable fare is strictly positive',
+    flags: 'ZF=1 if 0, SF=1 if neg'
+  },
+  {
+    stage: '10',
+    operation: 'BCD Decimal Conversion',
+    asm: 'Shift & Modulo Division',
+    primaryComponent: 'Barrel Shifter & Divider',
+    secondaryComponent: 'Shift Counter, BCD Registers',
+    busActivity: 'Converts binary fare into 4-bit Packed/Unpacked BCD nibbles for currency display',
+    flags: 'ZF, CF per nibble'
+  },
+  {
+    stage: '11',
+    operation: 'ABI Calling Convention Return',
+    asm: 'RET',
+    primaryComponent: 'Stack Pointer (RSP), PC',
+    secondaryComponent: 'Call Stack, Memory Bus',
+    busActivity: 'Pops caller return address from [RSP] into PC; Net fare in RAX returned to caller',
+    flags: 'None'
+  }
+]);
+
+// -----------------------------------------------------------------------------
+// Control-Flow Demo: Seat-Availability Branches & Branch Prediction Simulator
+// -----------------------------------------------------------------------------
+const branchOccupancySlider = ref(78);
+const branchPredictorState = ref('Weakly Taken (10)');
+
+const branchEvaluationTrace = computed(() => {
+  const total = 116;
+  const occ = branchOccupancySlider.value;
+  const booked = Math.round((occ / 100) * total);
+  const blocked = 6;
+  const avail = Math.max(0, total - (booked + blocked));
+
+  const stages = [];
+
+  // Stage 1: Available <= 0 Check
+  const cond1 = avail <= 0;
+  stages.push({
+    stage: 1,
+    asm: 'CMP [available], 0  |  JLE .status_full',
+    desc: `Available Seats (${avail}) <= 0`,
+    flags: `ZF=${avail <= 0 ? 1 : 0} SF=${avail < 0 ? 1 : 0}`,
+    predicted: 'NOT TAKEN',
+    actual: cond1 ? 'TAKEN' : 'NOT TAKEN',
+    hit: !cond1,
+    penalty: cond1 ? 3 : 0,
+    action: cond1 ? 'BRANCH TAKEN -> Flight Full (Booking Locked)' : 'FALLTHROUGH -> Evaluate next threshold'
+  });
+
+  if (!cond1) {
+    // Stage 2: Occupancy >= 90%
+    const cond2 = occ >= 90;
+    stages.push({
+      stage: 2,
+      asm: 'CMP [occupancy], 90 |  JGE .status_full',
+      desc: `Occupancy (${occ}%) >= 90% Threshold`,
+      flags: `ZF=${occ === 90 ? 1 : 0} SF=${occ < 90 ? 1 : 0}`,
+      predicted: 'NOT TAKEN',
+      actual: cond2 ? 'TAKEN' : 'NOT TAKEN',
+      hit: !cond2,
+      penalty: cond2 ? 3 : 0,
+      action: cond2 ? 'BRANCH TAKEN -> Flight Marked FULL' : 'FALLTHROUGH -> Check Warning Tier'
+    });
+
+    if (!cond2) {
+      // Stage 3: Occupancy >= 75%
+      const cond3 = occ >= 75;
+      stages.push({
+        stage: 3,
+        asm: 'CMP [occupancy], 75 |  JGE .status_low',
+        desc: `Occupancy (${occ}%) >= 75% Threshold`,
+        flags: `ZF=${occ === 75 ? 1 : 0} SF=${occ < 75 ? 1 : 0}`,
+        predicted: 'TAKEN',
+        actual: cond3 ? 'TAKEN' : 'NOT TAKEN',
+        hit: cond3,
+        penalty: cond3 ? 0 : 3,
+        action: cond3 ? 'BRANCH TAKEN -> RUNNING LOW (Surge Pricing Multipliers Active)' : 'FALLTHROUGH -> Status OPEN'
+      });
+
+      if (!cond3) {
+        // Stage 4: Open
+        stages.push({
+          stage: 4,
+          asm: 'MOV [status], 0     |  JMP .done',
+          desc: 'Unconditional Jump (Occupancy < 75%)',
+          flags: 'None',
+          predicted: 'TAKEN',
+          actual: 'TAKEN',
+          hit: true,
+          penalty: 0,
+          action: 'STATUS COMMITTED: OPEN (Standard Fares, All Rows Accessible)'
+        });
+      }
+    }
+  }
+
+  return {
+    total,
+    booked,
+    blocked,
+    avail,
+    stages
+  };
+});
+
+
 // =============================================================================
 // TAB 5: COMPUTER GRAPHICS (CG) IMPLEMENTATION (cpp-cg)
 // =============================================================================
@@ -1813,8 +2661,16 @@ const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 function initializeCgSeats() {
   const seatsList = [];
-  const svgX = (x) => 112 + x * 1.035;
-  const svgY = (y, h) => 610 - y - h;
+  const addSeat = (id, label, classType, status, x, y, width, height) => {
+    seatsList.push({
+      id,
+      label,
+      classType,
+      status,
+      selected: false,
+      ...aircraftWorldSeatToSvg(x, y, width, height)
+    });
+  };
 
   // First Class: 2 rows x 4 cols (2+2)
   for (let r = 0; r < 2; r++) {
@@ -1823,17 +2679,8 @@ function initializeCgSeats() {
       const ys = [320, 300, 275, 255];
       const y = ys[c];
       const isBooked = (r + c) % 3 === 0;
-      seatsList.push({
-        id: `F${r+1}${letters[c]}`,
-        label: `${r+1}${letters[c]}`,
-        classType: 'first',
-        status: isBooked ? 'booked' : 'available',
-        selected: false,
-        x: svgX(x),
-        y: svgY(y, 14),
-        w: 22,
-        h: 14
-      });
+      addSeat(`F${r+1}${letters[c]}`, `${r+1}${letters[c]}`, 'first',
+        isBooked ? 'booked' : 'available', x, y, 20, 12);
     }
   }
 
@@ -1844,17 +2691,8 @@ function initializeCgSeats() {
       const ys = [320, 300, 275, 255];
       const y = ys[c];
       const isBooked = (r * 2 + c) % 4 === 0;
-      seatsList.push({
-        id: `B${r+1}${letters[c]}`,
-        label: `${r+1}${letters[c]}`,
-        classType: 'business',
-        status: isBooked ? 'booked' : 'available',
-        selected: false,
-        x: svgX(x),
-        y: svgY(y, 14),
-        w: 22,
-        h: 14
-      });
+      addSeat(`B${r+1}${letters[c]}`, `${r+1}${letters[c]}`, 'business',
+        isBooked ? 'booked' : 'available', x, y, 20, 12);
     }
   }
 
@@ -1865,25 +2703,16 @@ function initializeCgSeats() {
       const ys = [327, 312, 297, 282, 267, 252];
       const y = ys[c];
       const isBooked = (r + c * 2) % 5 === 0;
-      seatsList.push({
-        id: `E${r+1}${letters[c]}`,
-        label: `${r+1}${letters[c]}`,
-        classType: 'economy',
-        status: isBooked ? 'booked' : 'available',
-        selected: false,
-        x: svgX(x),
-        y: svgY(y, 12),
-        w: 20,
-        h: 12
-      });
+      addSeat(`E${r+1}${letters[c]}`, `${r+1}${letters[c]}`, 'economy',
+        isBooked ? 'booked' : 'available', x, y, 20, 12);
     }
   }
 
   // Pilot & Crew
-  seatsList.push({ id: 'P1', label: 'PLT', classType: 'pilot', status: 'pilot', selected: false, x: svgX(55), y: svgY(315, 16), w: 22, h: 16 });
-  seatsList.push({ id: 'P2', label: 'PLT', classType: 'pilot', status: 'pilot', selected: false, x: svgX(55), y: svgY(270, 16), w: 22, h: 16 });
+  addSeat('P1', 'PLT', 'pilot', 'pilot', 55, 315, 22, 16);
+  addSeat('P2', 'PLT', 'pilot', 'pilot', 55, 270, 22, 16);
   [[350, 320], [350, 255], [825, 320], [825, 255]].forEach(([cx, cy], idx) => {
-    seatsList.push({ id: `CRW${idx+1}`, label: 'CRW', classType: 'crew', status: 'crew', selected: false, x: svgX(cx), y: svgY(cy, 12), w: 18, h: 12 });
+    addSeat(`CRW${idx+1}`, 'CRW', 'crew', 'crew', cx, cy, 18, 12);
   });
 
   cgSeats.value = seatsList;
@@ -1914,11 +2743,11 @@ const bresenhamPixels = computed(() => {
     const e2 = 2 * err;
     if (e2 > -dy) {
       err -= dy;
-      x0 += sx * 4; // Step by 4 for visible pixel clustering
+      x0 += sx;
     }
     if (e2 < dx) {
       err += dx;
-      y0 += sy * 4;
+      y0 += sy;
     }
   }
   return points;
@@ -2015,6 +2844,8 @@ const rotY = ref(-30);
 const rotZ = ref(0);
 const zoom3D = ref(1.0);
 const autoRotate3D = ref(true);
+const active3DProjectionMode = ref('PERSPECTIVE');
+const active3DCameraPreset = ref('FREE');
 let animationFrameId = null;
 let isDragging = false;
 let lastMouseX = 0;
@@ -2025,6 +2856,29 @@ function reset3DCamera() {
   rotY.value = -30;
   rotZ.value = 0;
   zoom3D.value = 1.0;
+  active3DCameraPreset.value = 'FREE';
+}
+
+function apply3DPreset(preset) {
+  active3DCameraPreset.value = preset;
+  autoRotate3D.value = false;
+  rotZ.value = 0;
+
+  if (preset === 'PLAN') {
+    rotX.value = 90;
+    rotY.value = 0;
+  } else if (preset === 'FRONT') {
+    rotX.value = 0;
+    rotY.value = 90;
+  } else if (preset === 'SIDE') {
+    rotX.value = 0;
+    rotY.value = 0;
+  } else if (preset === 'ISO') {
+    rotX.value = 35.264;
+    rotY.value = 45;
+  } else {
+    reset3DCamera();
+  }
 }
 
 function render3DAircraft() {
@@ -2069,7 +2923,9 @@ function render3DAircraft() {
     const fov = 400;
     const distance = 8;
     const depth = distance + z2 * 0.15;
-    const pScale = fov / (fov + depth * 30);
+    const pScale = active3DProjectionMode.value === 'ORTHOGRAPHIC'
+      ? 1
+      : fov / (fov + depth * 30);
 
     return {
       x: cx + x3 * scale * pScale,
@@ -3689,12 +4545,14 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.svg-seat-node.first rect, .svg-seat-node.business rect { fill: #8b5cf6; }
-.svg-seat-node.economy rect { fill: #10b981; }
+.svg-seat-node.first rect { fill: #7c3aed; stroke: #f5c530; stroke-width: 1.5; }
+.svg-seat-node.business rect { fill: #2563eb; }
+.svg-seat-node.economy rect { fill: #059669; }
 .svg-seat-node.selected rect { fill: #fbbf24; stroke: #fff; stroke-width: 2; }
-.svg-seat-node.booked rect { fill: #ef4444; cursor: not-allowed; }
-.svg-seat-node.pilot rect { fill: #2563eb; cursor: default; }
-.svg-seat-node.crew rect { fill: #f97316; cursor: default; }
+.svg-seat-node.booked rect { fill: #dc2626; cursor: not-allowed; }
+.svg-seat-node.blocked rect { fill: #4b5563; cursor: not-allowed; }
+.svg-seat-node.pilot rect { fill: #1e40af; cursor: default; }
+.svg-seat-node.crew rect { fill: #ea580c; cursor: default; }
 
 .cg-legend {
   display: flex;
@@ -3719,12 +4577,14 @@ onUnmounted(() => {
   vertical-align: middle;
 }
 
-.swatch.violet { background: #8b5cf6; }
-.swatch.green { background: #10b981; }
-.swatch.gold { background: #fbbf24; }
-.swatch.red { background: #ef4444; }
-.swatch.blue { background: #2563eb; }
-.swatch.orange { background: #f97316; }
+.swatch.plum { background: #7c3aed; border: 1px solid #f5c530; }
+.swatch.sapphire { background: #2563eb; }
+.swatch.emerald { background: #059669; }
+.swatch.amber { background: #fbbf24; }
+.swatch.crimson { background: #dc2626; }
+.swatch.slate { background: #4b5563; }
+.swatch.navy { background: #1e40af; }
+.swatch.orange { background: #ea580c; }
 
 /* Bresenham & Clipping SVG */
 .algo-canvas-box {
@@ -3837,12 +4697,232 @@ onUnmounted(() => {
   overflow-wrap: anywhere;
 }
 
+/* ========================================================================= */
+/* Generic Repository Demo Styles                                            */
+/* ========================================================================= */
+.repo-demo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.repo-actions-box {
+  background: #06111f;
+  border: 1px solid #1a334f;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.repo-actions-box label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #38bdf8;
+  letter-spacing: 0.5px;
+}
+
+.repo-buttons-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.repo-interactive-form {
+  margin-top: 4px;
+}
+
+.repo-console-output {
+  background: #040913;
+  border: 1px solid #14283f;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.repo-log {
+  margin: 6px 0 0;
+  padding: 8px;
+  background: #02050b;
+  border-radius: 6px;
+  border: 1px solid #0f1f31;
+  color: #38bdf8;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  height: 140px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+/* ========================================================================= */
+/* PNR Hash Table Separate Chaining Visualizer                               */
+/* ========================================================================= */
+.hash-table-visualizer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.hash-buckets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #06111f;
+  border: 1px solid #1a334f;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.hash-bucket-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  background: #081628;
+  border: 1px solid #162a42;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.bucket-idx-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: #0c1e33;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #1e3a5f;
+  min-width: 82px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.bucket-chain {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.empty-bucket-tag {
+  font-size: 11px;
+  color: #475569;
+  font-style: italic;
+}
+
+.hash-chain-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chain-arrow {
+  color: #38bdf8;
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.hash-node-box {
+  background: #0f2744;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.hash-node-box strong {
+  color: #f8fafc;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.hash-node-box small {
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.hash-node-box.collision {
+  border-color: #f59e0b;
+  background: #231c0a;
+}
+
+.hash-node-box.collision strong {
+  color: #fbbf24;
+}
+
+.chain-null {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ef4444;
+  background: #2a1010;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #4a1818;
+}
+
+.hash-search-panel {
+  background: #081628;
+  border: 1px solid #1a334f;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+/* ========================================================================= */
+/* Mapping Table & Data Formatting                                           */
+/* ========================================================================= */
+.mapping-table th {
+  background: #07172b;
+  color: #38bdf8;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 12px;
+}
+
+.mapping-table td {
+  padding: 9px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid #14283f;
+  vertical-align: middle;
+}
+
+.mapping-table tr:hover {
+  background: rgba(56, 189, 248, 0.04);
+}
+
+.bold-text {
+  font-weight: 700;
+  color: #38bdf8;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.code-font {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.text-cyan {
+  color: #38bdf8;
+}
+
 /* Responsive Media Queries */
 @media (max-width: 900px) {
   .two-col-layout {
     grid-template-columns: 1fr;
   }
   .stack-layout {
+    grid-template-columns: 1fr;
+  }
+  .repo-demo-grid {
     grid-template-columns: 1fr;
   }
   .hero-quick-stats {

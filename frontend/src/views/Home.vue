@@ -38,7 +38,7 @@
           <form @submit.prevent="handleSearch" class="search-form-grid">
             <div class="form-group">
               <label class="form-label">From (Origin)</label>
-              <select v-model="form.from" class="form-select" required>
+              <select v-model="form.from" class="form-select" :disabled="!airports.length" required>
                 <option value="" disabled>Select Departure Airport</option>
                 <option v-for="apt in airports" :key="apt.id" :value="apt.airport_code">
                   {{ apt.city }} ({{ apt.airport_code }}) - {{ apt.airport_name }}
@@ -48,7 +48,7 @@
 
             <div class="form-group">
               <label class="form-label">To (Destination)</label>
-              <select v-model="form.to" class="form-select" required>
+              <select v-model="form.to" class="form-select" :disabled="!airports.length" required>
                 <option value="" disabled>Select Arrival Airport</option>
                 <option v-for="apt in airports" :key="apt.id" :value="apt.airport_code">
                   {{ apt.city }} ({{ apt.airport_code }}) - {{ apt.airport_name }}
@@ -91,6 +91,11 @@
               </button>
             </div>
           </form>
+
+          <div v-if="flightStore.airportError" class="validation-msg">
+            ⚠️ Airport options could not be loaded: {{ flightStore.airportError }}
+            <button type="button" class="btn btn-outline btn-sm" @click="loadAirports">Retry</button>
+          </div>
 
           <div v-if="validationError" class="validation-msg">
             ⚠️ {{ validationError }}
@@ -204,12 +209,21 @@ const flightStore = useFlightStore();
 const tripType = ref('one-way');
 const validationError = ref('');
 
-const todayDate = new Date().toISOString().split('T')[0];
+function localDateAfterDays(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+const todayDate = localDateAfterDays(0);
 
 const form = ref({
   from: 'BOM',
   to: 'DEL',
-  date: '2026-10-15',
+  date: localDateAfterDays(1),
   returnDate: '',
   passengers: 1,
   travelClass: 'Economy'
@@ -269,8 +283,16 @@ const popularRoutes = [
 ];
 
 onMounted(async () => {
-  await flightStore.fetchAirports();
+  try {
+    await flightStore.fetchAirports();
+  } catch {
+    // The store exposes the load error to the form so the user can retry.
+  }
 });
+
+function loadAirports() {
+  flightStore.fetchAirports().catch(() => {});
+}
 
 function handleSearch() {
   validationError.value = '';

@@ -34,6 +34,8 @@
 #endif
 #include <cstdlib>
 #include <cmath>
+#include <string>
+#include "AircraftProjectionViewing.h"
 
 // ---------------- Rotation / camera state ----------------
 static float angleX = 15.0f;     // pitch
@@ -43,8 +45,25 @@ static float camDist = 9.0f;     // distance of camera from the model
 static bool  autoRotate = true;
 static const float STEP = 5.0f;  // degrees per key press
 
+static ProjectionMode projMode = ProjectionMode::PERSPECTIVE;
+static CameraPreset camPreset = CameraPreset::FREE_ORBIT;
+
 static GLUquadric* quad = nullptr;
 static int winW = 900, winH = 600;
+
+static void updateProjection() {
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    float aspect = (float)winW / (winH ? winH : 1);
+    if (projMode == ProjectionMode::ORTHOGRAPHIC) {
+        float halfH = camDist * 0.45f;
+        float halfW = halfH * aspect;
+        glOrtho(-halfW, halfW, -halfH, halfH, 0.1, 100.0);
+    } else {
+        gluPerspective(45.0, aspect, 0.1, 100.0);
+    }
+    glMatrixMode(GL_MODELVIEW);
+}
 
 // ---------------- Small helpers ----------------
 static void setColor(float r, float g, float b) {
@@ -207,9 +226,18 @@ static void drawOverlay() {
             glLoadIdentity();
             glColor3f(1, 1, 1);
             drawText(12, winH - 20, "3D Aircraft - Airline Reservation System (CGL)");
+            
+            // Display active Projection & Camera Preset
+            std::string projStr = "Projection: " + AircraftProjectionViewing::getProjectionModeName(projMode) + " [O: Ortho | P: Persp]";
+            glColor3f(0.3f, 0.9f, 1.0f);
+            drawText(12, winH - 38, projStr.c_str());
+
+            std::string viewStr = "Camera Preset: " + AircraftProjectionViewing::getCameraPresetName(camPreset) + " [1: Plan, 2: Front, 3: Side, 4: Iso, 0: Free]";
+            glColor3f(0.9f, 0.8f, 0.2f);
+            drawText(12, winH - 54, viewStr.c_str());
+
             glColor3f(0.8f, 0.9f, 1.0f);
-            drawText(12, winH - 40, "W/S or Up/Down : pitch (X)    A/D or Left/Right : yaw (Y)    Q/E : roll (Z)");
-            drawText(12, winH - 56, "SPACE : auto-rotate on/off    + / - : zoom    R : reset    ESC : quit");
+            drawText(12, winH - 72, "W/S/A/D: Rotate | SPACE: Auto-Rotate | +/- : Zoom | R: Reset | ESC: Quit");
         glPopMatrix();
         glMatrixMode(GL_PROJECTION);
     glPopMatrix();
@@ -224,9 +252,14 @@ static void display() {
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    gluLookAt(0.0, 1.5, camDist,     // camera position
-              0.0, 0.0, 0.0,         // looking at the origin
-              0.0, 1.0, 0.0);        // up direction
+
+    if (camPreset == CameraPreset::FREE_ORBIT) {
+        gluLookAt(0.0, 1.5, camDist, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    } else {
+        Vec3 eye, target, up;
+        AircraftProjectionViewing::getCameraForPreset(camPreset, camDist, eye, target, up);
+        gluLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, up.x, up.y, up.z);
+    }
 
     // keep the light fixed in the world (set after the camera transform)
     GLfloat lightPos[] = { 4.0f, 6.0f, 6.0f, 1.0f };
@@ -234,9 +267,11 @@ static void display() {
 
     // ---- model transformation: this is the rotation the keyboard controls ----
     glPushMatrix();
-        glRotatef(angleX, 1, 0, 0);
-        glRotatef(angleY, 0, 1, 0);
-        glRotatef(angleZ, 0, 0, 1);
+        if (camPreset == CameraPreset::FREE_ORBIT) {
+            glRotatef(angleX, 1, 0, 0);
+            glRotatef(angleY, 0, 1, 0);
+            glRotatef(angleZ, 0, 0, 1);
+        }
         drawAircraft();
     glPopMatrix();
 
@@ -249,14 +284,11 @@ static void reshape(int w, int h) {
     winW = w;
     winH = h;
     glViewport(0, 0, w, h);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(45.0, (double)w / h, 0.1, 100.0);
-    glMatrixMode(GL_MODELVIEW);
+    updateProjection();
 }
 
 static void timer(int) {
-    if (autoRotate) {
+    if (autoRotate && camPreset == CameraPreset::FREE_ORBIT) {
         angleY += 1.0f;
         if (angleY >= 360.0f) angleY -= 360.0f;
         glutPostRedisplay();
@@ -269,6 +301,10 @@ static void resetView() {
     angleY = -30.0f;
     angleZ = 0.0f;
     camDist = 9.0f;
+    camPreset = CameraPreset::FREE_ORBIT;
+    projMode = ProjectionMode::PERSPECTIVE;
+    autoRotate = true;
+    updateProjection();
 }
 
 static void keyboard(unsigned char key, int, int) {
@@ -279,10 +315,59 @@ static void keyboard(unsigned char key, int, int) {
         case 'd': case 'D': angleY += STEP; break;
         case 'q': case 'Q': angleZ += STEP; break;
         case 'e': case 'E': angleZ -= STEP; break;
-        case '+': case '=': camDist -= 0.5f; if (camDist < 3.0f) camDist = 3.0f; break;
-        case '-': case '_': camDist += 0.5f; if (camDist > 25.0f) camDist = 25.0f; break;
+        case '+': case '=':
+            camDist -= 0.5f;
+            if (camDist < 3.0f) camDist = 3.0f;
+            updateProjection();
+            break;
+        case '-': case '_':
+            camDist += 0.5f;
+            if (camDist > 25.0f) camDist = 25.0f;
+            updateProjection();
+            break;
         case ' ': autoRotate = !autoRotate; break;
         case 'r': case 'R': resetView(); break;
+
+        // Projection Mode toggles
+        case 'o': case 'O':
+            projMode = ProjectionMode::ORTHOGRAPHIC;
+            updateProjection();
+            break;
+        case 'p': case 'P':
+            projMode = ProjectionMode::PERSPECTIVE;
+            updateProjection();
+            break;
+
+        // Multi-view Architectural Camera Presets
+        case '1':
+            camPreset = CameraPreset::TOP_PLAN;
+            projMode = ProjectionMode::ORTHOGRAPHIC;
+            autoRotate = false;
+            updateProjection();
+            break;
+        case '2':
+            camPreset = CameraPreset::FRONT_ELEVATION;
+            projMode = ProjectionMode::ORTHOGRAPHIC;
+            autoRotate = false;
+            updateProjection();
+            break;
+        case '3':
+            camPreset = CameraPreset::SIDE_PROFILE;
+            projMode = ProjectionMode::ORTHOGRAPHIC;
+            autoRotate = false;
+            updateProjection();
+            break;
+        case '4':
+            camPreset = CameraPreset::ISOMETRIC;
+            projMode = ProjectionMode::ORTHOGRAPHIC;
+            autoRotate = false;
+            updateProjection();
+            break;
+        case '0':
+            camPreset = CameraPreset::FREE_ORBIT;
+            updateProjection();
+            break;
+
         case 27:  exit(0);
     }
     glutPostRedisplay();

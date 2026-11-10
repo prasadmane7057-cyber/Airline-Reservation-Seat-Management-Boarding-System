@@ -55,6 +55,13 @@
         </form>
       </div>
 
+      <div v-if="flightStore.airportError" class="empty-state card" role="alert">
+        <p>Airport options could not be loaded: {{ flightStore.airportError }}</p>
+        <button @click="loadAirports" class="btn btn-outline btn-sm mt-16">
+          Retry airport loading
+        </button>
+      </div>
+
       <!-- Main Content Layout -->
       <div class="results-layout">
         <!-- Sidebar Filters -->
@@ -95,6 +102,14 @@
 
         <!-- Flights List -->
         <section class="results-content">
+          <div v-if="flightStore.error" class="empty-state card" role="alert">
+            <h3>Could not load flights</h3>
+            <p>{{ flightStore.error }}</p>
+            <button @click="executeSearch" class="btn btn-outline btn-sm mt-16">
+              Retry
+            </button>
+          </div>
+
           <div class="results-header">
             <h2 class="results-count">
               Available Flights 
@@ -107,7 +122,7 @@
             <p>Scanning flight schedules & seat maps...</p>
           </div>
 
-          <div v-else-if="flights.length === 0" class="empty-state card">
+          <div v-else-if="flights.length === 0 && !flightStore.error" class="empty-state card">
             <div class="empty-icon">✈️</div>
             <h3>No flights found matching your criteria</h3>
             <p>Try changing the departure airport, destination, or date filter.</p>
@@ -233,20 +248,36 @@ const filters = ref({
 const flights = computed(() => flightStore.flights);
 
 onMounted(async () => {
-  await flightStore.fetchAirports();
+  try {
+    await flightStore.fetchAirports();
+  } catch {
+    // Airport errors are shown in the shared flight-store error state.
+  }
   await executeSearch();
 });
 
 async function executeSearch() {
-  await flightStore.searchFlights({
-    from: filters.value.from,
-    to: filters.value.to,
-    date: filters.value.date,
-    travelClass: filters.value.travelClass,
-    sortBy: filters.value.sortBy,
-    status: filters.value.status,
-    maxPrice: maxPriceFilter.value
-  });
+  try {
+    await flightStore.searchFlights({
+      from: filters.value.from,
+      to: filters.value.to,
+      date: filters.value.date,
+      travelClass: filters.value.travelClass,
+      sortBy: filters.value.sortBy,
+      status: filters.value.status,
+      maxPrice: maxPriceFilter.value
+    });
+  } catch {
+    // The shared store error is rendered above the flight results.
+  }
+}
+
+async function loadAirports() {
+  try {
+    await flightStore.fetchAirports();
+  } catch {
+    // The shared airport error is rendered above the flight results.
+  }
 }
 
 function resetFilters() {

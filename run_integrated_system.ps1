@@ -45,14 +45,22 @@ function Invoke-JavaDemo {
         [string]$ClassPath,
         [string]$MainClass,
         [string[]]$Arguments = @(),
-        [string]$InputText
+        [string]$InputText,
+        [switch]$EnableAssertions
     )
 
     Write-Host "`n--- $Step ---" -ForegroundColor Green
+    $javaArguments = @()
+    if ($EnableAssertions) {
+        $javaArguments += "-ea"
+    }
+    $javaArguments += @("-cp", $ClassPath, $MainClass)
+    $javaArguments += $Arguments
+
     if ($null -eq $InputText) {
-        & $java -cp $ClassPath $MainClass @Arguments 2>&1
+        & $java @javaArguments 2>&1
     } else {
-        $InputText | & $java -cp $ClassPath $MainClass @Arguments 2>&1
+        $InputText | & $java @javaArguments 2>&1
     }
     if ($LASTEXITCODE -ne 0) {
         throw "$Step failed with exit code $LASTEXITCODE."
@@ -104,6 +112,8 @@ try {
 
     Invoke-JavaDemo -Step "Run booking file checks" -ClassPath $javaOopBuild `
         -MainClass "util.BookingFileManagerTest"
+    Invoke-JavaDemo -Step "Run booking file save/load service checks" `
+        -ClassPath $javaOopBuild -MainClass "service.BookingFileServiceTest" -EnableAssertions
     Invoke-JavaDemo -Step "Run booking service demonstration" -ClassPath $javaOopBuild `
         -MainClass "model.BookingService"
     $bookingInput = "AI101`n2`nPNR101`nAarav Sharma`n1A`n1`nPNR102`nSneha Iyer`n2B`n2`n"
@@ -132,11 +142,13 @@ try {
     New-Item -ItemType Directory -Path $dsBuild, $cgBuild, $asmBuild | Out-Null
 
     $dsDemo = Join-Path $dsBuild "ds_demo.exe"
-    Invoke-Checked "Build passenger, seat map, and waitlist demo" {
+    Invoke-Checked "Build passenger, seat map, waitlist, PNR hash table, and search/sort comparison demos" {
         & $gpp -std=c++17 "cpp-ds\src\main.cpp" "cpp-ds\src\PassengerArray.cpp" `
-            "cpp-ds\src\SeatMap2D.cpp" "cpp-ds\src\Waitlist.cpp" -o $dsDemo
+            "cpp-ds\src\SeatMap2D.cpp" "cpp-ds\src\Waitlist.cpp" `
+            "cpp-ds\src\PNRHashTable.cpp" "cpp-ds\src\SearchComparison.cpp" `
+            "cpp-ds\src\SortComparison.cpp" -o $dsDemo
     }
-    Invoke-Demo "Run passenger, seat map, and waitlist demo" $dsDemo $null
+    Invoke-Demo "Run data structure, search, and sorting comparisons" $dsDemo $null
 
     $linkedList = Join-Path $dsBuild "linked_list.exe"
     Invoke-Checked "Build booking history list" {
@@ -176,6 +188,12 @@ try {
             & $gpp -std=c++17 -fsyntax-only $source.FullName
         }
     }
+    $projectionTests = Join-Path $cgBuild "projection_tests.exe"
+    Invoke-Checked "Build aircraft projection precision checks" {
+        & $gpp -std=c++17 "cpp-cg\tests\AircraftProjectionViewingTest.cpp" `
+            "cpp-cg\src\AircraftProjectionViewing.cpp" -o $projectionTests
+    }
+    Invoke-Demo "Run aircraft projection precision checks" $projectionTests $null
 
     $lineComparison = Join-Path $cgBuild "line_comparison.exe"
     Invoke-Checked "Build DDA and Bresenham comparison" {
@@ -208,7 +226,8 @@ try {
     New-Item -ItemType Directory -Path $aircraft3dDirectory -Force | Out-Null
     $aircraft3d = Join-Path $aircraft3dDirectory "Aircraft3D.exe"
     Invoke-Checked "Build interactive 3D aircraft visual" {
-        & $gpp -std=c++17 "cpp-cg\src\Aircraft3D.cpp" -o $aircraft3d -lfreeglut -lopengl32 -lglu32
+        & $gpp -std=c++17 "cpp-cg\src\Aircraft3D.cpp" "cpp-cg\src\AircraftProjectionViewing.cpp" `
+            -o $aircraft3d -lfreeglut -lopengl32 -lglu32
     }
     Write-Host "`n--- Launch interactive 3D aircraft visual ---" -ForegroundColor Green
     $aircraft3dProcess = Start-Process -FilePath $aircraft3d -PassThru
@@ -223,15 +242,21 @@ try {
     [void]$subjectResults.Add("Computer graphics: PASSED")
 
     Write-SubjectHeader "SUBJECT 4/4: COA AND ASSEMBLY"
-    $fareObject = Join-Path $asmBuild "fare.obj"
-    $fareExe = Join-Path $asmBuild "fare.exe"
-    Invoke-Checked "Assemble Windows fare calculator" {
-        & $nasm -f win64 "coa-nasm\out\model\farecalculator.asm" -o $fareObject
+    $seatControlFlow = Join-Path $asmBuild "seat_control_flow.exe"
+    Invoke-Checked "Build seat-availability branch simulator" {
+        & $gpp -std=c++17 "coa-nasm\SeatControlFlowDemo.cpp" -o $seatControlFlow
     }
-    Invoke-Checked "Link Windows fare calculator" {
-        & $gcc $fareObject -o $fareExe
+    Invoke-Demo "Run seat-availability branch simulator" $seatControlFlow $null
+
+    $seatBranchesObject = Join-Path $asmBuild "seat_availability_branches.obj"
+    $seatBranchesExe = Join-Path $asmBuild "seat_availability_branches.exe"
+    Invoke-Checked "Assemble seat-availability branch demo" {
+        & $nasm -f win64 "coa-nasm\seat_availability_branches.asm" -o $seatBranchesObject
     }
-    Invoke-Demo "Run fare calculator" $fareExe "5000`n3`n900`n500`n180`n120`n"
+    Invoke-Checked "Link seat-availability branch demo" {
+        & $gcc $seatBranchesObject -o $seatBranchesExe
+    }
+    Invoke-Demo "Run seat-availability branch demo" $seatBranchesExe $null
 
     $fuelObject = Join-Path $asmBuild "fuel.obj"
     $fuelExe = Join-Path $asmBuild "fuel.exe"
@@ -255,11 +280,9 @@ try {
     Invoke-Demo "Run hexadecimal and BCD conversion checks" $hexExe "0x1A2B3C`n"
     Invoke-Demo "Run maximum 64-bit hexadecimal conversion check" $hexExe "0xFFFFFFFFFFFFFFFF`n"
 
-    $fareSimulation = Join-Path $asmBuild "fare_simulation.exe"
-    Invoke-Checked "Build fare register simulation" {
-        & $gpp -std=c++17 "assembly-component\fare_calc_sim.cpp" -o $fareSimulation
+    Invoke-Checked "Run simulator and NASM fare parity demo on shared input" {
+        & (Join-Path $PSHOME "powershell.exe") -NoProfile -File "coa-nasm\run_fare_parity_demo.ps1"
     }
-    Invoke-Demo "Run fare register simulation" $fareSimulation $null
 
     $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
     $distributions = @()
