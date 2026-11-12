@@ -41,11 +41,12 @@ export const useAuthStore = defineStore('auth', {
       this.error = null;
       try {
         const response = await authApi.register(userData);
-        this.token = response.token;
-        this.user = response.user;
-
-        localStorage.setItem('airline_token', response.token);
-        localStorage.setItem('airline_user', JSON.stringify(response.user));
+        if (response.token && response.user) {
+          this.token = response.token;
+          this.user = response.user;
+          localStorage.setItem('airline_token', response.token);
+          localStorage.setItem('airline_user', JSON.stringify(response.user));
+        }
         return response;
       } catch (err) {
         this.error = err.message;

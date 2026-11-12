@@ -1,112 +1,73 @@
-const { pool, memoryDB, isConnectedToMySQL } = require('../config/db');
+const { supabase } = require('../lib/supabaseClient');
 
-/**
- * Get all airports
- */
 async function getAirports(req, res, next) {
   try {
-    if (isConnectedToMySQL() && pool) {
-      const [rows] = await pool.query('SELECT * FROM airports ORDER BY city ASC');
-      return res.json({ success: true, count: rows.length, airports: rows });
-    } else {
-      const sorted = [...memoryDB.airports].sort((a, b) => a.city.localeCompare(b.city));
-      return res.json({ success: true, count: sorted.length, airports: sorted });
-    }
+    const { data, error } = await supabase.from('airports').select('*').order('city');
+    if (error) throw error;
+    return res.json({ success: true, count: data.length, airports: data });
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * Admin: Create airport
- */
 async function createAirport(req, res, next) {
   try {
-    const { airport_code, airport_name, city, country } = req.body;
-
-    if (!airport_code || !airport_name || !city) {
+    const { airport_code, airport_name, city, country = 'India' } = req.body;
+    if (!airport_code?.trim() || !airport_name?.trim() || !city?.trim()) {
       return res.status(400).json({
         success: false,
         message: 'Airport code, name, and city are required.'
       });
     }
-
-    const code = airport_code.toUpperCase().trim();
-
-    if (isConnectedToMySQL() && pool) {
-      const [result] = await pool.query(
-        'INSERT INTO airports (airport_code, airport_name, city, country) VALUES (?, ?, ?, ?)',
-        [code, airport_name.trim(), city.trim(), country ? country.trim() : 'India']
-      );
-      return res.status(201).json({
-        success: true,
-        message: 'Airport created successfully.',
-        airportId: result.insertId
-      });
-    } else {
-      const newAirport = {
-        id: memoryDB.airports.length + 1,
-        airport_code: code,
+    const { data, error } = await req.supabase
+      .from('airports')
+      .insert({
+        airport_code: airport_code.toUpperCase().trim(),
         airport_name: airport_name.trim(),
         city: city.trim(),
-        country: country ? country.trim() : 'India'
-      };
-      memoryDB.airports.push(newAirport);
-      return res.status(201).json({
-        success: true,
-        message: 'Airport created successfully.',
-        airport: newAirport
-      });
-    }
+        country: country.trim()
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return res.status(201).json({ success: true, airport: data });
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * Admin: Update airport
- */
 async function updateAirport(req, res, next) {
   try {
-    const id = parseInt(req.params.id, 10);
-    const { airport_code, airport_name, city, country } = req.body;
-
-    if (isConnectedToMySQL() && pool) {
-      await pool.query(
-        'UPDATE airports SET airport_code = COALESCE(?, airport_code), airport_name = COALESCE(?, airport_name), city = COALESCE(?, city), country = COALESCE(?, country) WHERE id = ?',
-        [airport_code ? airport_code.toUpperCase() : null, airport_name, city, country, id]
-      );
-    } else {
-      const a = memoryDB.airports.find(item => item.id === id);
-      if (a) {
-        if (airport_code) a.airport_code = airport_code.toUpperCase();
-        if (airport_name) a.airport_name = airport_name;
-        if (city) a.city = city;
-        if (country) a.country = country;
-      }
-    }
-
-    res.json({ success: true, message: 'Airport updated successfully.' });
+    const allowed = ['airport_code', 'airport_name', 'city', 'country'];
+    const updates = Object.fromEntries(
+      Object.entries(req.body).filter(([key, value]) => allowed.includes(key) && value !== undefined)
+    );
+    if (updates.airport_code) updates.airport_code = updates.airport_code.toUpperCase().trim();
+    const { data, error } = await req.supabase
+      .from('airports')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ success: false, message: 'Airport not found.' });
+    return res.json({ success: true, message: 'Airport updated successfully.' });
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * Admin: Delete airport
- */
 async function deleteAirport(req, res, next) {
   try {
-    const id = parseInt(req.params.id, 10);
-
-    if (isConnectedToMySQL() && pool) {
-      await pool.query('DELETE FROM airports WHERE id = ?', [id]);
-    } else {
-      const idx = memoryDB.airports.findIndex(a => a.id === id);
-      if (idx !== -1) memoryDB.airports.splice(idx, 1);
-    }
-
-    res.json({ success: true, message: 'Airport removed successfully.' });
+    const { data, error } = await req.supabase
+      .from('airports')
+      .delete()
+      .eq('id', req.params.id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ success: false, message: 'Airport not found.' });
+    return res.json({ success: true, message: 'Airport removed successfully.' });
   } catch (err) {
     next(err);
   }

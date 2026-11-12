@@ -1,74 +1,48 @@
-const { pool, memoryDB, isConnectedToMySQL } = require('../config/db');
-
-/**
- * Admin: Get all registered passengers with booking counts
- */
 async function getPassengers(req, res, next) {
   try {
-    if (isConnectedToMySQL() && pool) {
-      const query = `
-        SELECT 
-          u.id AS user_id,
-          u.name,
-          u.email,
-          u.phone,
-          u.status,
-          u.created_at,
-          COUNT(b.id) AS total_bookings,
-          SUM(CASE WHEN b.booking_status = 'CONFIRMED' THEN 1 ELSE 0 END) AS active_bookings
-        FROM users u
-        LEFT JOIN bookings b ON u.id = b.user_id
-        WHERE u.role = 'passenger'
-        GROUP BY u.id
-        ORDER BY u.created_at DESC
-      `;
-      const [rows] = await pool.query(query);
-      return res.json({ success: true, count: rows.length, passengers: rows });
-    } else {
-      const list = memoryDB.users
-        .filter(u => u.role === 'passenger')
-        .map(u => {
-          const userBookings = memoryDB.bookings.filter(b => b.user_id === u.id);
-          const activeBookings = userBookings.filter(b => b.booking_status === 'CONFIRMED');
-          return {
-            user_id: u.id,
-            name: u.name,
-            email: u.email,
-            phone: u.phone || '',
-            status: u.status || 'ACTIVE',
-            created_at: u.created_at,
-            total_bookings: userBookings.length,
-            active_bookings: activeBookings.length
-          };
-        });
+    const { data: users, error } = await req.supabase
+      .from('users')
+      .select('id, name, email, phone, status, created_at, bookings(id, booking_status)')
+      .eq('role', 'passenger')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
 
-      return res.json({ success: true, count: list.length, passengers: list });
-    }
+    const passengers = users.map(user => ({
+      user_id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      status: user.status,
+      created_at: user.created_at,
+      total_bookings: user.bookings.length,
+      active_bookings: user.bookings.filter(booking => booking.booking_status === 'CONFIRMED').length
+    }));
+    return res.json({ success: true, count: passengers.length, passengers });
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * Admin: Update Passenger Account Status (ACTIVE / INACTIVE)
- */
 async function updatePassengerStatus(req, res, next) {
   try {
-    const userId = parseInt(req.params.id, 10);
     const { status } = req.body;
-
-    if (!status) {
-      return res.status(400).json({ success: false, message: 'Status is required.' });
+    if (!['ACTIVE', 'INACTIVE', 'SUSPENDED'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status must be ACTIVE, INACTIVE, or SUSPENDED.'
+      });
     }
 
-    if (isConnectedToMySQL() && pool) {
-      await pool.query('UPDATE users SET status = ? WHERE id = ?', [status, userId]);
-    } else {
-      const u = memoryDB.users.find(usr => usr.id === userId);
-      if (u) u.status = status;
-    }
-
-    res.json({ success: true, message: `Passenger account status updated to ${status}.` });
+    const { data, error } = await req.supabase
+      .from('users')
+      .update({ status })
+      .eq('id', req.params.id)
+      .eq('role', 'passenger')
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ success: false, message: 'Passenger not found.' });
+    return res.json({ success: true, message: `Passenger account status updated to ${status}.` });
   } catch (err) {
     next(err);
   }

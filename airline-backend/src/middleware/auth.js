@@ -1,72 +1,64 @@
-const jwt = require('jsonwebtoken');
+const { createSupabaseClient } = require('../lib/supabaseClient');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'airline_jwt_super_secret_key_2026_academic';
+async function getAuthenticatedUser(req) {
+  const authorization = req.headers.authorization || '';
+  const [scheme, token] = authorization.split(' ');
+  if (scheme !== 'Bearer' || !token) return null;
 
-/**
- * Middleware: Verify JWT Authentication Token
- */
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Access denied. No authentication token provided.'
-    });
+  const client = createSupabaseClient(token);
+  const { data: authData, error: authError } = await client.auth.getUser(token);
+  if (authError) {
+    if (authError.status === 401 || authError.status === 403) return null;
+    throw authError;
   }
+  if (!authData.user) return null;
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({
-        success: false,
-        message: 'Invalid or expired authentication token. Please log in again.'
-      });
-    }
+  const { data: profile, error: profileError } = await client
+    .from('users')
+    .select('id, name, email, role, phone, address, dob, status, created_at')
+    .eq('id', authData.user.id)
+    .maybeSingle();
 
-    req.user = user;
-    next();
-  });
+  if (profileError) throw profileError;
+  if (!profile || profile.status !== 'ACTIVE') return null;
+
+  req.supabase = client;
+  req.user = { ...authData.user, ...profile, id: authData.user.id };
+  return req.user;
 }
 
-/**
- * Middleware: Require Admin Role
- */
+function authenticateToken(req, res, next) {
+  getAuthenticatedUser(req)
+    .then(user => {
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Your session is missing or expired. Please sign in again.'
+        });
+      }
+      next();
+    })
+    .catch(next);
+}
+
 function requireAdmin(req, res, next) {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
-      message: 'Forbidden. Administrator privileges required for this action.'
+      message: 'Forbidden. Administrator privileges are required.'
     });
   }
   next();
 }
 
-/**
- * Middleware: Optional Authentication (attaches user if valid token present)
- */
 function optionalAuth(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    req.user = null;
-    return next();
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (!err) {
-      req.user = user;
-    } else {
-      req.user = null;
-    }
-    next();
-  });
+  getAuthenticatedUser(req)
+    .then(() => next())
+    .catch(next);
 }
 
 module.exports = {
   authenticateToken,
   requireAdmin,
-  optionalAuth,
-  JWT_SECRET
+  optionalAuth
 };

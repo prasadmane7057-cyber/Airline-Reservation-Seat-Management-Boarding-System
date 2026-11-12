@@ -12,6 +12,10 @@
           ⚠️ {{ errorMessage }}
         </div>
 
+        <div v-if="successMessage" class="success-banner">
+          {{ successMessage }}
+        </div>
+
         <form @submit.prevent="handleRegister" class="auth-form">
           <div class="form-group">
             <label class="form-label">Full Name</label>
@@ -104,9 +108,11 @@ const form = ref({
 
 const loading = ref(false);
 const errorMessage = ref('');
+const successMessage = ref('');
 
 async function handleRegister() {
   errorMessage.value = '';
+  successMessage.value = '';
 
   if (form.value.password !== form.value.confirmPassword) {
     errorMessage.value = 'Passwords do not match.';
@@ -120,13 +126,18 @@ async function handleRegister() {
 
   loading.value = true;
   try {
-    await authStore.register({
+    const response = await authStore.register({
       name: form.value.name,
       email: form.value.email,
       phone: form.value.phone,
       password: form.value.password,
       confirmPassword: form.value.confirmPassword
     });
+
+    if (response.requiresEmailConfirmation) {
+      successMessage.value = response.message;
+      return;
+    }
 
     router.push('/dashboard');
   } catch (err) {
@@ -183,6 +194,18 @@ async function handleRegister() {
   font-size: 0.875rem;
   font-weight: 600;
   margin-bottom: 20px;
+  text-align: left;
+}
+
+.success-banner {
+  margin-bottom: 20px;
+  padding: 12px;
+  border: 1px solid #86efac;
+  border-radius: var(--radius-md);
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 0.875rem;
+  font-weight: 600;
   text-align: left;
 }
 

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: airline-reservation-api
+    runtime: node
+    rootDir: airline-backend
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false

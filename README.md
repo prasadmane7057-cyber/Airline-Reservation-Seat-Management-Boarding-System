@@ -1,6 +1,51 @@
 # Airline Reservation and Boarding System
 
-An integrated airline project combining PSOOP, programming/data structures, COA, and computer graphics. The development order below follows the Project Definition Document. Source folders remain grouped by module so Java packages and C++ build boundaries stay intact.
+An integrated airline reservation application and interactive learning dashboard covering Java OOP, C++ data structures and algorithms, computer organization and assembly, computer graphics, and Supabase-backed web services. Source folders remain grouped by module so Java packages and C++ build boundaries stay intact.
+
+## Integrated web application
+
+The public web app combines the airline booking experience with the interactive course dashboard. The dashboard is available from **Project Dashboard** in the navigation or at `/project-dashboard` and includes:
+
+- **Java OOP:** fare-method overloading, booking and boarding priority, Swing/JDBC workflow simulation, generic repositories, and CSV/binary file-I/O demonstrations.
+- **Data structures and algorithms:** circular boarding queues, priority deques, linked structures, undo stacks, PNR hashing with collision chains, and linear-versus-binary search.
+- **COA and assembly:** seat occupancy thresholds, register/ALU operations, hexadecimal-to-BCD conversion, instruction-cycle stages, processor mapping, and branch-prediction traces.
+- **Computer graphics:** interactive aircraft/seat visualizations and line/shape rasterization demonstrations.
+- **Integration:** live Supabase flight data alongside airline booking APIs.
+
+The browser-based subject panels are interactive teaching simulators; native Java, C++, and assembly implementations remain in their module folders and can also be compiled and run locally.
+
+### Run the web app locally
+
+Set the Supabase URL and publishable key in `frontend/.env.local` and `airline-backend/.env.local` (see `airline-backend/.env.example`), then start the services in separate terminals:
+
+```powershell
+cd airline-backend
+npm install
+npm start
+```
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. The API health check is at `http://localhost:5000/api/health`.
+
+### Publish the web app
+
+The GitHub Pages workflow builds and publishes the Vue frontend from `main`. The Express API is deployed separately using the Render Blueprint in `render.yaml`.
+
+1. In the Supabase SQL Editor, run `database/supabase_airline_schema.sql` once. It creates the reservation tables and policies while preserving existing flight rows.
+2. In Render, create a new Blueprint from this repository and set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` for the API service.
+3. In GitHub repository **Settings → Pages**, select **GitHub Actions** as the build and deployment source.
+4. In repository **Settings → Secrets and variables → Actions → Variables**, add:
+   - `VITE_API_URL`: the Render API base URL, ending in `/api` (for example, `https://airline-reservation-api.onrender.com/api`).
+   - `VITE_SUPABASE_URL`: the Supabase project URL.
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`: the Supabase publishable key used by the browser client.
+5. Push to `main` or run **Deploy dashboard to GitHub Pages** from the Actions tab. The Pages URL for this repository is `https://snowflake2007.github.io/Airline/`.
+
+Do not commit `.env` files or service credentials. The frontend publishable key is intended for browser use; protect database data with Supabase row-level security policies.
 
 ## Development Flow
 

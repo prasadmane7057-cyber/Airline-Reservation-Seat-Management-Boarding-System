@@ -1,81 +1,55 @@
-const { pool, memoryDB, isConnectedToMySQL, generateSeatLayoutForFlight } = require('../config/db');
+const { supabase } = require('../lib/supabaseClient');
 
-/**
- * Get all seats for a specific flight
- */
 async function getSeatsByFlight(req, res, next) {
   try {
-    const flightId = parseInt(req.params.flightId, 10);
-
-    if (isConnectedToMySQL() && pool) {
-      const [rows] = await pool.query(
-        'SELECT * FROM seats WHERE flight_id = ? ORDER BY row_number ASC, column_letter ASC',
-        [flightId]
-      );
-
-      if (rows.length === 0) {
-        // If flight seats haven't been generated in DB yet, generate them dynamically
-        const generated = [];
-        for (let r = 1; r <= 2; r++) {
-          ['A', 'B', 'E', 'F'].forEach(c => generated.push([flightId, `${r}${c}`, r, c, 'First Class', false]));
-        }
-        for (let r = 3; r <= 5; r++) {
-          ['A', 'B', 'C', 'D', 'E', 'F'].forEach(c => generated.push([flightId, `${r}${c}`, r, c, 'Business', false]));
-        }
-        for (let r = 6; r <= 20; r++) {
-          ['A', 'B', 'C', 'D', 'E', 'F'].forEach(c => generated.push([flightId, `${r}${c}`, r, c, 'Economy', false]));
-        }
-
-        await pool.query(
-          'INSERT INTO seats (flight_id, seat_number, row_number, column_letter, seat_class, is_occupied) VALUES ?',
-          [generated]
-        );
-
-        const [newRows] = await pool.query(
-          'SELECT * FROM seats WHERE flight_id = ? ORDER BY row_number ASC, column_letter ASC',
-          [flightId]
-        );
-        return res.json({ success: true, count: newRows.length, seats: newRows });
-      }
-
-      return res.json({ success: true, count: rows.length, seats: rows });
-    } else {
-      let flightSeats = memoryDB.seats.filter(s => s.flight_id === flightId);
-      if (flightSeats.length === 0) {
-        const generated = generateSeatLayoutForFlight(flightId);
-        memoryDB.seats.push(...generated);
-        flightSeats = generated;
-      }
-
-      return res.json({ success: true, count: flightSeats.length, seats: flightSeats });
+    const client = req.supabase || supabase;
+    const flightId = Number(req.params.flightId);
+    if (!Number.isSafeInteger(flightId) || flightId <= 0) {
+      return res.status(400).json({ success: false, message: 'A valid flight ID is required.' });
     }
+
+    const { error: ensureError } = await client.rpc('ensure_flight_seats', {
+      p_flight_id: flightId
+    });
+    if (ensureError) throw ensureError;
+
+    const { data, error } = await client
+      .from('seats')
+      .select('*')
+      .eq('flight_id', flightId)
+      .order('row_number')
+      .order('column_letter');
+    if (error) throw error;
+    return res.json({ success: true, count: data.length, seats: data });
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * Admin: Update seat status (block/unblock or manual override)
- */
 async function updateSeatStatus(req, res, next) {
   try {
-    const seatId = parseInt(req.params.id, 10);
-    const { is_occupied, is_blocked } = req.body;
-
-    if (isConnectedToMySQL() && pool) {
-      await pool.query(
-        'UPDATE seats SET is_occupied = COALESCE(?, is_occupied), is_blocked = COALESCE(?, is_blocked) WHERE id = ?',
-        [is_occupied !== undefined ? is_occupied : null, is_blocked !== undefined ? is_blocked : null, seatId]
-      );
-    } else {
-      const seat = memoryDB.seats.find(s => s.id === seatId);
-      if (seat) {
-        if (is_occupied !== undefined) seat.is_occupied = Boolean(is_occupied);
-        if (is_blocked !== undefined) seat.is_blocked = Boolean(is_blocked);
+    const updates = {};
+    for (const key of ['is_occupied', 'is_blocked']) {
+      if (req.body[key] !== undefined) {
+        if (typeof req.body[key] !== 'boolean') {
+          return res.status(400).json({ success: false, message: `${key} must be a boolean.` });
+        }
+        updates[key] = req.body[key];
       }
     }
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, message: 'Provide a seat status to update.' });
+    }
 
-    res.json({ success: true, message: 'Seat status updated.' });
+    const { data, error } = await req.supabase
+      .from('seats')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ success: false, message: 'Seat not found.' });
+    return res.json({ success: true, message: 'Seat status updated.' });
   } catch (err) {
     next(err);
   }
