@@ -96,7 +96,7 @@ public class BookingFileService {
             try {
                 bookings.add(parseCsvRow(record));
             } catch (IllegalArgumentException e) {
-                System.err.println("[WARN] Skipping malformed CSV record " + (i + 1)
+                System.out.println("[WARN] Skipping malformed CSV record " + (i + 1)
                         + " in " + filePath + ": " + e.getMessage());
             }
         }
