@@ -134,12 +134,13 @@ async function handleRegister() {
       confirmPassword: form.value.confirmPassword
     });
 
-    if (response.requiresEmailConfirmation) {
+    if (response.token) {
+      router.push('/dashboard');
+    } else if (response.requiresEmailConfirmation) {
       successMessage.value = response.message;
-      return;
+    } else {
+      router.push('/dashboard');
     }
-
-    router.push('/dashboard');
   } catch (err) {
     errorMessage.value = err.message || 'Registration failed. Please try again.';
   } finally {

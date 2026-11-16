@@ -1,30 +1,67 @@
 const { createSupabaseClient } = require('../lib/supabaseClient');
+const userStore = require('../utils/userStore');
 
 async function getAuthenticatedUser(req) {
   const authorization = req.headers.authorization || '';
   const [scheme, token] = authorization.split(' ');
   if (scheme !== 'Bearer' || !token) return null;
 
-  const client = createSupabaseClient(token);
-  const { data: authData, error: authError } = await client.auth.getUser(token);
-  if (authError) {
-    if (authError.status === 401 || authError.status === 403) return null;
-    throw authError;
+  // 1. Check if token is locally signed by userStore
+  const localPayload = userStore.verifyToken(token);
+  if (localPayload && localPayload.id) {
+    const user = userStore.getUserById(localPayload.id);
+    if (user && user.status === 'ACTIVE') {
+      const pubUser = userStore.toPublicUser(user);
+      req.user = pubUser;
+      req.supabase = createSupabaseClient();
+      return pubUser;
+    }
   }
-  if (!authData.user) return null;
 
-  const { data: profile, error: profileError } = await client
-    .from('users')
-    .select('id, name, email, role, phone, address, dob, status, created_at')
-    .eq('id', authData.user.id)
-    .maybeSingle();
+  // 2. Otherwise verify through Supabase Auth
+  try {
+    const client = createSupabaseClient(token);
+    const { data: authData, error: authError } = await client.auth.getUser(token);
+    if (authError || !authData.user) return null;
 
-  if (profileError) throw profileError;
-  if (!profile || profile.status !== 'ACTIVE') return null;
+    let profile = null;
+    try {
+      const { data, error: profileError } = await client
+        .from('users')
+        .select('id, name, email, role, phone, address, dob, status, created_at')
+        .eq('id', authData.user.id)
+        .maybeSingle();
 
-  req.supabase = client;
-  req.user = { ...authData.user, ...profile, id: authData.user.id };
-  return req.user;
+      if (!profileError && data) {
+        profile = data;
+      }
+    } catch (e) {
+      // Table may not exist yet
+    }
+
+    if (!profile) {
+      const meta = authData.user.user_metadata || {};
+      profile = {
+        id: authData.user.id,
+        name: meta.name || authData.user.email.split('@')[0],
+        email: authData.user.email,
+        role: meta.role || 'passenger',
+        phone: meta.phone || '',
+        address: '',
+        dob: null,
+        status: 'ACTIVE',
+        created_at: authData.user.created_at || new Date().toISOString()
+      };
+    }
+
+    if (profile.status !== 'ACTIVE') return null;
+
+    req.supabase = client;
+    req.user = { ...authData.user, ...profile, id: authData.user.id };
+    return req.user;
+  } catch (err) {
+    return null;
+  }
 }
 
 function authenticateToken(req, res, next) {

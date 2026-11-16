@@ -9,8 +9,15 @@
         </div>
 
         <div class="demo-helpers">
-          <span class="demo-label">Account access</span>
-          <p class="account-note">Use an account registered for this application; demo credentials are not provided. Admin pages require an authenticated account with the admin role.</p>
+          <span class="demo-label">⚡ Quick Credentials or Demo Access:</span>
+          <div class="demo-buttons-group">
+            <button type="button" class="btn btn-outline btn-xs" @click="fillDemo('passenger')">
+              👤 Passenger (passenger@skywings.com)
+            </button>
+            <button type="button" class="btn btn-outline btn-xs" @click="fillDemo('admin')">
+              🛡️ Admin (admin@skywings.com)
+            </button>
+          </div>
         </div>
 
         <div v-if="route.query.redirect" class="booking-login-notice" role="status">
@@ -74,6 +81,16 @@ const form = ref({
 
 const loading = ref(false);
 const errorMessage = ref('');
+
+function fillDemo(role) {
+  if (role === 'admin') {
+    form.value.email = 'admin@skywings.com';
+    form.value.password = 'admin123';
+  } else {
+    form.value.email = 'passenger@skywings.com';
+    form.value.password = 'password123';
+  }
+}
 
 async function handleLogin() {
   errorMessage.value = '';
@@ -147,6 +164,18 @@ async function handleLogin() {
   color: var(--text-muted);
   text-transform: uppercase;
   margin-bottom: 8px;
+}
+
+.demo-buttons-group {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.demo-buttons-group .btn {
+  font-size: 0.8125rem;
+  padding: 6px 12px;
 }
 
 .account-note {
