@@ -1,50 +1,33 @@
 import { defineStore } from 'pinia';
-import { flightApi, airportApi } from '../services/api';
+import { flightApi } from '../services/api';
 
 export const useFlightStore = defineStore('flight', {
   state: () => ({
     flights: [],
-    airports: [],
-    airportError: null,
     selectedFlight: null,
     searchParams: {
-      from: '',
       to: '',
-      date: '',
-      returnDate: '',
-      passengers: 1,
-      travelClass: 'Economy',
-      sortBy: 'departure',
-      maxPrice: null
+      status: ''
     },
     loading: false,
     error: null
   }),
 
   actions: {
-    async fetchAirports() {
-      if (this.airports.length > 0) return;
-      this.airportError = null;
-      try {
-        const res = await airportApi.getAirports();
-        if (!Array.isArray(res.airports)) {
-          throw new Error('The airport service returned an invalid response.');
-        }
-        this.airports = res.airports || [];
-      } catch (err) {
-        this.airportError = err.message || 'Unable to load airports.';
-        throw err;
-      }
-    },
-
     async searchFlights(customParams = {}) {
       this.loading = true;
       this.error = null;
       try {
-        const params = {
+        const requested = {
           ...this.searchParams,
           ...customParams
         };
+        const params = {};
+        for (const key of ['to', 'status']) {
+          if (typeof requested[key] === 'string' && requested[key].trim()) {
+            params[key] = requested[key].trim();
+          }
+        }
         const res = await flightApi.getFlights(params);
         this.flights = res.flights || [];
         return this.flights;
@@ -73,7 +56,10 @@ export const useFlightStore = defineStore('flight', {
     },
 
     setSearchParams(params) {
-      this.searchParams = { ...this.searchParams, ...params };
+      this.searchParams = {
+        to: typeof params.to === 'string' ? params.to : this.searchParams.to,
+        status: typeof params.status === 'string' ? params.status : this.searchParams.status
+      };
     },
 
     setSelectedFlight(flight) {

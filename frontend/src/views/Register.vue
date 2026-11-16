@@ -5,7 +5,7 @@
         <div class="auth-header">
           <div class="auth-icon">✈</div>
           <h1 class="auth-title">Create Passenger Account</h1>
-          <p class="auth-subtitle">Join SkyWings Airlines for fast bookings, seat selection, and rewards.</p>
+          <p class="auth-subtitle">Create an account to manage your passenger profile and reservations.</p>
         </div>
 
         <div v-if="errorMessage" class="error-banner">

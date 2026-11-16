@@ -5,7 +5,7 @@
       <div class="dashboard-header">
         <div>
           <h1 class="page-title">Welcome back, {{ authStore.userName }}! ✈️</h1>
-          <p class="page-subtitle">Manage your upcoming flights, seat assignments, and digital boarding passes.</p>
+          <p class="page-subtitle">Review your booking and passenger records.</p>
         </div>
         <router-link to="/flights" class="btn btn-gold btn-lg">
           🔍 Book New Flight
@@ -34,15 +34,15 @@
           <div class="metric-icon red-bg">🔄</div>
           <div class="metric-meta">
             <span class="metric-val">{{ cancelledBookingsCount }}</span>
-            <span class="metric-title">Cancelled / Refunded</span>
+            <span class="metric-title">Cancelled bookings</span>
           </div>
         </div>
 
         <div class="metric-card card">
           <div class="metric-icon gold-bg">📱</div>
           <div class="metric-meta">
-            <span class="metric-val">{{ checkedInCount }}</span>
-            <span class="metric-title">Boarding Ready</span>
+            <span class="metric-val">{{ boardedBookingsCount }}</span>
+            <span class="metric-title">Boarded bookings</span>
           </div>
         </div>
       </div>
@@ -52,25 +52,25 @@
         <router-link to="/flights" class="action-tile card">
           <div class="tile-icon">🔍</div>
           <h3>Search Flights</h3>
-          <p>Find new routes, compare class fares, and view live aircraft schedules.</p>
+          <p>Search by destination and flight status using the fields in the current database.</p>
         </router-link>
 
         <router-link to="/my-bookings" class="action-tile card">
           <div class="tile-icon">📑</div>
           <h3>My Bookings</h3>
-          <p>View confirmed reservations, download tickets, or cancel with automatic seat release.</p>
+          <p>View booking details or cancel a confirmed reservation and release its seat.</p>
         </router-link>
 
         <router-link to="/boarding-pass" class="action-tile card">
           <div class="tile-icon">🚪</div>
           <h3>Web Check-in & Pass</h3>
-          <p>Generate digital boarding passes with encoded academic QR and view gate info.</p>
+          <p>Check in or verify a booking when the required reservation schema is available.</p>
         </router-link>
 
         <router-link to="/profile" class="action-tile card">
           <div class="tile-icon">👤</div>
           <h3>Passenger Profile</h3>
-          <p>Update personal contact info, view frequent flyer status, and change password.</p>
+          <p>Manage account details and password.</p>
         </router-link>
       </div>
 
@@ -86,6 +86,10 @@
           <p>Loading your flight history...</p>
         </div>
 
+        <div v-else-if="loadError" class="text-center py-24" role="alert">
+          Could not load bookings: {{ loadError }}
+        </div>
+
         <div v-else-if="bookings.length === 0" class="empty-bookings text-center py-24">
           <p>No bookings found yet. Ready for your next journey?</p>
           <router-link to="/flights" class="btn btn-primary btn-sm mt-12">Search Flights Now</router-link>
@@ -97,11 +101,11 @@
               <tr>
                 <th>PNR</th>
                 <th>Flight</th>
-                <th>Route</th>
-                <th>Departure</th>
-                <th>Seats</th>
+                <th>Destination</th>
+                <th>Booking Date</th>
+                <th>Seat</th>
                 <th>Class</th>
-                <th>Total Fare</th>
+                <th>Fare</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -110,11 +114,11 @@
               <tr v-for="b in bookings.slice(0, 5)" :key="b.id">
                 <td><strong class="pnr-text">{{ b.pnr }}</strong></td>
                 <td>{{ b.flight_number }}</td>
-                <td>{{ b.from_code }} ➔ {{ b.to_code }}</td>
-                <td>{{ formatDateTime(b.departure_time) }}</td>
-                <td>{{ b.seat_numbers || 'Assigned' }}</td>
-                <td><span class="badge" :class="'badge-' + (b.travel_class ? b.travel_class.toLowerCase().replace(' ', '') : 'economy')">{{ b.travel_class }}</span></td>
-                <td>₹{{ (b.total_fare || 0).toLocaleString() }}</td>
+                <td>{{ b.destination || 'Unavailable' }}</td>
+                <td>{{ formatDateTime(b.booking_date) }}</td>
+                <td>{{ b.seat_number || 'Unavailable' }}</td>
+                <td>{{ b.travel_class }}</td>
+                <td>₹{{ Number(b.fare).toLocaleString() }}</td>
                 <td><span class="badge" :class="'badge-' + b.booking_status.toLowerCase()">{{ b.booking_status }}</span></td>
                 <td>
                   <router-link :to="'/booking-details/' + b.id" class="btn btn-outline btn-sm">
@@ -139,18 +143,19 @@ const authStore = useAuthStore();
 const bookingStore = useBookingStore();
 
 const loading = ref(true);
+const loadError = ref('');
 const bookings = computed(() => bookingStore.myBookings);
 
 const totalBookingsCount = computed(() => bookings.value.length);
 const activeBookingsCount = computed(() => bookings.value.filter(b => b.booking_status === 'CONFIRMED').length);
 const cancelledBookingsCount = computed(() => bookings.value.filter(b => b.booking_status === 'CANCELLED').length);
-const checkedInCount = computed(() => bookings.value.filter(b => b.booking_status === 'CONFIRMED').length);
+const boardedBookingsCount = computed(() => bookings.value.filter(b => b.booking_status === 'BOARDED').length);
 
 onMounted(async () => {
   try {
     await bookingStore.fetchUserBookings();
   } catch (err) {
-    console.error(err);
+    loadError.value = err.message || 'Unable to load bookings.';
   } finally {
     loading.value = false;
   }

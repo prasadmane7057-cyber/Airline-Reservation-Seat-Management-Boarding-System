@@ -2,11 +2,11 @@
   <div class="admin-flights-view">
     <div class="page-top-actions">
       <div>
-        <h1 class="page-title mb-0">Flight Schedule Management</h1>
-        <p class="page-subtitle">Configure routes, timings, class fare tiers, and aircraft allocations.</p>
+        <h1 class="page-title mb-0">Flight Records</h1>
+        <p class="page-subtitle">Manage only fields supported by the existing flights table.</p>
       </div>
       <button @click="openAddModal" class="btn btn-primary">
-        + Add New Flight Schedule
+        + Add Flight Record
       </button>
     </div>
 
@@ -17,15 +17,9 @@
           type="text" 
           v-model="searchQuery" 
           class="form-input" 
-          placeholder="Search by flight number or city..." 
+          placeholder="Search by flight number or destination..."
         />
-        <select v-model="statusFilter" class="form-select status-select">
-          <option value="">All Statuses</option>
-          <option value="SCHEDULED">Scheduled</option>
-          <option value="DELAYED">Delayed</option>
-          <option value="CANCELLED">Cancelled</option>
-          <option value="COMPLETED">Completed</option>
-        </select>
+        <input v-model.trim="statusFilter" class="form-input status-select" placeholder="Exact status (optional)" />
       </div>
     </div>
 
@@ -33,7 +27,11 @@
     <div class="card table-card">
       <div v-if="loading" class="text-center py-32">
         <div class="spinner"></div>
-        <p>Loading flight schedules...</p>
+        <p>Loading flight records...</p>
+      </div>
+
+      <div v-else-if="adminStore.error" class="empty-state card" role="alert">
+        Could not load flight records: {{ adminStore.error }}
       </div>
 
       <div v-else class="table-responsive">
@@ -41,12 +39,8 @@
           <thead>
             <tr>
               <th>Flight No</th>
-              <th>Origin ➔ Destination</th>
-              <th>Departure</th>
-              <th>Arrival</th>
-              <th>Duration</th>
-              <th>Fares (Eco / Bus / First)</th>
-              <th>Seats Avail</th>
+              <th>Destination</th>
+              <th>Created</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -55,26 +49,12 @@
             <tr v-for="f in filteredFlights" :key="f.id">
               <td>
                 <strong>{{ f.flight_number }}</strong>
-                <div class="aircraft-sub">{{ f.airline }}</div>
               </td>
+              <td>{{ f.destination }}</td>
+              <td>{{ formatDate(f.created_at) }}</td>
               <td>
-                <div><strong>{{ f.from_code }}</strong> ({{ f.from_city }})</div>
-                <div>➔ <strong>{{ f.to_code }}</strong> ({{ f.to_city }})</div>
-              </td>
-              <td>{{ formatDateTime(f.departure_time) }}</td>
-              <td>{{ formatDateTime(f.arrival_time) }}</td>
-              <td>{{ f.duration }}</td>
-              <td>
-                <div class="fare-triplet">
-                  <span>₹{{ f.economy_fare }}</span> / 
-                  <span>₹{{ f.business_fare }}</span> / 
-                  <span>₹{{ f.first_class_fare }}</span>
-                </div>
-              </td>
-              <td><strong>{{ f.available_seats }}</strong> / {{ f.total_seats }}</td>
-              <td>
-                <span class="badge" :class="'badge-' + f.status.toLowerCase()">
-                  {{ f.status }}
+                <span class="badge" :class="'badge-' + String(f.status || 'unknown').toLowerCase()">
+                  {{ f.status || 'Unknown' }}
                 </span>
               </td>
               <td>
@@ -93,88 +73,25 @@
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
       <div class="modal-card modal-lg">
         <div class="modal-header">
-          <h3>{{ isEditing ? 'Edit Flight Schedule' : 'Add New Flight Schedule' }}</h3>
+          <h3>{{ isEditing ? 'Edit Flight Record' : 'Add Flight Record' }}</h3>
           <button @click="showModal = false" class="modal-close">×</button>
         </div>
 
         <form @submit.prevent="saveFlight">
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Flight Number *</label>
-              <input type="text" v-model="form.flight_number" class="form-input" placeholder="e.g. AI707" required />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Airline Name</label>
-              <input type="text" v-model="form.airline" class="form-input" placeholder="SkyWings Airlines" />
-            </div>
+          <div class="form-group">
+            <label class="form-label">Flight Number *</label>
+            <input type="text" v-model.trim="form.flight_number" class="form-input" required />
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Origin Airport *</label>
-              <select v-model.number="form.from_airport_id" class="form-select" required>
-                <option value="" disabled>Select Origin</option>
-                <option v-for="apt in airports" :key="apt.id" :value="apt.id">
-                  {{ apt.city }} ({{ apt.airport_code }}) - {{ apt.airport_name }}
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Destination Airport *</label>
-              <select v-model.number="form.to_airport_id" class="form-select" required>
-                <option value="" disabled>Select Destination</option>
-                <option v-for="apt in airports" :key="apt.id" :value="apt.id">
-                  {{ apt.city }} ({{ apt.airport_code }}) - {{ apt.airport_name }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Departure Date & Time *</label>
-              <input type="datetime-local" v-model="form.departure_time" class="form-input" required />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Arrival Date & Time *</label>
-              <input type="datetime-local" v-model="form.arrival_time" class="form-input" required />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Duration</label>
-              <input type="text" v-model="form.duration" class="form-input" placeholder="e.g. 2h 15m" />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Economy Fare (₹) *</label>
-              <input type="number" v-model.number="form.economy_fare" class="form-input" required />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Business Fare (₹) *</label>
-              <input type="number" v-model.number="form.business_fare" class="form-input" required />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">First Class Fare (₹) *</label>
-              <input type="number" v-model.number="form.first_class_fare" class="form-input" required />
-            </div>
+          <div class="form-group">
+            <label class="form-label">Destination *</label>
+            <input type="text" v-model.trim="form.destination" class="form-input" required />
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Status</label>
-              <select v-model="form.status" class="form-select">
-                <option value="SCHEDULED">SCHEDULED</option>
-                <option value="DELAYED">DELAYED</option>
-                <option value="CANCELLED">CANCELLED</option>
-                <option value="COMPLETED">COMPLETED</option>
-              </select>
+              <input type="text" v-model.trim="form.status" class="form-input" placeholder="Optional" />
             </div>
           </div>
 
@@ -194,10 +111,8 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useAdminStore } from '../../stores/adminStore';
-import { useFlightStore } from '../../stores/flightStore';
 
 const adminStore = useAdminStore();
-const flightStore = useFlightStore();
 
 const searchQuery = ref('');
 const statusFilter = ref('');
@@ -208,59 +123,30 @@ const saving = ref(false);
 
 const form = ref({
   flight_number: '',
-  airline: 'SkyWings Airlines',
-  aircraft_id: 1,
-  from_airport_id: '',
-  to_airport_id: '',
-  departure_time: '',
-  arrival_time: '',
-  duration: '2h 15m',
-  economy_fare: 4500,
-  business_fare: 11500,
-  first_class_fare: 21000,
-  total_seats: 116,
-  status: 'SCHEDULED'
+  destination: '',
+  status: ''
 });
 
 const loading = computed(() => adminStore.loading);
 const flights = computed(() => adminStore.flights);
-const airports = computed(() => flightStore.airports);
 
 const filteredFlights = computed(() => {
   return flights.value.filter(f => {
     const matchQuery = !searchQuery.value || 
-      f.flight_number.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      f.from_city?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      f.to_city?.toLowerCase().includes(searchQuery.value.toLowerCase());
+      String(f.flight_number || '').toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      String(f.destination || '').toLowerCase().includes(searchQuery.value.toLowerCase());
 
     const matchStatus = !statusFilter.value || f.status === statusFilter.value;
     return matchQuery && matchStatus;
   });
 });
 
-onMounted(async () => {
-  await flightStore.fetchAirports();
-  await adminStore.fetchAdminFlights();
-});
+onMounted(() => adminStore.fetchAdminFlights());
 
 function openAddModal() {
   isEditing.value = false;
   currentFlightId.value = null;
-  form.value = {
-    flight_number: '',
-    airline: 'SkyWings Airlines',
-    aircraft_id: 1,
-    from_airport_id: airports.value[0]?.id || 1,
-    to_airport_id: airports.value[1]?.id || 2,
-    departure_time: '2026-10-20T08:00',
-    arrival_time: '2026-10-20T10:15',
-    duration: '2h 15m',
-    economy_fare: 4500,
-    business_fare: 11500,
-    first_class_fare: 21000,
-    total_seats: 116,
-    status: 'SCHEDULED'
-  };
+  form.value = { flight_number: '', destination: '', status: '' };
   showModal.value = true;
 }
 
@@ -269,18 +155,8 @@ function openEditModal(flight) {
   currentFlightId.value = flight.id;
   form.value = {
     flight_number: flight.flight_number,
-    airline: flight.airline,
-    aircraft_id: flight.aircraft_id || 1,
-    from_airport_id: flight.from_airport_id,
-    to_airport_id: flight.to_airport_id,
-    departure_time: flight.departure_time ? flight.departure_time.substring(0, 16) : '',
-    arrival_time: flight.arrival_time ? flight.arrival_time.substring(0, 16) : '',
-    duration: flight.duration,
-    economy_fare: flight.economy_fare,
-    business_fare: flight.business_fare,
-    first_class_fare: flight.first_class_fare,
-    total_seats: flight.total_seats,
-    status: flight.status
+    destination: flight.destination,
+    status: flight.status || ''
   };
   showModal.value = true;
 }
@@ -289,9 +165,17 @@ async function saveFlight() {
   saving.value = true;
   try {
     if (isEditing.value) {
-      await adminStore.updateFlight(currentFlightId.value, form.value);
+      await adminStore.updateFlight(currentFlightId.value, {
+        flight_number: form.value.flight_number,
+        destination: form.value.destination,
+        ...(form.value.status ? { status: form.value.status } : {})
+      });
     } else {
-      await adminStore.createFlight(form.value);
+      await adminStore.createFlight({
+        flight_number: form.value.flight_number,
+        destination: form.value.destination,
+        ...(form.value.status ? { status: form.value.status } : {})
+      });
     }
     showModal.value = false;
   } catch (err) {
@@ -302,7 +186,7 @@ async function saveFlight() {
 }
 
 async function confirmDelete(flight) {
-  if (confirm(`Are you sure you want to delete flight ${flight.flight_number}? This will remove all associated seats.`)) {
+  if (confirm(`Are you sure you want to delete flight ${flight.flight_number}? Deletion is blocked if reservations reference it.`)) {
     try {
       await adminStore.deleteFlight(flight.id);
     } catch (err) {
@@ -311,10 +195,9 @@ async function confirmDelete(flight) {
   }
 }
 
-function formatDateTime(str) {
+function formatDate(str) {
   if (!str) return '';
-  const d = new Date(str);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+  return new Date(str).toLocaleDateString();
 }
 </script>
 

@@ -10,9 +10,11 @@ The public web app combines the airline booking experience with the interactive 
 - **Data structures and algorithms:** circular boarding queues, priority deques, linked structures, undo stacks, PNR hashing with collision chains, and linear-versus-binary search.
 - **COA and assembly:** seat occupancy thresholds, register/ALU operations, hexadecimal-to-BCD conversion, instruction-cycle stages, processor mapping, and branch-prediction traces.
 - **Computer graphics:** interactive aircraft/seat visualizations and line/shape rasterization demonstrations.
-- **Integration:** live Supabase flight data alongside airline booking APIs.
+- **Integration:** live Supabase flight data and reservation APIs. Reservation APIs require the reviewed additive migration and real seat inventory; airport and aircraft details are not invented when those tables are absent.
 
-The browser-based subject panels are interactive teaching simulators; native Java, C++, and assembly implementations remain in their module folders and can also be compiled and run locally.
+The browser-based subject panels are interactive teaching simulators; native Java, C++, and assembly implementations remain in their module folders and can also be compiled and run locally. No payment provider is configured, so payment processing is deliberately unavailable rather than reported as successful.
+
+The backend also exposes `GET /api/academic/cpp-demo`, a public, fixed-fixture demonstration of the native C++ data structures and algorithms. Its passenger, seat, waitlist, hash, and search results come from the compiled `cpp-ds` coursework implementations; all fixtures are classroom demo data, not live bookings. The sort section contains the coursework sort demo's console report. Build the executable locally with `cd airline-backend; npm run build:native`. Render compiles it during deployment; the generated executable is ignored and is not committed.
 
 ### Run the web app locally
 
@@ -36,7 +38,7 @@ Open `http://localhost:5173`. The API health check is at `http://localhost:5000/
 
 The GitHub Pages workflow builds and publishes the Vue frontend from `main`. The Express API is deployed separately using the Render Blueprint in `render.yaml`.
 
-1. In the Supabase SQL Editor, run `database/supabase_airline_schema.sql` once. It creates the reservation tables and policies while preserving existing flight rows.
+1. Review `database/supabase_reservations_migration.sql` and apply it through the Supabase SQL Editor only after approving the schema changes. It adds user profiles, passengers, seats, bookings, row-level security, and atomic reservation/check-in/boarding functions without changing or seeding flights. Do not run the legacy `database/supabase_airline_schema.sql` for this setup.
 2. In Render, create a new Blueprint from this repository and set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` for the API service.
 3. In GitHub repository **Settings → Pages**, select **GitHub Actions** as the build and deployment source.
 4. In repository **Settings → Secrets and variables → Actions → Variables**, add:
@@ -46,6 +48,10 @@ The GitHub Pages workflow builds and publishes the Vue frontend from `main`. The
 5. Push to `main` or run **Deploy dashboard to GitHub Pages** from the Actions tab. The Pages URL for this repository is `https://snowflake2007.github.io/Airline/`.
 
 Do not commit `.env` files or service credentials. The frontend publishable key is intended for browser use; protect database data with Supabase row-level security policies.
+
+### Java API integration
+
+The Java service client in `java-oop/src/service/` calls the Express API using `AIRLINE_API_URL` (defaults to `http://localhost:5000/api`) and a user access token in `AIRLINE_API_TOKEN`. Use a normal Supabase access token with the required account role; never provide a service-role key. The server generates PNRs and verifies reservations. Java API booking calls require the reservation migration and actual seat records. A payment API/provider and the previously referenced `Payment` and `CheckIn` Java classes are not present in this checkout; check-in uses the booking API service, while payment is not simulated.
 
 ## Development Flow
 

@@ -1,33 +1,33 @@
 const { supabase } = require('../lib/supabaseClient');
-const { throwIfError, flightSelect, normalizeFlight } = require('../lib/query');
+const {
+  throwIfError,
+  flightSelect,
+  enrichFlightDetails,
+  normalizeFlight
+} = require('../lib/query');
 
 async function getFlights(req, res, next) {
   try {
-    const { from, to, date, travelClass = 'Economy', sortBy = 'departure', maxPrice, status } = req.query;
-    let query = supabase.from('flights').select(flightSelect());
-
-    if (from) query = query.eq('from_airport.airport_code', from.toUpperCase());
-    if (to) query = query.eq('to_airport.airport_code', to.toUpperCase());
-    if (date) {
-      const start = new Date(`${date.split('T')[0]}T00:00:00.000Z`);
-      const end = new Date(start);
-      end.setUTCDate(end.getUTCDate() + 1);
-      query = query.gte('departure_time', start.toISOString()).lt('departure_time', end.toISOString());
+    const { from, to, date, maxPrice, status } = req.query;
+    if (from !== undefined || date !== undefined || maxPrice !== undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'The current flight schema does not support origin, departure-date, or fare filtering.'
+      });
     }
-    if (status) query = query.eq('status', status);
-    if (maxPrice) {
-      const priceColumn = travelClass === 'Business'
-        ? 'business_fare'
-        : travelClass === 'First Class' ? 'first_class_fare' : 'economy_fare';
-      query = query.lte(priceColumn, Number(maxPrice));
+    if ((to !== undefined && typeof to !== 'string') ||
+        (status !== undefined && typeof status !== 'string')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Flight destination and status filters must be single strings.'
+      });
     }
-    query = query.order(sortBy === 'price_asc' || sortBy === 'price_desc' ? 'economy_fare' : 'departure_time', {
-      ascending: sortBy !== 'price_desc'
-    });
 
-    const flights = throwIfError(await query);
+    const query = supabase.from('flights').select(flightSelect());
+    const flights = await enrichFlightDetails(supabase, throwIfError(await query));
     const normalized = flights
-      .filter(flight => flight.departure_time && flight.arrival_time)
+      .filter(flight => !status || flight.status === status)
+      .filter(flight => !to || flight.destination?.toLowerCase() === to.toLowerCase())
       .map(normalizeFlight);
     return res.json({ success: true, count: normalized.length, flights: normalized });
   } catch (err) {
@@ -37,16 +37,21 @@ async function getFlights(req, res, next) {
 
 async function getFlightById(req, res, next) {
   try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ success: false, message: 'A valid flight ID is required.' });
+    }
     const { data, error } = await supabase
       .from('flights')
       .select(flightSelect())
-      .eq('id', req.params.id)
+      .eq('id', id)
       .maybeSingle();
     if (error) throw error;
-    if (!data || !data.departure_time) {
+    const [flight] = await enrichFlightDetails(supabase, data);
+    if (!flight) {
       return res.status(404).json({ success: false, message: 'Flight not found.' });
     }
-    return res.json({ success: true, flight: normalizeFlight(data) });
+    return res.json({ success: true, flight: normalizeFlight(flight) });
   } catch (err) {
     next(err);
   }
@@ -54,56 +59,38 @@ async function getFlightById(req, res, next) {
 
 async function createFlight(req, res, next) {
   try {
-    const {
-      flight_number,
-      airline = 'SkyWings Airlines',
-      aircraft_id,
-      from_airport_id,
-      to_airport_id,
-      departure_time,
-      arrival_time,
-      duration = '2h 00m',
-      economy_fare = 4500,
-      business_fare,
-      first_class_fare,
-      total_seats = 116,
-      status = 'SCHEDULED'
-    } = req.body;
-
-    if (!flight_number || !aircraft_id || !from_airport_id || !to_airport_id || !departure_time || !arrival_time) {
+    const allowed = new Set(['flight_number', 'destination', 'status']);
+    if (Object.keys(req.body).some(key => !allowed.has(key))) {
       return res.status(400).json({
         success: false,
-        message: 'Flight number, aircraft, origin, destination, and timings are required.'
+        message: 'The current flight schema supports only flight_number, destination, and status.'
       });
     }
-    if (String(from_airport_id) === String(to_airport_id)) {
+    const flightNumber = req.body.flight_number;
+    const destination = req.body.destination;
+    if (typeof flightNumber !== 'string' || !flightNumber.trim()
+        || typeof destination !== 'string' || !destination.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Origin and destination airports cannot be the same.'
+        message: 'Flight number and destination are required.'
       });
     }
+    if (req.body.status !== undefined
+        && (typeof req.body.status !== 'string' || !req.body.status.trim())) {
+      return res.status(400).json({ success: false, message: 'Flight status must be a non-empty string.' });
+    }
 
-    const flight = throwIfError(await req.supabase.from('flights').insert({
-      flight_number: flight_number.toUpperCase().trim(),
-      airline,
-      aircraft_id,
-      from_airport_id,
-      to_airport_id,
-      departure_time,
-      arrival_time,
-      duration,
-      economy_fare,
-      business_fare: business_fare ?? Number(economy_fare) * 2.5,
-      first_class_fare: first_class_fare ?? Number(economy_fare) * 4.5,
-      total_seats,
-      available_seats: total_seats,
-      status
-    }).select('id').single());
-    throwIfError(await req.supabase.rpc('ensure_flight_seats', { p_flight_id: flight.id }));
+    const values = {
+      flight_number: flightNumber.trim().toUpperCase(),
+      destination: destination.trim()
+    };
+    if (req.body.status !== undefined) values.status = req.body.status.trim();
+    const flight = throwIfError(await req.supabase.from('flights').insert(values)
+      .select('id, flight_number, destination, status, created_at').single());
     return res.status(201).json({
       success: true,
-      message: 'Flight created successfully with configured seat map.',
-      flightId: flight.id
+      message: 'Flight created using fields supported by the current schema.',
+      flight
     });
   } catch (err) {
     next(err);
@@ -112,19 +99,31 @@ async function createFlight(req, res, next) {
 
 async function updateFlight(req, res, next) {
   try {
-    const allowed = [
-      'flight_number', 'airline', 'aircraft_id', 'from_airport_id', 'to_airport_id',
-      'departure_time', 'arrival_time', 'duration', 'economy_fare', 'business_fare',
-      'first_class_fare', 'total_seats', 'available_seats', 'status'
-    ];
-    const updates = Object.fromEntries(
-      Object.entries(req.body).filter(([key, value]) => allowed.includes(key) && value !== undefined)
-    );
-    if (updates.flight_number) updates.flight_number = updates.flight_number.toUpperCase().trim();
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ success: false, message: 'A valid flight ID is required.' });
+    }
+    const allowed = new Set(['flight_number', 'destination', 'status']);
+    if (Object.keys(req.body).some(key => !allowed.has(key))) {
+      return res.status(400).json({
+        success: false,
+        message: 'The current flight schema supports only flight_number, destination, and status.'
+      });
+    }
+    const updates = { ...req.body };
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ success: false, message: 'Provide supported flight fields to update.' });
+    }
+    for (const [field, value] of Object.entries(updates)) {
+      if (typeof value !== 'string' || !value.trim()) {
+        return res.status(400).json({ success: false, message: `${field} must be a non-empty string.` });
+      }
+      updates[field] = field === 'flight_number' ? value.trim().toUpperCase() : value.trim();
+    }
     const { data, error } = await req.supabase
       .from('flights')
       .update(updates)
-      .eq('id', req.params.id)
+      .eq('id', id)
       .select('id')
       .maybeSingle();
     if (error) throw error;
@@ -137,12 +136,22 @@ async function updateFlight(req, res, next) {
 
 async function deleteFlight(req, res, next) {
   try {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({ success: false, message: 'A valid flight ID is required.' });
+    }
     const { data, error } = await req.supabase
       .from('flights')
       .delete()
-      .eq('id', req.params.id)
+      .eq('id', id)
       .select('id')
       .maybeSingle();
+    if (error?.code === '23503') {
+      return res.status(409).json({
+        success: false,
+        message: 'Flight cannot be deleted while reservation records reference it.'
+      });
+    }
     if (error) throw error;
     if (!data) return res.status(404).json({ success: false, message: 'Flight not found.' });
     return res.json({ success: true, message: 'Flight removed successfully.' });

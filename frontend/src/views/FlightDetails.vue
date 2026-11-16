@@ -3,7 +3,7 @@
     <div class="container-narrow">
       <div v-if="loading" class="card text-center py-48">
         <div class="spinner"></div>
-        <p>Loading flight itinerary & aircraft details...</p>
+        <p>Loading the fields available for this flight...</p>
       </div>
 
       <div v-else-if="flight" class="details-container">
@@ -28,8 +28,7 @@
           <div class="hero-card-top">
             <div class="flight-badge-group">
               <span class="flight-code-badge">{{ flight.flight_number }}</span>
-              <span class="airline-tag">{{ flight.airline || 'SkyWings Airlines' }}</span>
-              <span class="aircraft-tag">✈ {{ flight.aircraft_model || 'Boeing 737' }} ({{ flight.aircraft_registration || 'VT-SK1' }})</span>
+              <span class="airline-tag">Destination: {{ flight.destination || 'Unavailable' }}</span>
             </div>
             <span class="badge" :class="'badge-' + (flight.status || 'scheduled').toLowerCase()">
               {{ flight.status }}
@@ -38,28 +37,26 @@
 
           <div class="itinerary-grid">
             <div class="itinerary-point">
-              <div class="point-time">{{ formatTime(flight.departure_time) }}</div>
-              <div class="point-code">{{ flight.from_code }}</div>
-              <div class="point-name">{{ flight.from_name }}</div>
-              <div class="point-city">{{ flight.from_city }}, {{ flight.from_country || 'India' }}</div>
+              <div class="point-code">Flight</div>
+              <div class="point-name">{{ flight.flight_number }}</div>
+              <div class="point-city">Status: {{ flight.status }}</div>
             </div>
 
             <div class="itinerary-mid">
-              <div class="duration-label">{{ flight.duration }}</div>
+              <div class="duration-label">Recorded flight</div>
               <div class="route-line-graphic">
                 <span class="circle-start"></span>
                 <span class="line-bar"></span>
                 <span class="plane-icon">✈</span>
                 <span class="circle-end"></span>
               </div>
-              <div class="flight-date-tag">📅 {{ formatDate(flight.departure_time) }}</div>
+              <div class="flight-date-tag">No schedule in current schema</div>
             </div>
 
             <div class="itinerary-point text-right">
-              <div class="point-time">{{ formatTime(flight.arrival_time) }}</div>
-              <div class="point-code">{{ flight.to_code }}</div>
-              <div class="point-name">{{ flight.to_name }}</div>
-              <div class="point-city">{{ flight.to_city }}, {{ flight.to_country || 'India' }}</div>
+              <div class="point-code">Destination</div>
+              <div class="point-name">{{ flight.destination || 'Unavailable' }}</div>
+              <div class="point-city">No airport details available</div>
             </div>
           </div>
         </div>
@@ -74,14 +71,12 @@
           >
             <div class="class-header">
               <span class="badge badge-economy">Economy</span>
-              <div class="class-price">₹{{ flight.economy_fare.toLocaleString() }}</div>
+              <div class="class-price">₹5,000</div>
             </div>
-            <p class="class-desc">Comfortable standard seating with complimentary snack & beverage.</p>
+            <p class="class-desc">Academic base fare only; fare and amenities are not stored per flight.</p>
             <ul class="amenities-list">
-              <li>✓ 15 kg Check-in Baggage</li>
-              <li>✓ 7 kg Cabin Hand Baggage</li>
-              <li>✓ In-seat USB Power Port</li>
-              <li>✓ Standard Seat Selection</li>
+              <li>Seat class must match the selected seat.</li>
+              <li>Payment is not configured.</li>
             </ul>
           </div>
 
@@ -93,14 +88,12 @@
           >
             <div class="class-header">
               <span class="badge badge-business">Business</span>
-              <div class="class-price">₹{{ flight.business_fare.toLocaleString() }}</div>
+              <div class="class-price">₹10,000</div>
             </div>
-            <p class="class-desc">Priority check-in, extra legroom, gourmet dining, and lounge pass.</p>
+            <p class="class-desc">Academic base fare only; fare and amenities are not stored per flight.</p>
             <ul class="amenities-list">
-              <li>✓ 30 kg Check-in Baggage</li>
-              <li>✓ Priority Boarding (Group 1)</li>
-              <li>✓ Dedicated Lounge Access</li>
-              <li>✓ Premium Recliner Seat</li>
+              <li>Seat class must match the selected seat.</li>
+              <li>Payment is not configured.</li>
             </ul>
           </div>
 
@@ -112,14 +105,12 @@
           >
             <div class="class-header">
               <span class="badge badge-first">First Class</span>
-              <div class="class-price">₹{{ flight.first_class_fare.toLocaleString() }}</div>
+              <div class="class-price">₹20,000</div>
             </div>
-            <p class="class-desc">Ultra-luxury private suite with fine dining & VIP chauffeur transfer.</p>
+            <p class="class-desc">Academic base fare only; fare and amenities are not stored per flight.</p>
             <ul class="amenities-list">
-              <li>✓ 40 kg Check-in Baggage</li>
-              <li>✓ VIP Suite & Lie-Flat Bed</li>
-              <li>✓ Champagne & Multi-course Meal</li>
-              <li>✓ 100% Refundable Ticket</li>
+              <li>Seat class must match the selected seat.</li>
+              <li>Payment is not configured.</li>
             </ul>
           </div>
         </div>
@@ -177,10 +168,9 @@ onMounted(async () => {
 });
 
 function getBaseFare(cls) {
-  if (!flight.value) return 0;
-  if (cls === 'Business') return flight.value.business_fare;
-  if (cls === 'First Class') return flight.value.first_class_fare;
-  return flight.value.economy_fare;
+  if (cls === 'Business') return 10000;
+  if (cls === 'First Class') return 20000;
+  return 5000;
 }
 
 function proceedToSeatSelection() {
@@ -194,17 +184,6 @@ function proceedToSeatSelection() {
   });
 }
 
-function formatTime(dateTimeStr) {
-  if (!dateTimeStr) return '';
-  const d = new Date(dateTimeStr);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-}
-
-function formatDate(dateTimeStr) {
-  if (!dateTimeStr) return '';
-  const d = new Date(dateTimeStr);
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-}
 </script>
 
 <style scoped>

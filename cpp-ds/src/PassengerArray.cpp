@@ -91,6 +91,12 @@ bool PassengerArray::getPassengerByPNR(const string &pnr, Passenger &passenger) 
     return true;
 }
 
+bool PassengerArray::getPassengerAt(int index, Passenger &passenger) const {
+    if (index < 0 || index >= passengerCount) return false;
+    passenger = passengers[index];
+    return true;
+}
+
 void PassengerArray::searchPassenger(const string &key) {
     bool found = false;
     for (int i = 0; i < passengerCount; i++) {

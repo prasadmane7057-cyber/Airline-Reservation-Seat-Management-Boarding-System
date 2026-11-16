@@ -3,7 +3,7 @@
     <div class="page-top-actions">
       <div>
         <h1 class="page-title mb-0">Passenger Directory</h1>
-        <p class="page-subtitle">View registered passengers, booking history counts, and account statuses.</p>
+        <p class="page-subtitle">View passenger records and their booking counts.</p>
       </div>
     </div>
 
@@ -14,42 +14,32 @@
         <p>Loading passenger directory...</p>
       </div>
 
+      <div v-else-if="adminStore.error" class="empty-state card" role="alert">
+        Could not load passengers: {{ adminStore.error }}
+      </div>
+
       <div v-else class="table-responsive">
         <table class="data-table">
           <thead>
             <tr>
-              <th>User ID</th>
+              <th>Passenger ID</th>
               <th>Passenger Name</th>
               <th>Email Address</th>
               <th>Phone</th>
               <th>Total Bookings</th>
               <th>Active Bookings</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>Created</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="p in passengers" :key="p.user_id">
-              <td><strong>#{{ p.user_id }}</strong></td>
-              <td><strong>{{ p.name }}</strong></td>
+            <tr v-for="p in passengers" :key="p.id">
+              <td><strong>#{{ p.id }}</strong></td>
+              <td><strong>{{ p.full_name }}</strong></td>
               <td>{{ p.email }}</td>
               <td>{{ p.phone || 'N/A' }}</td>
               <td><span class="count-pill">{{ p.total_bookings }}</span></td>
               <td><span class="count-pill active-pill">{{ p.active_bookings }}</span></td>
-              <td>
-                <span class="badge" :class="p.status === 'ACTIVE' ? 'badge-active' : 'badge-inactive'">
-                  {{ p.status }}
-                </span>
-              </td>
-              <td>
-                <button 
-                  @click="toggleStatus(p)" 
-                  class="btn btn-sm"
-                  :class="p.status === 'ACTIVE' ? 'btn-danger' : 'btn-success'"
-                >
-                  {{ p.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }}
-                </button>
-              </td>
+              <td>{{ formatDate(p.created_at) }}</td>
             </tr>
           </tbody>
         </table>
@@ -71,15 +61,8 @@ onMounted(async () => {
   await adminStore.fetchPassengers();
 });
 
-async function toggleStatus(passenger) {
-  const newStatus = passenger.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-  if (confirm(`Change status of ${passenger.name} to ${newStatus}?`)) {
-    try {
-      await adminStore.togglePassengerStatus(passenger.user_id, newStatus);
-    } catch (err) {
-      alert(err.message || 'Failed to update status.');
-    }
-  }
+function formatDate(value) {
+  return value ? new Date(value).toLocaleDateString() : 'Unavailable';
 }
 </script>
 

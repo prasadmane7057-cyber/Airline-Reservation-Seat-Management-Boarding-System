@@ -62,9 +62,7 @@
         </div>
 
         <div class="topbar-right">
-          <div class="system-chip">
-            <span class="dot-live"></span> Live System: MySQL Active
-          </div>
+          <div class="system-chip">Database: Supabase via Express API</div>
           <router-link to="/profile" class="btn btn-outline btn-sm">Admin Profile</router-link>
         </div>
       </header>

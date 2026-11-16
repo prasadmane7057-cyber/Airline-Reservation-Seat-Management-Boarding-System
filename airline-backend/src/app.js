@@ -12,6 +12,7 @@ const boardingRoutes = require('./routes/boardingRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const passengerRoutes = require('./routes/passengerRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const academicRoutes = require('./routes/academicRoutes');
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/boarding', boardingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/passengers', passengerRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/academic', academicRoutes);
 
 // 404 & Centralized Error Handlers
 app.use(notFoundHandler);

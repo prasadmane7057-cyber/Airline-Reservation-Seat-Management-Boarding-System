@@ -4,12 +4,106 @@ function throwIfError(result) {
 }
 
 function flightSelect() {
-  return [
-    '*',
-    'from_airport:airports!flights_from_airport_id_fkey!inner(airport_code, airport_name, city, country)',
-    'to_airport:airports!flights_to_airport_id_fkey!inner(airport_code, airport_name, city, country)',
-    'aircraft(model, registration_number)'
-  ].join(',');
+  return '*';
+}
+
+async function lookupOptionalRows(client, table, columns, ids) {
+  const { data, error } = await client
+    .from(table)
+    .select(columns)
+    .in('id', ids);
+  if (error && ['PGRST204', 'PGRST205', '42703', '42P01'].includes(error.code)) {
+    return [];
+  }
+  if (error) throw error;
+  return data || [];
+}
+
+async function enrichFlightAirports(client, flights) {
+  const rows = Array.isArray(flights) ? flights : flights ? [flights] : [];
+  const airportIds = [...new Set(rows.flatMap(flight => [
+    flight.from_airport_id,
+    flight.to_airport_id
+  ]).filter(id => id !== null && id !== undefined).map(String))];
+  const airportsById = new Map();
+
+  if (airportIds.length) {
+    const airports = await lookupOptionalRows(
+      client,
+      'airports',
+      'id, airport_code, airport_name, city, country',
+      airportIds
+    );
+    for (const airport of airports || []) {
+      airportsById.set(String(airport.id), airport);
+    }
+  }
+
+  return rows.map(flight => ({
+    ...flight,
+    from_airport: airportsById.get(String(flight.from_airport_id)) || null,
+    to_airport: airportsById.get(String(flight.to_airport_id)) || null
+  }));
+}
+
+async function enrichFlightAircraft(client, flights) {
+  const rows = Array.isArray(flights) ? flights : flights ? [flights] : [];
+  const aircraftIds = [...new Set(rows
+    .map(flight => flight.aircraft_id)
+    .filter(id => id !== null && id !== undefined)
+    .map(String))];
+  const aircraftById = new Map();
+
+  if (aircraftIds.length) {
+    const aircraft = await lookupOptionalRows(
+      client,
+      'aircraft',
+      'id, model, registration_number',
+      aircraftIds
+    );
+    for (const item of aircraft || []) {
+      aircraftById.set(String(item.id), item);
+    }
+  }
+
+  return rows.map(flight => ({
+    ...flight,
+    aircraft: aircraftById.get(String(flight.aircraft_id)) || null
+  }));
+}
+
+async function enrichFlightDetails(client, flights) {
+  const rows = Array.isArray(flights) ? flights : flights ? [flights] : [];
+  const [withAirports, withAircraft] = await Promise.all([
+    enrichFlightAirports(client, rows),
+    enrichFlightAircraft(client, rows)
+  ]);
+  return withAirports.map((flight, index) => ({
+    ...flight,
+    aircraft: withAircraft[index].aircraft
+  }));
+}
+
+async function enrichBookingFlights(client, bookings) {
+  const rows = Array.isArray(bookings) ? bookings : bookings ? [bookings] : [];
+  const flightValues = rows.map(booking => booking.flight);
+  const flights = flightValues.flatMap(value =>
+    Array.isArray(value) ? value : value ? [value] : []
+  );
+  const enrichedFlights = await enrichFlightDetails(client, flights);
+  const flightsById = new Map(
+    enrichedFlights.map(flight => [String(flight.id), flight])
+  );
+  const enrichFlight = flight => flight
+    ? flightsById.get(String(flight.id)) || { ...flight, from_airport: null, to_airport: null }
+    : null;
+
+  return rows.map((booking, index) => ({
+    ...booking,
+    flight: Array.isArray(flightValues[index])
+      ? flightValues[index].map(enrichFlight)
+      : enrichFlight(flightValues[index])
+  }));
 }
 
 function normalizeFlight(flight) {
@@ -17,23 +111,35 @@ function normalizeFlight(flight) {
   const { from_airport, to_airport, aircraft, ...fields } = flight;
   return {
     ...fields,
-    from_code: from_airport?.airport_code || '',
-    from_name: from_airport?.airport_name || '',
-    from_city: from_airport?.city || '',
-    from_country: from_airport?.country || '',
-    to_code: to_airport?.airport_code || '',
-    to_name: to_airport?.airport_name || '',
-    to_city: to_airport?.city || '',
-    to_country: to_airport?.country || '',
-    aircraft_model: aircraft?.model || 'Commercial Jet',
-    aircraft_registration: aircraft?.registration_number || ''
+    airline: flight.airline ?? null,
+    from_airport_id: flight.from_airport_id ?? null,
+    to_airport_id: flight.to_airport_id ?? null,
+    aircraft_id: flight.aircraft_id ?? null,
+    departure_time: flight.departure_time ?? null,
+    arrival_time: flight.arrival_time ?? null,
+    duration: flight.duration ?? null,
+    economy_fare: flight.economy_fare ?? null,
+    business_fare: flight.business_fare ?? null,
+    first_class_fare: flight.first_class_fare ?? null,
+    total_seats: flight.total_seats ?? null,
+    available_seats: flight.available_seats ?? null,
+    from_code: from_airport?.airport_code ?? null,
+    from_name: from_airport?.airport_name ?? null,
+    from_city: from_airport?.city ?? null,
+    from_country: from_airport?.country ?? null,
+    to_code: to_airport?.airport_code ?? null,
+    to_name: to_airport?.airport_name ?? null,
+    to_city: to_airport?.city ?? null,
+    to_country: to_airport?.country ?? null,
+    aircraft_model: aircraft?.model ?? null,
+    aircraft_registration: aircraft?.registration_number ?? null
   };
 }
 
 function bookingSelect() {
   return [
     '*',
-    'flight:flights(*,from_airport:airports!flights_from_airport_id_fkey(airport_code,airport_name,city,country),to_airport:airports!flights_to_airport_id_fkey(airport_code,airport_name,city,country),aircraft(model,registration_number))',
+    'flight:flights(*)',
     'user:users!bookings_user_id_fkey(name,email)',
     'passengers:booking_passengers(*,boarding(*))',
     'payment:payments(transaction_id,payment_method,payment_date,payment_status)'
@@ -82,6 +188,11 @@ function flattenBooking(booking) {
 module.exports = {
   throwIfError,
   flightSelect,
+  lookupOptionalRows,
+  enrichFlightAirports,
+  enrichFlightAircraft,
+  enrichFlightDetails,
+  enrichBookingFlights,
   normalizeFlight,
   bookingSelect,
   flattenBooking

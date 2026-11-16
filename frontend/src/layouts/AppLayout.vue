@@ -82,18 +82,18 @@
           <ul>
             <li><span class="tech-tag">Vue 3 + Vite</span></li>
             <li><span class="tech-tag">Express.js API</span></li>
-            <li><span class="tech-tag">MySQL Relational DB</span></li>
+            <li><span class="tech-tag">Supabase PostgreSQL</span></li>
             <li><span class="tech-tag">Java OOP Model</span></li>
-            <li><span class="tech-tag">OpenGL FreeGLUT CG</span></li>
+            <li><span class="tech-tag">Native OpenGL / FreeGLUT Coursework</span></li>
           </ul>
         </div>
 
         <div class="footer-col">
-          <h4>Demo Credentials</h4>
-          <p class="demo-info"><strong>Admin:</strong> admin@airline.com (admin123)</p>
-          <p class="demo-info"><strong>Passenger:</strong> passenger@airline.com (pass123)</p>
+          <h4>Account Access</h4>
+          <p class="demo-info">Sign in with an account registered for this application; demo credentials are not provided.</p>
+          <p class="demo-info"><strong>Admin:</strong> Admin pages require an authenticated account with the admin role.</p>
           <div class="status-indicator">
-            <span class="dot-online"></span> System Operational
+            <span class="dot-online"></span> Admin sign-in required
           </div>
         </div>
       </div>

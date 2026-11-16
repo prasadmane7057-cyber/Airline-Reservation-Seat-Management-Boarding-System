@@ -4,7 +4,7 @@
       <div class="page-header-row">
         <div>
           <h1 class="page-title">My Flight Reservations</h1>
-          <p class="page-subtitle">View and manage your upcoming flights, e-tickets, and cancellation requests.</p>
+          <p class="page-subtitle">View your reservation records and cancel eligible bookings.</p>
         </div>
         <router-link to="/flights" class="btn btn-gold">
           + Book Another Flight
@@ -40,7 +40,11 @@
       <div class="card bookings-card">
         <div v-if="loading" class="text-center py-48">
           <div class="spinner"></div>
-          <p>Retrieving your booking records from MySQL...</p>
+          <p>Retrieving your booking records...</p>
+        </div>
+
+        <div v-else-if="loadError" class="empty-state py-48" role="alert">
+          Could not load bookings: {{ loadError }}
         </div>
 
         <div v-else-if="filteredBookings.length === 0" class="empty-state py-48">
@@ -56,11 +60,11 @@
               <tr>
                 <th>PNR</th>
                 <th>Flight No</th>
-                <th>Origin ➔ Dest</th>
-                <th>Departure Time</th>
-                <th>Seats</th>
+                <th>Destination</th>
+                <th>Seat</th>
                 <th>Class</th>
-                <th>Total Fare</th>
+                <th>Fare</th>
+                <th>Booking Date</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -69,11 +73,11 @@
               <tr v-for="b in filteredBookings" :key="b.id">
                 <td><strong class="pnr-link">{{ b.pnr }}</strong></td>
                 <td><strong>{{ b.flight_number }}</strong></td>
-                <td>{{ b.from_code }} ➔ {{ b.to_code }}</td>
-                <td>{{ formatDateTime(b.departure_time) }}</td>
-                <td><span class="seat-badge">{{ b.seat_numbers || 'Assigned' }}</span></td>
-                <td><span class="badge" :class="'badge-' + (b.travel_class ? b.travel_class.toLowerCase().replace(' ', '') : 'economy')">{{ b.travel_class }}</span></td>
-                <td><strong>₹{{ (b.total_fare || 0).toLocaleString() }}</strong></td>
+                <td>{{ b.destination || 'Unavailable' }}</td>
+                <td><span class="seat-badge">{{ b.seat_number || 'Unavailable' }}</span></td>
+                <td>{{ b.travel_class }}</td>
+                <td><strong>₹{{ Number(b.fare).toLocaleString() }}</strong></td>
+                <td>{{ formatDateTime(b.booking_date) }}</td>
                 <td>
                   <span class="badge" :class="'badge-' + b.booking_status.toLowerCase()">
                     {{ b.booking_status }}
@@ -84,8 +88,8 @@
                     <router-link :to="'/booking-details/' + b.id" class="btn btn-outline btn-sm">
                       View
                     </router-link>
-                    <router-link :to="'/booking-confirmation/' + b.pnr" class="btn btn-outline btn-sm" title="E-Ticket">
-                      Ticket
+                    <router-link :to="'/booking-confirmation/' + b.pnr" class="btn btn-outline btn-sm" title="Reservation record">
+                      Record
                     </router-link>
                     <button 
                       v-if="b.booking_status === 'CONFIRMED'"
@@ -115,12 +119,11 @@
               Are you sure you want to cancel booking reference <strong>{{ bookingToCancel.pnr }}</strong>?
             </p>
             <div class="cancel-summary-box">
-              <div><strong>Flight:</strong> {{ bookingToCancel.flight_number }} ({{ bookingToCancel.from_code }} ➔ {{ bookingToCancel.to_code }})</div>
-              <div><strong>Seats to Release:</strong> {{ bookingToCancel.seat_numbers }}</div>
-              <div><strong>Refund Amount:</strong> ₹{{ (bookingToCancel.total_fare || 0).toLocaleString() }} (Full Refund)</div>
+              <div><strong>Flight:</strong> {{ bookingToCancel.flight_number }} — {{ bookingToCancel.destination }}</div>
+              <div><strong>Seat to release:</strong> {{ bookingToCancel.seat_number }}</div>
             </div>
             <p class="cancel-notice">
-              ⚠️ Once cancelled, all assigned seats will immediately be released back into the aircraft inventory and payment status updated to REFUNDED.
+              Cancelling releases the seat for another reservation. No payment or refund is processed by this project.
             </p>
           </div>
 
@@ -130,7 +133,7 @@
             </button>
             <button @click="confirmCancellation" class="btn btn-danger" :disabled="cancelling">
               <span v-if="cancelling">Processing Cancellation...</span>
-              <span v-else>Confirm & Release Seats</span>
+              <span v-else>Confirm Cancellation</span>
             </button>
           </div>
         </div>
@@ -147,6 +150,7 @@ const bookingStore = useBookingStore();
 
 const currentTab = ref('ALL');
 const loading = ref(true);
+const loadError = ref('');
 const showCancelModal = ref(false);
 const bookingToCancel = ref(null);
 const cancelling = ref(false);
@@ -165,7 +169,7 @@ onMounted(async () => {
   try {
     await bookingStore.fetchUserBookings();
   } catch (err) {
-    console.error(err);
+    loadError.value = err.message || 'Unable to load bookings.';
   } finally {
     loading.value = false;
   }

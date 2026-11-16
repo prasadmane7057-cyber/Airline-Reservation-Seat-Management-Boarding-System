@@ -1,34 +1,34 @@
 <template>
   <div class="project-dashboard">
-    <!-- Top Hero Banner with Live Supabase Status -->
+    <!-- Top Hero Banner -->
     <header class="dashboard-hero">
       <div class="container hero-content">
         <div class="hero-left">
           <div class="hero-tag-row">
             <span class="eyebrow-tag">ACADEMIC &amp; SYSTEM INTEGRATION</span>
-            <span class="supabase-live-tag" :class="{ connected: supabaseConnected }">
+            <span class="api-live-tag" :class="{ connected: flightsLoaded }">
               <span class="pulsing-dot"></span>
-              {{ supabaseStatusText }}
+              {{ flightApiStatus }}
             </span>
           </div>
           <h1 class="hero-title">Airline Master Integration Dashboard</h1>
           <p class="hero-desc">
-            One unified engineering platform joining <strong>Java OOP</strong>, <strong>C++ Data Structures</strong>, <strong>Computer Architecture &amp; 64-bit Assembly</strong>, <strong>Computer Graphics &amp; 3D WebGL</strong>, and <strong>Supabase Cloud PostgreSQL</strong>.
+            Operational values are loaded from the <strong>Express API / Supabase</strong>; academic panels are clearly marked as demo or native C++ output.
           </p>
         </div>
 
         <div class="hero-quick-stats">
           <div class="stat-pill">
-            <span class="stat-number">5/5</span>
-            <span class="stat-label">Subjects Unified</span>
+            <span class="stat-number">4</span>
+            <span class="stat-label">Coursework Subjects</span>
           </div>
           <div class="stat-pill">
-            <span class="stat-number">{{ supabaseFlightCount }}</span>
-            <span class="stat-label">Cloud Flights</span>
+            <span class="stat-number">{{ apiFlights.length }}</span>
+            <span class="stat-label">API Flights</span>
           </div>
           <div class="stat-pill">
-            <span class="stat-number" :class="occupancyStatusClass">{{ occupancyPercentage }}%</span>
-            <span class="stat-label">Seat Occupancy ({{ occupancyStatus }})</span>
+            <span class="stat-number" :class="occupancyStatusClass">{{ hasSeatData ? `${occupancyPercentage}%` : '—' }}</span>
+            <span class="stat-label">API Seat Occupancy ({{ hasSeatData ? occupancyStatus : 'Not loaded' }})</span>
           </div>
         </div>
       </div>
@@ -59,130 +59,167 @@
     <main class="container dashboard-body">
 
       <!-- =================================================================== -->
-      <!-- TAB 1: OVERVIEW & LIVE SUPABASE INTEGRATION                         -->
+      <!-- TAB 1: OVERVIEW & OPERATIONAL API                                   -->
       <!-- =================================================================== -->
       <section v-show="activeMainTab === 'overview'" class="tab-section">
         <div class="section-intro">
           <div>
-            <h2>System Topology &amp; Cloud Synchronization</h2>
-            <p class="subtitle">Live bidirectional synchronization between local modules and Supabase Cloud database.</p>
+            <h2>Operational API &amp; Academic Integration</h2>
+            <p class="subtitle">Live flight and seat data from the Express API backed by Supabase. Academic interactions are demo data unless marked native.</p>
           </div>
-          <button class="btn btn-primary btn-sm" @click="fetchSupabaseData" :disabled="loadingSupabase">
-            <span v-if="loadingSupabase">Syncing...</span>
-            <span v-else>↻ Sync Supabase Cloud</span>
+          <button class="btn btn-primary btn-sm" @click="refreshOperationalData" :disabled="loadingFlights || loadingOperations">
+            <span v-if="loadingFlights || loadingOperations">Refreshing...</span>
+            <span v-else>↻ Refresh API data</span>
           </button>
         </div>
 
-        <!-- Live Status Metric Cards -->
+        <p v-if="flightApiError" class="form-feedback error" role="alert">{{ flightApiError }}</p>
+
+        <!-- Live API Metric Cards -->
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-icon blue">☁</div>
             <div class="metric-info">
-              <span class="metric-label">Supabase Project Endpoint</span>
-              <span class="metric-value code-font">{{ supabaseEndpointMasked }}</span>
-              <span class="metric-sub">Connected via RLS Publishable Key</span>
+            <span class="metric-label">Operational data source</span>
+            <span class="metric-value">Express API / Supabase</span>
+            <span class="metric-sub">Flight and seat endpoints</span>
             </div>
           </div>
           <div class="metric-card">
             <div class="metric-icon green">✈</div>
             <div class="metric-info">
-              <span class="metric-label">Live Flights in Supabase</span>
-              <span class="metric-value">{{ supabaseFlights.length }} Flights Synced</span>
-              <span class="metric-sub">Public schema: public.flights</span>
+            <span class="metric-label">API flights</span>
+            <span class="metric-value">{{ apiFlights.length }} Flights Loaded</span>
+            <span class="metric-sub">GET /api/flights</span>
             </div>
           </div>
           <div class="metric-card">
             <div class="metric-icon violet">☕</div>
             <div class="metric-info">
-              <span class="metric-label">Java OOP Booking Store</span>
-              <span class="metric-value">{{ javaBookings.length }} Bookings Active</span>
-              <span class="metric-sub">Synced with bookings.csv &amp; PNR Generator</span>
+            <span class="metric-label">Academic panels</span>
+            <span class="metric-value">Demo data</span>
+            <span class="metric-sub">Except panels marked Native C++</span>
             </div>
           </div>
           <div class="metric-card">
             <div class="metric-icon gold">⚙</div>
             <div class="metric-info">
-              <span class="metric-label">COA Hardware Threshold</span>
-              <span class="metric-value" :class="occupancyStatusClass">{{ occupancyStatus }}</span>
-              <span class="metric-sub">{{ totalSeatsCount - bookedSeatsCount }} of {{ totalSeatsCount }} Seats Available</span>
+            <span class="metric-label">Selected flight occupancy</span>
+            <span class="metric-value" :class="occupancyStatusClass">{{ hasSeatData ? `${occupancyStatus} · ${occupancyPercentage}%` : 'Not loaded' }}</span>
+            <span class="metric-sub">{{ hasSeatData ? `${availableSeatsCount} of ${totalSeatsCount} seats available` : 'Seat inventory unavailable' }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Live Supabase Flights Table -->
+        <!-- Operational Flight and Seat Data -->
         <div class="content-panel">
           <div class="panel-header">
             <div>
-              <h3>Supabase Cloud PostgreSQL Flights</h3>
-              <p class="panel-hint">Direct queries from table <code>public.flights</code> running over PostgREST API.</p>
+            <h3>Live Flight &amp; Seat Inventory <span class="badge-source">API / Supabase</span></h3>
+            <p class="panel-hint">Flight records from <code>GET /api/flights</code>; selected flight inventory from <code>GET /api/seats/flight/:flightId</code>.</p>
             </div>
-            <div class="header-actions">
-              <button class="btn btn-outline btn-sm" @click="showAddFlightModal = !showAddFlightModal">
-                + Add Flight to Supabase
-              </button>
-            </div>
+          <label class="flight-select-label">Selected flight
+            <select v-model="selectedFlightId" class="form-input" @change="loadSelectedFlightSeats">
+              <option value="">Choose a live flight</option>
+              <option v-for="flight in apiFlights" :key="flight.id" :value="String(flight.id)">
+                {{ flight.flight_number }} · {{ flight.destination }}
+              </option>
+            </select>
+          </label>
           </div>
 
-          <!-- Add Flight Form (Toggleable) -->
-          <div v-if="showAddFlightModal" class="inline-form-card">
-            <h4>Insert New Flight Record (Direct Supabase Insert)</h4>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Flight No</label>
-                <input v-model="newFlight.flight_number" placeholder="e.g. AI707" class="form-input" />
-              </div>
-              <div class="form-group">
-                <label>Destination</label>
-                <input v-model="newFlight.destination" placeholder="e.g. MUMBAI" class="form-input" />
-              </div>
-              <div class="form-group">
-                <label>Status</label>
-                <select v-model="newFlight.status" class="form-input">
-                  <option value="On Time">On Time</option>
-                  <option value="Delayed">Delayed</option>
-                  <option value="Boarding">Boarding</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
-              </div>
-              <div class="form-group form-actions-col">
-                <label>&nbsp;</label>
-                <button class="btn btn-primary" @click="insertSupabaseFlight" :disabled="submittingFlight">
-                  {{ submittingFlight ? 'Inserting...' : 'Commit to Supabase' }}
-                </button>
-              </div>
-            </div>
-            <p v-if="flightMessage" class="form-feedback" :class="{ error: flightMessageIsError }">{{ flightMessage }}</p>
+        <div v-if="loadingSeats" class="empty-cell">Loading selected flight seat inventory…</div>
+        <p v-else-if="seatApiError" class="form-feedback error" role="alert">{{ seatApiError }}</p>
+        <p v-else-if="!selectedFlight" class="empty-cell">Load flights from the API, then select a flight to view its seat inventory.</p>
+        <div v-else class="occupancy-stats-grid api-seat-stats">
+          <div class="stat-box"><small>TOTAL SEATS</small><strong>{{ totalSeatsCount }}</strong></div>
+          <div class="stat-box green"><small>AVAILABLE</small><strong>{{ availableSeatsCount }}</strong></div>
+          <div class="stat-box red"><small>BOOKED</small><strong>{{ bookedSeatsCount }}</strong></div>
+          <div class="stat-box amber"><small>BLOCKED</small><strong>{{ blockedSeatsCount }}</strong></div>
+          <div class="stat-box"><small>OCCUPANCY</small><strong>{{ hasSeatData ? `${occupancyPercentage}% · ${occupancyStatus}` : 'No API data' }}</strong></div>
           </div>
 
+        <p v-if="!loadingFlights && apiFlights.length === 0 && !flightApiError" class="empty-cell">No flights were returned by the API.</p>
           <div class="table-responsive">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Flight No</th>
-                  <th>Destination</th>
-                  <th>Flight Status</th>
-                  <th>Database Source</th>
-                  <th>Cloud Record Timestamp</th>
+                <th>Flight</th><th>Destination</th><th>Status</th><th>Source</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="f in supabaseFlights" :key="f.id || f.flight_number">
-                  <td class="bold-text">#{{ f.id || 'N/A' }}</td>
-                  <td><span class="flight-tag">{{ f.flight_number || f.flight_no }}</span></td>
-                  <td><strong>{{ f.destination || 'N/A' }}</strong></td>
-                  <td>
-                    <span :class="['status-chip', getStatusClass(f.status)]">{{ f.status }}</span>
-                  </td>
-                  <td><span class="badge-source">Supabase PostgreSQL</span></td>
-                  <td class="code-font text-muted">{{ f.created_at ? new Date(f.created_at).toLocaleString() : 'Live Sync' }}</td>
+              <tr v-for="f in apiFlights" :key="f.id">
+                <td><span class="flight-tag">{{ f.flight_number }}</span></td>
+                <td>{{ f.destination }}</td>
+                <td><span :class="['status-chip', getStatusClass(f.status)]">{{ f.status }}</span></td>
+                <td><span class="badge-source">API / Supabase</span></td>
                 </tr>
-                <tr v-if="supabaseFlights.length === 0">
-                  <td colspan="6" class="empty-cell">No flights loaded. Click "Sync Supabase Cloud" to refresh.</td>
+              <tr v-if="loadingFlights">
+                <td colspan="4" class="empty-cell">Loading API flights…</td>
                 </tr>
               </tbody>
             </table>
           </div>
+        </div>
+
+        <div class="content-panel">
+        <div class="panel-header">
+          <div>
+            <h3>Restricted Operational Summary <span class="badge-source">Authenticated API</span></h3>
+            <p class="panel-hint">Passenger and booking records are requested only for an authenticated admin account.</p>
+          </div>
+          <button v-if="authStore.isAdmin" class="btn btn-outline btn-sm" @click="loadAdminOperations" :disabled="loadingOperations">Refresh admin data</button>
+        </div>
+        <div v-if="!authStore.isAuthenticated" class="auth-notice">
+          Admin sign-in is required to view bookings, passenger records, and dashboard statistics.
+          <router-link :to="{ path: '/login', query: { redirect: '/project-dashboard' } }">Sign in</router-link>
+        </div>
+        <div v-else-if="!authStore.isAdmin" class="auth-notice">
+          Admin authorization is required to view operational bookings and passenger records.
+          <router-link to="/admin/dashboard">Open admin area</router-link>
+        </div>
+        <div v-else>
+          <p v-if="operationsError" class="form-feedback error" role="alert">{{ operationsError }}</p>
+          <p v-else-if="loadingOperations" class="empty-cell">Loading authenticated admin data…</p>
+          <div v-else class="metrics-grid">
+            <div class="metric-card"><div class="metric-info"><span class="metric-label">Flights</span><span class="metric-value">{{ operationalStats?.totalFlights ?? '—' }}</span></div></div>
+            <div class="metric-card"><div class="metric-info"><span class="metric-label">Passengers</span><span class="metric-value">{{ operationalStats?.totalPassengers ?? adminStore.passengers.length }}</span></div></div>
+            <div class="metric-card"><div class="metric-info"><span class="metric-label">Bookings</span><span class="metric-value">{{ operationalStats?.totalBookings ?? adminStore.bookings.length }}</span></div></div>
+            <div class="metric-card"><div class="metric-info"><span class="metric-label">API data</span><span class="metric-value">Authenticated</span><span class="metric-sub">Stats, bookings, passengers</span></div></div>
+          </div>
+          <div class="admin-search-row">
+            <label for="operational-search">Search by PNR or passenger ID</label>
+            <input id="operational-search" v-model="operationalSearch" class="form-input" placeholder="Enter PNR or passenger ID" />
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>              <tr><th>PNR</th><th>Passenger</th><th>Passenger ID</th><th>Flight</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr v-for="booking in searchedAdminBookings" :key="booking.id">
+                  <td>{{ booking.pnr }}</td><td>{{ booking.passenger_name || booking.user?.name || '—' }}</td>
+                  <td>{{ booking.passenger_id ?? '—' }}</td><td>{{ booking.flight_number || '—' }}</td><td>{{ booking.booking_status || '—' }}</td>
+                </tr>
+                <tr v-if="searchedAdminBookings.length === 0"><td colspan="5" class="empty-cell">{{ operationalSearch ? 'No matching PNR or passenger ID.' : 'No bookings returned by the admin API.' }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-if="searchedAdminPassengers.length" class="native-record-list">
+            <strong>Passenger ID matches</strong>
+            <div v-for="passenger in searchedAdminPassengers" :key="passenger.id">
+            #{{ passenger.id }} · {{ passenger.full_name }} · {{ passenger.email }}
+            </div>
+          </div>
+          <p class="panel-hint">
+            <router-link to="/register">Passenger registration</router-link>
+            <span aria-hidden="true"> · </span>
+            <router-link to="/admin/passengers">Passenger information management</router-link>
+          </p>
+        </div>
+        <p v-if="!authStore.isAdmin" class="panel-hint operational-links">
+          <router-link to="/register">Passenger registration</router-link>
+          <span aria-hidden="true"> · </span>
+          <router-link to="/admin/passengers">Passenger information management</router-link>
+        </p>
         </div>
 
         <!-- 5-Subject Architectural Topology -->
@@ -190,9 +227,9 @@
           <div class="panel-header">
             <div>
               <h3>Unified Academic Architecture Topology</h3>
-              <p class="panel-hint">How data structures, computer graphics, low-level assembly, and Java OOP integrate into the web application.</p>
+              <p class="panel-hint">Academic data is demo unless explicitly marked as output from the native C++ adapter.</p>
             </div>
-            <span class="badge-verified">✓ 100% Implemented</span>
+            <span class="badge-source">4 Coursework Subjects</span>
           </div>
           <div class="topology-grid">
             <div class="topo-card" v-for="mod in moduleOverviews" :key="mod.title">
@@ -215,9 +252,9 @@
         <div class="section-intro">
           <div>
             <h2>Java OOP &amp; Airline Reservation System (PSOOP / JDBC)</h2>
-            <p class="subtitle">Interactive implementation of Java domain models, static PNR generators, polymorphic cabin classes, method overloading, CSV persistence, and Swing flight status management.</p>
+            <p class="subtitle">Browser-side academic simulation of Java concepts; it does not execute or modify the Java source model, which remains unchanged.</p>
           </div>
-          <span class="badge-source">java-oop/src/model/</span>
+          <span class="badge-source">Academic demo · Java source unchanged</span>
         </div>
 
         <div class="two-col-layout">
@@ -226,7 +263,7 @@
             <div class="panel-header">
               <div>
                 <h3>Interactive PNR &amp; Booking Generator</h3>
-                <p class="panel-hint">Executes exact logic from <code>model.PNR.java</code> and <code>BookingSystem.java</code>.</p>
+                <p class="panel-hint">Local demo of PNR and booking concepts; this panel does not execute Java source.</p>
               </div>
             </div>
 
@@ -395,8 +432,8 @@
           <div class="content-panel">
             <div class="panel-header">
               <div>
-                <h3>Desktop Swing GUI Synchronizer</h3>
-                <p class="panel-hint">Represents <code>FlightStatusForm.java</code> (JFrame &amp; JDBC).</p>
+                <h3>Desktop Swing GUI Interaction Demo</h3>
+                <p class="panel-hint">Browser simulation of the <code>FlightStatusForm.java</code> interface; it does not connect to a database.</p>
               </div>
             </div>
 
@@ -405,12 +442,12 @@
                 <span class="swing-dot red"></span>
                 <span class="swing-dot yellow"></span>
                 <span class="swing-dot green"></span>
-                <span class="swing-title">Flight Status Update (Java Swing / JDBC)</span>
+                <span class="swing-title">Flight Status Update (UI Demo)</span>
               </div>
               <div class="swing-body">
                 <div class="swing-field">
                   <label>Flight No:</label>
-                  <input v-model="swingForm.flightNo" class="swing-input" placeholder="e.g. AI101" />
+                  <input v-model="swingForm.flightNo" class="swing-input" placeholder="e.g. DEMO-001" />
                 </div>
                 <div class="swing-field">
                   <label>Destination:</label>
@@ -560,9 +597,82 @@
         <div class="section-intro">
           <div>
             <h2>Data Structures &amp; Algorithms Laboratory (C++ DS)</h2>
-            <p class="subtitle">Live interactive execution of linear and non-linear data structures from <code>cpp-ds/src</code>: Circular Queues, Priority Deques, Dynamic Arrays, Linked Lists, Doubly Linked Lists for manifest merges, and Undo Stacks.</p>
+            <p class="subtitle">The interactive browser examples below are demo state. The Native C++ Output panel separately displays results returned by the native adapter.</p>
           </div>
           <span class="badge-source">cpp-ds/src/</span>
+        </div>
+
+        <div class="content-panel native-output-panel">
+          <div class="panel-header">
+            <div>
+              <h3>Native C++ Data-Structure Output <span class="badge-source">Native adapter</span></h3>
+              <p class="panel-hint">Loaded from <code>GET /api/academic/cpp-demo</code>. Browser-only interactions below remain demo data.</p>
+            </div>
+            <button class="btn btn-outline btn-sm" @click="loadNativeDemo" :disabled="loadingNativeDemo">
+              {{ loadingNativeDemo ? 'Loading…' : 'Refresh native output' }}
+            </button>
+          </div>
+          <p v-if="nativeDemoError" class="form-feedback error" role="alert">{{ nativeDemoError }}</p>
+          <p v-else-if="loadingNativeDemo" class="empty-cell">Loading native C++ output…</p>
+          <div v-else-if="nativeDemo" class="native-output-grid">
+            <article class="native-output-card">
+              <h4>Passenger Array · {{ nativeDemo.passengerArray?.count ?? 0 }}</h4>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead><tr><th>PNR</th><th>Name</th><th>Age</th><th>Gender</th><th>Contact</th><th>Seat</th><th>Class</th></tr></thead>
+                  <tbody>
+                    <tr v-for="record in nativeDemo.passengerArray?.records || []" :key="record.pnr">
+                      <td>{{ record.pnr }}</td><td>{{ record.name }}</td><td>{{ record.age }}</td><td>{{ record.gender }}</td>
+                      <td>{{ maskNativeContact(record.contact) }}</td><td>{{ record.seatNo }}</td><td>{{ record.travelClass }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+            <article class="native-output-card">
+              <h4>Seat Map · {{ nativeDemo.seatMap?.rows }} × {{ nativeDemo.seatMap?.columns }}</h4>
+              <p class="panel-hint">
+                Available {{ nativeDemo.seatMap?.counts?.available ?? 0 }} ·
+                Booked {{ nativeDemo.seatMap?.counts?.booked ?? 0 }} ·
+                Blocked {{ nativeDemo.seatMap?.counts?.blocked ?? 0 }}
+              </p>
+              <div class="native-seat-map">
+                <div v-for="(row, rowIndex) in nativeDemo.seatMap?.statuses || []" :key="rowIndex" class="native-seat-row">
+                  <span v-for="(status, colIndex) in row" :key="`${rowIndex}-${colIndex}`" class="native-seat-cell" :title="`Row ${rowIndex + 1}, seat ${colIndex + 1}, status ${status}`">{{ status }}</span>
+                </div>
+              </div>
+            </article>
+            <article class="native-output-card">
+              <h4>Waitlist · {{ nativeDemo.waitlist?.count ?? 0 }}</h4>
+              <ul class="native-record-list">
+                <li v-for="record in nativeDemo.waitlist?.records || []" :key="record.pnr">{{ record.pnr }} · {{ record.name }}</li>
+              </ul>
+            </article>
+            <article class="native-output-card">
+              <h4>PNR Hash Table</h4>
+              <p>Records {{ nativeDemo.pnrHash?.count ?? 0 }} / {{ nativeDemo.pnrHash?.capacity ?? 0 }} · Collisions {{ nativeDemo.pnrHash?.collisions ?? 0 }} · Load factor {{ nativeDemo.pnrHash?.loadFactor ?? '—' }}</p>
+              <p v-if="nativeDemo.pnrHash?.search">
+                Search {{ nativeDemo.pnrHash.search.target }}:
+                {{ nativeDemo.pnrHash.search.found ? 'found' : 'not found' }}
+                ({{ nativeDemo.pnrHash.search.steps }} steps)
+              </p>
+              <p v-if="nativeDemo.pnrHash?.search?.record" class="panel-hint">
+                {{ nativeDemo.pnrHash.search.record.pnr }} · {{ nativeDemo.pnrHash.search.record.name }}
+                <span v-if="nativeDemo.pnrHash.search.record.seatNo"> · {{ nativeDemo.pnrHash.search.record.seatNo }}</span>
+              </p>
+            </article>
+            <article class="native-output-card">
+              <h4>Linear vs Binary Search · {{ nativeDemo.searchComparison?.datasetSize ?? 0 }} records</h4>
+              <p>Target: {{ nativeDemo.searchComparison?.targetPnr ?? '—' }}</p>
+              <p>Linear: {{ nativeDemo.searchComparison?.linear?.found ? 'found' : 'not found' }} at {{ nativeDemo.searchComparison?.linear?.index ?? '—' }} · {{ nativeDemo.searchComparison?.linear?.comparisons ?? 0 }} comparisons</p>
+              <p>Binary: {{ nativeDemo.searchComparison?.binary?.found ? 'found' : 'not found' }} at {{ nativeDemo.searchComparison?.binary?.index ?? '—' }} · {{ nativeDemo.searchComparison?.binary?.comparisons ?? 0 }} comparisons</p>
+            </article>
+            <article class="native-output-card">
+              <h4>Sort Demonstration</h4>
+              <pre class="native-sort-output">{{ nativeDemo.sortDemo?.text || 'No sort output returned.' }}</pre>
+            </article>
+          </div>
+          <p v-else class="empty-cell">Native output is not available yet. Use “Refresh native output” to retry.</p>
         </div>
 
         <!-- DS Algorithms Grid -->
@@ -927,9 +1037,9 @@
         <div class="section-intro">
           <div>
             <h2>Computer Organization &amp; Architecture (COA &amp; Assembly)</h2>
-            <p class="subtitle">Hardware seat occupancy calculations, threshold detection (OPEN / RUNNING LOW / FULL), 64-bit x86-64 register simulation (RAX, RBX, RCX), BCD converters, and Control Unit cycle.</p>
+            <p class="subtitle">Live occupancy from API seat data, alongside academic demos for threshold logic, 64-bit registers, BCD conversion, and the Control Unit cycle.</p>
           </div>
-          <span class="badge-source">coa-nasm/ &amp; assembly-component/</span>
+          <span class="badge-source">Academic demo · COA / Assembly</span>
         </div>
 
         <div class="two-col-layout">
@@ -937,8 +1047,8 @@
           <div class="content-panel">
             <div class="panel-header">
               <div>
-                <h3>Hardware Seat Occupancy &amp; Threshold Detection</h3>
-                <p class="panel-hint">Threshold logic: &lt;75% OPEN (Green) | 75-89% RUNNING LOW (Amber) | &ge;90% FULL (Red).</p>
+                <h3>API Seat Occupancy &amp; Threshold Detection <span class="badge-source">API / Supabase</span></h3>
+                <p class="panel-hint">Live seat totals and integer occupancy are from the selected flight’s API seat inventory. Thresholds: &lt;75% OPEN | 75-89% RUNNING LOW | &ge;90% FULL.</p>
               </div>
             </div>
 
@@ -947,9 +1057,9 @@
                 <div class="status-led" :class="occupancyStatusClass"></div>
                 <div>
                   <span class="status-hero-label">SYSTEM HARDWARE STATUS</span>
-                  <span class="status-hero-val">{{ occupancyStatus }}</span>
+                  <span class="status-hero-val">{{ hasSeatData ? occupancyStatus : 'NO API DATA' }}</span>
                 </div>
-                <div class="occupancy-large-percent">{{ occupancyPercentage }}%</div>
+                <div class="occupancy-large-percent">{{ hasSeatData ? `${occupancyPercentage}%` : '—' }}</div>
               </div>
 
               <div class="occupancy-stats-grid">
@@ -971,23 +1081,11 @@
                 </div>
               </div>
 
-              <!-- Interactive Seat Count Adjuster -->
-              <div class="occupancy-slider-row">
-                <label>Simulate Booked Seats (Triggers Digital Comparator):</label>
-                <input
-                  type="range"
-                  min="0"
-                  :max="totalSeatsCount"
-                  v-model.number="bookedSeatsCount"
-                  class="occupancy-range"
-                />
-              </div>
-
               <!-- Binary Bitmask Representation -->
               <div class="binary-register-box">
-                <span class="reg-label">16-BIT LOW-ORDER SEAT REGISTER BITMASK:</span>
+                <span class="reg-label">16-BIT BOOKED-SEAT COUNT DEMO ENCODING:</span>
                 <span class="binary-string code-font">{{ seatRegisterBitmask }}</span>
-                <small class="text-muted">Direct digital logic bitfield representation of seat allocations.</small>
+                <small class="text-muted">A binary encoding of the live booked-seat count; not an individual seat allocation bitfield.</small>
               </div>
             </div>
           </div>
@@ -1211,10 +1309,10 @@
       <section v-show="activeMainTab === 'cg'" class="tab-section">
         <div class="section-intro">
           <div>
-            <h2>Computer Graphics Interactive Suite (C++ CG / CGL)</h2>
-            <p class="subtitle">Embedded rendering of top-down aircraft glyphs, cabin seat matrices, material lighting, Bresenham line rasterization, Cohen-Sutherland clipping, and a live 3D rotating aircraft.</p>
+            <h2>Computer Graphics Browser Demo (Native C++ Coursework)</h2>
+            <p class="subtitle">Aircraft glyphs, cabin seat matrices, material lighting, Bresenham rasterization, Cohen-Sutherland clipping, and a rotating aircraft are rendered in the browser; native C++ coursework sources are referenced, not executed here.</p>
           </div>
-          <span class="badge-source">cpp-cg/src/</span>
+          <span class="badge-source">Academic demo · C++ CG / CGL</span>
         </div>
 
         <!-- 3D Aircraft Model Viewer (Aircraft3D.cpp & AircraftProjectionViewing.cpp) -->
@@ -1532,111 +1630,150 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { aircraftWorldSeatToSvg } from '../utils/aircraftCoordinates.js';
-import { supabase } from '../lib/supabaseClient';
+import { academicApi, flightApi, seatApi } from '../services/api';
+import { useAdminStore } from '../stores/adminStore';
+import { useAuthStore } from '../stores/authStore';
 
 // =============================================================================
 // MAIN NAVIGATION TABS
 // =============================================================================
 const activeMainTab = ref('overview');
+const adminStore = useAdminStore();
+const authStore = useAuthStore();
 
 const mainTabs = [
-  { id: 'overview', name: 'Overview & Supabase', icon: '☁', sub: 'Cloud DB & Topology' },
+  { id: 'overview', name: 'Overview & API', icon: '☁', sub: 'Operations & Topology' },
   { id: 'java', name: 'Java OOP Hub', icon: '☕', sub: 'PSOOP, PNR, Overload, Swing' },
   { id: 'ds', name: 'Data Structures Lab', icon: '🌲', sub: 'Queues, Deque, DLL, Stack' },
   { id: 'coa', name: 'COA & Architecture', icon: '⚙', sub: 'Hardware Threshold, ALU' },
-  { id: 'cg', name: 'Computer Graphics', icon: '🎨', sub: 'Plane Glyph, 3D WebGL, Bresenham' }
+  { id: 'cg', name: 'Computer Graphics', icon: '🎨', sub: 'Browser CG, Native Coursework' }
 ];
 
 // =============================================================================
-// SUPABASE CLOUD SYNCHRONIZATION
+// LIVE OPERATIONAL API DATA
 // =============================================================================
-const supabaseConnected = ref(false);
-const supabaseStatusText = ref('Connecting to Supabase...');
-const supabaseFlights = ref([]);
-const loadingSupabase = ref(false);
-const showAddFlightModal = ref(false);
-const submittingFlight = ref(false);
-const flightMessage = ref('');
-const flightMessageIsError = ref(false);
-
-const supabaseEndpointMasked = computed(() => {
-  const url = import.meta.env.VITE_SUPABASE_URL || '';
-  return url.replace('https://', '').split('.')[0] + '.supabase.co (PostgreSQL 15)';
+const apiFlights = ref([]);
+const selectedFlightId = ref('');
+const seatInventory = ref([]);
+const loadingFlights = ref(false);
+const loadingSeats = ref(false);
+const loadingOperations = ref(false);
+const flightsLoaded = ref(false);
+const flightApiError = ref('');
+const seatApiError = ref('');
+const operationsError = ref('');
+const operationalStats = ref(null);
+const operationalSearch = ref('');
+const nativeDemo = ref(null);
+const loadingNativeDemo = ref(false);
+const nativeDemoError = ref('');
+const flightApiStatus = computed(() => loadingFlights.value ? 'Loading API…' : flightsLoaded.value ? 'Express API / Supabase' : 'API unavailable');
+const selectedFlight = computed(() => apiFlights.value.find(flight => String(flight.id) === String(selectedFlightId.value)) || null);
+const totalSeatsCount = computed(() => seatInventory.value.length);
+const bookedSeatsCount = computed(() => seatInventory.value.filter(seat => seat.is_occupied && !seat.is_blocked).length);
+const blockedSeatsCount = computed(() => seatInventory.value.filter(seat => seat.is_blocked).length);
+const availableSeatsCount = computed(() => seatInventory.value.filter(seat => !seat.is_occupied && !seat.is_blocked).length);
+const hasSeatData = computed(() => Boolean(selectedFlight.value && !loadingSeats.value && !seatApiError.value && totalSeatsCount.value > 0));
+const occupancyPercentage = computed(() => totalSeatsCount.value
+  ? Math.floor(bookedSeatsCount.value * 100 / totalSeatsCount.value)
+  : 0);
+const occupancyStatus = computed(() => occupancyPercentage.value >= 90 ? 'FULL' : occupancyPercentage.value >= 75 ? 'RUNNING LOW' : 'OPEN');
+const occupancyStatusClass = computed(() => !hasSeatData.value ? '' : occupancyStatus.value === 'FULL' ? 'status-red' : occupancyStatus.value === 'RUNNING LOW' ? 'status-amber' : 'status-green');
+const searchedAdminBookings = computed(() => {
+  const query = operationalSearch.value.trim().toLowerCase();
+  const rows = adminStore.bookings || [];
+  const filtered = query
+    ? rows.filter(booking => String(booking.pnr || '').toLowerCase().includes(query)
+      || String(booking.passenger_id ?? '').toLowerCase().includes(query))
+    : rows;
+  return filtered.slice(0, query ? 50 : 10);
+});
+const searchedAdminPassengers = computed(() => {
+  const query = operationalSearch.value.trim().toLowerCase();
+  if (!query) return [];
+  return (adminStore.passengers || []).filter(passenger => String(passenger.id ?? '').toLowerCase().includes(query)).slice(0, 20);
 });
 
-const supabaseFlightCount = computed(() => supabaseFlights.value.length);
-
-async function fetchSupabaseData() {
-  loadingSupabase.value = true;
-  supabaseStatusText.value = 'Syncing...';
+async function loadFlights() {
+  loadingFlights.value = true;
+  flightApiError.value = '';
   try {
-    const { data, error } = await supabase.from('flights').select('*').order('id', { ascending: true });
-    if (error) throw error;
-    supabaseFlights.value = data || [];
-    supabaseConnected.value = true;
-    supabaseStatusText.value = 'Supabase Cloud Synced (Online)';
-  } catch (err) {
-    console.warn('Supabase fetch notice:', err.message);
-    supabaseConnected.value = false;
-    supabaseStatusText.value = 'Supabase Cloud (Offline/Fallback)';
-    // Fallback default flights if cloud table has 0 records
-    if (supabaseFlights.value.length === 0) {
-      supabaseFlights.value = [
-        { id: 1, flight_number: '111', destination: 'PUNE', status: 'On Time', created_at: new Date().toISOString() },
-        { id: 2, flight_number: '155', destination: 'PUNE', status: 'On Time', created_at: new Date().toISOString() },
-        { id: 3, flight_number: 'AI101', destination: 'MUMBAI', status: 'Delayed', created_at: new Date().toISOString() }
-      ];
+    const response = await flightApi.getFlights({});
+    apiFlights.value = Array.isArray(response.flights) ? response.flights : [];
+    flightsLoaded.value = true;
+    if (!selectedFlightId.value || !apiFlights.value.some(flight => String(flight.id) === String(selectedFlightId.value))) {
+      selectedFlightId.value = apiFlights.value.length ? String(apiFlights.value[0].id) : '';
     }
+    if (selectedFlightId.value) await loadSelectedFlightSeats();
+    else seatInventory.value = [];
+  } catch (err) {
+    apiFlights.value = [];
+    seatInventory.value = [];
+    flightsLoaded.value = false;
+    flightApiError.value = err.message || 'Unable to load flights from the API.';
   } finally {
-    loadingSupabase.value = false;
+    loadingFlights.value = false;
   }
 }
 
-const newFlight = ref({
-  flight_number: '',
-  destination: '',
-  status: 'On Time'
-});
-
-async function insertSupabaseFlight() {
-  if (!newFlight.value.flight_number || !newFlight.value.destination) {
-    flightMessage.value = 'Please provide both flight number and destination.';
-    flightMessageIsError.value = true;
+async function loadSelectedFlightSeats() {
+  if (!selectedFlightId.value) {
+    seatInventory.value = [];
     return;
   }
-
-  submittingFlight.value = true;
-  flightMessage.value = '';
+  loadingSeats.value = true;
+  seatApiError.value = '';
   try {
-    const { data, error } = await supabase.from('flights').insert([
-      {
-        flight_number: newFlight.value.flight_number.toUpperCase().trim(),
-        destination: newFlight.value.destination.toUpperCase().trim(),
-        status: newFlight.value.status
-      }
-    ]).select();
-
-    if (error) throw error;
-
-    flightMessage.value = `Successfully inserted flight ${newFlight.value.flight_number} into Supabase!`;
-    flightMessageIsError.value = false;
-    newFlight.value.flight_number = '';
-    newFlight.value.destination = '';
-    await fetchSupabaseData();
+    const response = await seatApi.getSeatsByFlight(selectedFlightId.value);
+    seatInventory.value = Array.isArray(response.seats) ? response.seats : [];
   } catch (err) {
-    // If table schema expects different fields, add to local list as fallback
-    supabaseFlights.value.push({
-      id: supabaseFlights.value.length + 1,
-      flight_number: newFlight.value.flight_number.toUpperCase().trim(),
-      destination: newFlight.value.destination.toUpperCase().trim(),
-      status: newFlight.value.status,
-      created_at: new Date().toISOString()
-    });
-    flightMessage.value = `Recorded locally & Synced: ${newFlight.value.flight_number}`;
-    flightMessageIsError.value = false;
+    seatInventory.value = [];
+    seatApiError.value = err.message || 'Unable to load seat inventory.';
   } finally {
-    submittingFlight.value = false;
+    loadingSeats.value = false;
   }
+}
+
+async function loadAdminOperations() {
+  if (!authStore.isAdmin || !authStore.token) return;
+  loadingOperations.value = true;
+  operationsError.value = '';
+  try {
+    const data = await adminStore.fetchOperationalData();
+    operationalStats.value = data.stats;
+  } catch (err) {
+    operationsError.value = adminStore.operationsError || err.message || 'Unable to load authenticated admin data.';
+  } finally {
+    loadingOperations.value = false;
+  }
+}
+
+async function loadNativeDemo() {
+  loadingNativeDemo.value = true;
+  nativeDemoError.value = '';
+  try {
+    const response = await academicApi.getCppDemo();
+    if (response.success && response.source === 'cpp-ds-native-demo' && response.data) {
+      nativeDemo.value = response.data;
+    } else {
+      throw new Error('The native C++ demo returned an unexpected response.');
+    }
+  } catch (err) {
+    nativeDemo.value = null;
+    nativeDemoError.value = err.message || 'Native C++ demo is unavailable.';
+  } finally {
+    loadingNativeDemo.value = false;
+  }
+}
+
+async function refreshOperationalData() {
+  await Promise.all([loadFlights(), authStore.isAdmin ? loadAdminOperations() : Promise.resolve()]);
+}
+
+function maskNativeContact(contact) {
+  const value = String(contact || '');
+  if (!value) return '—';
+  return value.length <= 4 ? '••••' : `${'•'.repeat(Math.min(value.length - 4, 8))}${value.slice(-4)}`;
 }
 
 function getStatusClass(status) {
@@ -1676,7 +1813,7 @@ const moduleOverviews = [
   },
   {
     title: 'Computer Graphics Lab',
-    subject: 'C++ / OpenGL / 3D WebGL',
+    subject: 'Native C++ / OpenGL coursework · browser-rendered demo',
     icon: '🎨',
     color: '#06b6d4',
     desc: 'Aircraft fuselage and seat geometry share a tested world-to-SVG coordinate map; projection matrices include numerical precision checks.',
@@ -1740,7 +1877,6 @@ function createJavaBooking() {
 
   javaBookings.value.unshift(newRecord);
   generateNewPNR();
-  bookedSeatsCount.value = Math.min(totalSeatsCount.value, bookedSeatsCount.value + 1);
   alert(`Ticket Confirmed!\nPNR: ${newRecord.pnr}\nPassenger: ${newRecord.passengerName}\nFlight: ${newRecord.flightNumber} | Seat: ${newRecord.seatNumber}`);
 }
 
@@ -1748,7 +1884,6 @@ function cancelJavaBooking(pnr) {
   const b = javaBookings.value.find(item => item.pnr === pnr);
   if (b) {
     b.status = 'CANCELLED';
-    bookedSeatsCount.value = Math.max(0, bookedSeatsCount.value - 1);
   }
 }
 
@@ -1805,19 +1940,14 @@ const overloadResults = computed(() => {
 
 // Swing Desktop Form Simulator
 const swingForm = ref({
-  flightNo: 'A101',
-  destination: 'Mumbai',
-  status: 'Delayed'
+  flightNo: 'DEMO-001',
+  destination: 'Example destination',
+  status: 'DEMO STATUS'
 });
 
-const swingTerminalOutput = ref(`Connected to MySQL: jdbc:mysql://localhost:3306/airline
-Flights table synced:
-  A101 -> Mumbai | Delayed
-  A102 -> Latur  | Delayed
-  103  -> Pune   | On Time
-  105  -> Pune   | On Time
-  125  -> Mumbai | On Time
-Ready for updates.`);
+const swingTerminalOutput = ref(`Local browser simulation data — no database connection
+  DEMO-001 -> Example destination | DEMO STATUS
+Ready for simulated updates.`);
 
 function handleSwingAdd() {
   swingTerminalOutput.value += `\n[INSERT] Added flight ${swingForm.value.flightNo} -> ${swingForm.value.destination} [${swingForm.value.status}]`;
@@ -1828,7 +1958,7 @@ function handleSwingUpdate() {
 }
 
 function handleSwingView() {
-  swingTerminalOutput.value += `\n[SELECT * FROM flights]:\n  101: BOM -> DEL [Boarding]\n  202: DEL -> BLR [On Time]\n  ${swingForm.value.flightNo}: -> ${swingForm.value.destination} [${swingForm.value.status}]`;
+  swingTerminalOutput.value += `\n[SIMULATED SELECT]:\n  DEMO-001 -> Example destination [DEMO STATUS]\n  ${swingForm.value.flightNo} -> ${swingForm.value.destination} [${swingForm.value.status}]`;
 }
 
 // -----------------------------------------------------------------------------
@@ -2268,7 +2398,6 @@ function executeSearchComparison() {
   const bTrace = [];
   let low = 0;
   let high = n - 1;
-  let step = 1;
   const t2 = performance.now();
 
   while (low <= high) {
@@ -2278,13 +2407,13 @@ function executeSearchComparison() {
     if (curr === target) {
       bFound = true;
       bIdx = mid;
-      bTrace.push(`Step ${step++}: Range [${low}..${high}], Mid = ${mid} ('${curr}') == Target -> FOUND!`);
+      bTrace.push(`Step ${bTrace.length + 1}: Range [${low}..${high}], Mid = ${mid} ('${curr}') == Target -> FOUND!`);
       break;
     } else if (curr < target) {
-      bTrace.push(`Step ${step++}: Range [${low}..${high}], Mid = ${mid} ('${curr}') < Target -> Search RIGHT [${mid + 1}..${high}]`);
+      bTrace.push(`Step ${bTrace.length + 1}: Range [${low}..${high}], Mid = ${mid} ('${curr}') < Target -> Search RIGHT [${mid + 1}..${high}]`);
       low = mid + 1;
     } else {
-      bTrace.push(`Step ${step++}: Range [${low}..${high}], Mid = ${mid} ('${curr}') > Target -> Search LEFT [${low}..${mid - 1}]`);
+      bTrace.push(`Step ${bTrace.length + 1}: Range [${low}..${high}], Mid = ${mid} ('${curr}') > Target -> Search LEFT [${low}..${mid - 1}]`);
       high = mid - 1;
     }
   }
@@ -2304,29 +2433,6 @@ executeSearchComparison();
 // =============================================================================
 // TAB 4: COA & COMPUTER ARCHITECTURE IMPLEMENTATION
 // =============================================================================
-const totalSeatsCount = ref(116);
-const bookedSeatsCount = ref(42);
-const blockedSeatsCount = ref(6);
-
-const occupancyPercentage = computed(() => {
-  if (totalSeatsCount.value === 0) return 0;
-  return Math.round((bookedSeatsCount.value / totalSeatsCount.value) * 100);
-});
-
-const occupancyStatus = computed(() => {
-  const pct = occupancyPercentage.value;
-  if (pct >= 90) return 'FULL';
-  if (pct >= 75) return 'RUNNING LOW';
-  return 'OPEN';
-});
-
-const occupancyStatusClass = computed(() => {
-  const s = occupancyStatus.value;
-  if (s === 'FULL') return 'status-red';
-  if (s === 'RUNNING LOW') return 'status-amber';
-  return 'status-green';
-});
-
 const seatRegisterBitmask = computed(() => {
   // Convert bookedSeatsCount into 16-bit binary string
   const n = bookedSeatsCount.value & 0xFFFF;
@@ -3081,7 +3187,11 @@ function handleMouseUp() {
 // LIFECYCLE HOOKS
 // =============================================================================
 onMounted(async () => {
-  await fetchSupabaseData();
+  await Promise.all([
+    loadFlights(),
+    authStore.isAdmin ? loadAdminOperations() : Promise.resolve(),
+    loadNativeDemo()
+  ]);
   initializeCgSeats();
 
   nextTick(() => {
@@ -3110,6 +3220,102 @@ onUnmounted(() => {
   color: #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   padding-bottom: 80px;
+}
+
+.flight-select-label,
+.admin-search-row {
+  display: grid;
+  gap: 8px;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.flight-select-label {
+  min-width: min(320px, 100%);
+}
+
+.api-seat-stats {
+  margin: 18px 0;
+}
+
+.auth-notice {
+  padding: 16px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.08);
+  color: #fde68a;
+}
+
+.auth-notice a,
+.operational-links a {
+  color: #7dd3fc;
+  font-weight: 700;
+}
+
+.admin-search-row {
+  margin: 20px 0 12px;
+  max-width: 520px;
+}
+
+.native-output-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+}
+
+.native-output-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #24415f;
+  border-radius: 10px;
+  background: rgba(8, 20, 34, 0.7);
+  overflow: auto;
+}
+
+.native-output-card h4 {
+  margin: 0 0 12px;
+  color: #e0f2fe;
+}
+
+.native-seat-map {
+  display: grid;
+  gap: 5px;
+}
+
+.native-seat-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 5px;
+}
+
+.native-seat-cell {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: #1e3a5f;
+  color: #bae6fd;
+  font: 0.7rem ui-monospace, monospace;
+}
+
+.native-record-list {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding-left: 18px;
+}
+
+.native-sort-output {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.operational-links {
+  margin-top: 16px;
 }
 
 .container {
@@ -3156,7 +3362,7 @@ onUnmounted(() => {
   border: 1px solid rgba(56, 189, 248, 0.25);
 }
 
-.supabase-live-tag {
+.api-live-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3169,7 +3375,7 @@ onUnmounted(() => {
   padding: 4px 10px;
 }
 
-.supabase-live-tag.connected {
+.api-live-tag.connected {
   color: #34d399;
   background: rgba(16, 185, 129, 0.12);
   border-color: rgba(16, 185, 129, 0.3);
@@ -3380,16 +3586,6 @@ onUnmounted(() => {
   padding: 2px 7px;
   border-radius: 4px;
   margin-left: 6px;
-}
-
-.badge-verified {
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  font-size: 12px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 999px;
 }
 
 /* Metric Cards */

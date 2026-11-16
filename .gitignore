@@ -10,6 +10,7 @@ package-lock.json
 *.o
 out/
 bin/
+airline-backend/bin/
 dist/
 java-oop/lib/*.jar
 !coa-nasm/out/

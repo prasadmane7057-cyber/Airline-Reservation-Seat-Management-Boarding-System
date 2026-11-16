@@ -23,6 +23,7 @@ public:
     SeatMap2D();
     void initializeSeatMap();
     int getSeatStatus(int row, int col);          // -1 if out of bounds
+    int getSeatStatusSnapshot(int row, int col) const;
     bool setSeatStatus(int row, int col, int status);
     std::string getSeatClass(int row);
     void printSeatMap();

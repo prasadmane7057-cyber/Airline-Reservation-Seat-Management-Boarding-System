@@ -2,8 +2,8 @@
   <div class="admin-bookings-view">
     <div class="page-top-actions">
       <div>
-        <h1 class="page-title mb-0">Global Reservations Monitor</h1>
-        <p class="page-subtitle">Track, verify, update, and manage all passenger bookings across the airline system.</p>
+        <h1 class="page-title mb-0">Reservation Records</h1>
+        <p class="page-subtitle">Review reservation fields and cancel eligible bookings. Payments are not configured.</p>
       </div>
     </div>
 
@@ -21,8 +21,9 @@
         <select v-model="statusFilter" class="form-select" @change="applyFilters">
           <option value="">All Booking Statuses</option>
           <option value="CONFIRMED">CONFIRMED</option>
+          <option value="WAITLISTED">WAITLISTED</option>
           <option value="CANCELLED">CANCELLED</option>
-          <option value="COMPLETED">COMPLETED</option>
+          <option value="BOARDED">BOARDED</option>
         </select>
       </div>
     </div>
@@ -31,7 +32,11 @@
     <div class="card table-card">
       <div v-if="loading" class="text-center py-32">
         <div class="spinner"></div>
-        <p>Loading global bookings from database...</p>
+        <p>Loading bookings from the database...</p>
+      </div>
+
+      <div v-else-if="adminStore.error" class="empty-state card" role="alert">
+        Could not load bookings: {{ adminStore.error }}
       </div>
 
       <div v-else class="table-responsive">
@@ -42,11 +47,10 @@
               <th>PNR</th>
               <th>Passenger</th>
               <th>Flight</th>
-              <th>Route</th>
-              <th>Seats</th>
+              <th>Destination</th>
+              <th>Seat</th>
               <th>Class</th>
-              <th>Total Fare</th>
-              <th>Payment</th>
+              <th>Fare</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -60,27 +64,19 @@
                 <div class="email-sub">{{ b.passenger_email }}</div>
               </td>
               <td><strong>{{ b.flight_number }}</strong></td>
-              <td>{{ b.from_code }} ➔ {{ b.to_code }}</td>
-              <td><span class="seat-pill">{{ b.seats || 'Assigned' }}</span></td>
-              <td><span class="badge" :class="'badge-' + (b.travel_class ? b.travel_class.toLowerCase().replace(' ', '') : 'economy')">{{ b.travel_class }}</span></td>
-              <td><strong>₹{{ (b.total_fare || 0).toLocaleString() }}</strong></td>
-              <td><span class="badge badge-paid">{{ b.payment_status || 'PAID' }}</span></td>
+              <td>{{ b.destination || 'Unavailable' }}</td>
+              <td><span class="seat-pill">{{ b.seat_number || 'Unavailable' }}</span></td>
+              <td>{{ b.travel_class }}</td>
+              <td><strong>₹{{ Number(b.fare).toLocaleString() }}</strong></td>
               <td><span class="badge" :class="'badge-' + b.booking_status.toLowerCase()">{{ b.booking_status }}</span></td>
               <td>
                 <div class="action-buttons">
-                  <button 
+                  <button
                     v-if="b.booking_status === 'CONFIRMED'"
-                    @click="cancelBooking(b)" 
+                    @click="cancelBooking(b)"
                     class="btn btn-danger btn-sm"
                   >
-                    Cancel & Refund
-                  </button>
-                  <button 
-                    v-if="b.booking_status === 'CONFIRMED'"
-                    @click="markCompleted(b)" 
-                    class="btn btn-outline btn-sm"
-                  >
-                    Complete
+                    Cancel
                   </button>
                 </div>
               </td>
@@ -116,7 +112,7 @@ async function applyFilters() {
 }
 
 async function cancelBooking(booking) {
-  if (confirm(`Cancel booking ${booking.pnr}? Seats will be released back into inventory and status set to REFUNDED.`)) {
+  if (confirm(`Cancel booking ${booking.pnr}? Its seat will be released. No payment or refund is processed.`)) {
     try {
       await adminStore.cancelBookingAdmin(booking.id);
     } catch (err) {
@@ -125,13 +121,6 @@ async function cancelBooking(booking) {
   }
 }
 
-async function markCompleted(booking) {
-  try {
-    await adminStore.updateBookingStatus(booking.id, { booking_status: 'COMPLETED' });
-  } catch (err) {
-    alert(err.message || 'Failed to update status.');
-  }
-}
 </script>
 
 <style scoped>

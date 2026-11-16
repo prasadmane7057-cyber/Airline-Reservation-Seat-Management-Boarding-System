@@ -5,84 +5,24 @@
       <div class="hero-backdrop"></div>
       <div class="container hero-content">
         <div class="hero-badge">
-          ✨ Premium Airline Reservation & Boarding Management
+          Airline Reservation & Boarding Project
         </div>
         <h1 class="hero-title">
           Fly Smarter. <span class="gradient-text">Travel Better.</span>
         </h1>
         <p class="hero-subtitle">
-          Experience seamless airline booking, real-time aircraft seat selection, authoritative fare computation, and instant digital boarding passes.
+          Browse the flight records currently available in the connected database.
         </p>
 
-        <!-- Flight Search Widget Card -->
         <div class="search-widget card">
-          <div class="search-tabs">
-            <button 
-              type="button" 
-              class="tab-btn" 
-              :class="{ active: tripType === 'one-way' }" 
-              @click="tripType = 'one-way'"
-            >
-              One Way
-            </button>
-            <button 
-              type="button" 
-              class="tab-btn" 
-              :class="{ active: tripType === 'round-trip' }" 
-              @click="tripType = 'round-trip'"
-            >
-              Round Trip
-            </button>
-          </div>
-
           <form @submit.prevent="handleSearch" class="search-form-grid">
             <div class="form-group">
-              <label class="form-label">From (Origin)</label>
-              <select v-model="form.from" class="form-select" :disabled="!airports.length" required>
-                <option value="" disabled>Select Departure Airport</option>
-                <option v-for="apt in airports" :key="apt.id" :value="apt.airport_code">
-                  {{ apt.city }} ({{ apt.airport_code }}) - {{ apt.airport_name }}
-                </option>
-              </select>
+              <label class="form-label" for="destination">Destination</label>
+              <input id="destination" v-model.trim="form.to" class="form-input" placeholder="Filter by exact destination (optional)" />
             </div>
-
             <div class="form-group">
-              <label class="form-label">To (Destination)</label>
-              <select v-model="form.to" class="form-select" :disabled="!airports.length" required>
-                <option value="" disabled>Select Arrival Airport</option>
-                <option v-for="apt in airports" :key="apt.id" :value="apt.airport_code">
-                  {{ apt.city }} ({{ apt.airport_code }}) - {{ apt.airport_name }}
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Departure Date</label>
-              <input type="date" v-model="form.date" class="form-input" :min="todayDate" required />
-            </div>
-
-            <div class="form-group" v-if="tripType === 'round-trip'">
-              <label class="form-label">Return Date</label>
-              <input type="date" v-model="form.returnDate" class="form-input" :min="form.date || todayDate" />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Passengers</label>
-              <select v-model="form.passengers" class="form-select">
-                <option :value="1">1 Passenger</option>
-                <option :value="2">2 Passengers</option>
-                <option :value="3">3 Passengers</option>
-                <option :value="4">4 Passengers</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Travel Class</label>
-              <select v-model="form.travelClass" class="form-select">
-                <option value="Economy">Economy Class</option>
-                <option value="Business">Business Class</option>
-                <option value="First Class">First Class</option>
-              </select>
+              <label class="form-label" for="flight-status">Status</label>
+              <input id="flight-status" v-model.trim="form.status" class="form-input" placeholder="Filter by exact status (optional)" />
             </div>
 
             <div class="form-submit-cell">
@@ -92,240 +32,112 @@
             </div>
           </form>
 
-          <div v-if="flightStore.airportError" class="validation-msg">
-            ⚠️ Airport options could not be loaded: {{ flightStore.airportError }}
-            <button type="button" class="btn btn-outline btn-sm" @click="loadAirports">Retry</button>
-          </div>
-
           <div v-if="validationError" class="validation-msg">
             ⚠️ {{ validationError }}
           </div>
+          <div v-if="flightStore.error" class="validation-msg" role="alert">
+            Could not load flights: {{ flightStore.error }}
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Popular Flight Routes -->
+    <!-- Flights supplied by the existing database -->
     <section class="section popular-routes container">
       <div class="section-header">
-        <h2 class="section-title">Popular Domestic Routes</h2>
-        <p class="section-desc">Handpicked daily flights connecting major metropolitan business and tourism hubs.</p>
+        <h2 class="section-title">Available Flight Records</h2>
+        <p class="section-desc">Only flight number, destination, status, and ID are shown because those are the fields available in the connected schema.</p>
       </div>
 
-      <div class="routes-grid">
-        <div class="route-card card" v-for="route in popularRoutes" :key="route.code">
-          <div class="route-img" :style="{ backgroundImage: `url(${route.image})` }">
-            <span class="route-badge">{{ route.tag }}</span>
-          </div>
+      <div v-if="flightStore.loading" class="card text-center py-48" role="status">Loading flights…</div>
+      <div v-else-if="flightStore.flights.length === 0" class="card text-center py-48">
+        No flight records match the current search.
+      </div>
+      <div v-else class="routes-grid">
+        <div class="route-card card" v-for="flight in flightStore.flights" :key="flight.id">
           <div class="route-info">
-            <div class="route-cities">
-              <span class="city-name">{{ route.fromCity }}</span>
-              <span class="route-arrow">✈</span>
-              <span class="city-name">{{ route.toCity }}</span>
-            </div>
+            <div class="route-cities">{{ flight.flight_number }}</div>
             <div class="route-meta">
-              <span>Flight: {{ route.flightNo }}</span>
-              <span>Duration: {{ route.duration }}</span>
+              <span>Destination: {{ flight.destination }}</span>
+              <span>Status: {{ flight.status }}</span>
             </div>
             <div class="route-footer">
-              <div class="fare-tag">
-                <span class="from-txt">Starting from</span>
-                <span class="fare-val">₹{{ route.fare.toLocaleString() }}</span>
-              </div>
-              <button @click="quickBook(route)" class="btn btn-outline btn-sm">Book Flight</button>
+              <span>Flight ID: {{ flight.id }}</span>
+              <button @click="viewFlight(flight)" class="btn btn-outline btn-sm">View Flight</button>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Why Choose SkyWings -->
     <section class="section features-section">
       <div class="container">
         <div class="section-header">
-          <h2 class="section-title">Engineered for Reliability</h2>
-          <p class="section-desc">State-of-the-art features guaranteeing seamless reservation, seating, and boarding.</p>
+          <h2 class="section-title">Project Capabilities and Requirements</h2>
+          <p class="section-desc">Unavailable infrastructure is identified rather than represented as live airline data.</p>
         </div>
 
         <div class="features-grid">
           <div class="feature-card card">
             <div class="feature-icon">💺</div>
-            <h3>Visual Seat Matrix</h3>
-            <p>Interactive cabin grid displaying real-time available, selected, occupied, and blocked seats with class separation.</p>
+            <h3>Seat inventory</h3>
+            <p>The seat screen uses database seat records. No seat map is generated when inventory is absent.</p>
           </div>
 
           <div class="feature-card card">
             <div class="feature-icon">🎫</div>
-            <h3>Guaranteed Unique PNR</h3>
-            <p>Cryptographically collision-free 6-character PNR generation ensuring instantaneous retrieval and verification.</p>
+            <h3>Reservation schema</h3>
+            <p>Passenger, seat, and booking tables require the reviewed migration to be applied before reservations are available.</p>
           </div>
 
           <div class="feature-card card">
             <div class="feature-icon">🛡️</div>
-            <h3>Atomic Seat Locking</h3>
-            <p>Transactional database consistency preventing race conditions and duplicate bookings under high concurrency.</p>
+            <h3>Flight search</h3>
+            <p>Search filters only the supported destination and status fields from the existing flights table.</p>
           </div>
 
           <div class="feature-card card">
             <div class="feature-icon">📱</div>
-            <h3>Digital Boarding & QR</h3>
-            <p>Real-time boarding lifecycle status: Not Checked In ➔ Checked In ➔ Boarding ➔ Boarded with pass simulation.</p>
+            <h3>Payment</h3>
+            <p>No payment provider is configured, so the application does not collect card data or claim a payment succeeded.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Live Performance Stats -->
-    <section class="section stats-banner">
-      <div class="container stats-grid">
-        <div class="stat-item">
-          <div class="stat-number">99.8%</div>
-          <div class="stat-label">On-Time Performance</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number">100%</div>
-          <div class="stat-label">ACID Seat Allocation</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number">&lt; 100ms</div>
-          <div class="stat-label">Search API Response</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number">24 / 7</div>
-          <div class="stat-label">Automated Web Check-in</div>
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFlightStore } from '../stores/flightStore';
+
+defineOptions({ name: 'HomePage' });
 
 const router = useRouter();
 const flightStore = useFlightStore();
 
-const tripType = ref('one-way');
 const validationError = ref('');
-
-function localDateAfterDays(days) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-const todayDate = localDateAfterDays(0);
-
 const form = ref({
-  from: 'BOM',
-  to: 'DEL',
-  date: localDateAfterDays(1),
-  returnDate: '',
-  passengers: 1,
-  travelClass: 'Economy'
+  to: '',
+  status: ''
 });
 
-const airports = computed(() => flightStore.airports);
+onMounted(() => flightStore.searchFlights().catch(() => {}));
 
-const popularRoutes = [
-  {
-    code: 'BOM-DEL',
-    from: 'BOM',
-    to: 'DEL',
-    fromCity: 'Mumbai',
-    toCity: 'New Delhi',
-    flightNo: 'AI101',
-    duration: '2h 15m',
-    fare: 4500,
-    tag: 'Daily Express',
-    image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=600&q=80'
-  },
-  {
-    code: 'DEL-BLR',
-    from: 'DEL',
-    to: 'BLR',
-    fromCity: 'New Delhi',
-    toCity: 'Bengaluru',
-    flightNo: 'AI202',
-    duration: '2h 45m',
-    fare: 5200,
-    tag: 'Silicon Connect',
-    image: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=600&q=80'
-  },
-  {
-    code: 'PNQ-HYD',
-    from: 'PNQ',
-    to: 'HYD',
-    fromCity: 'Pune',
-    toCity: 'Hyderabad',
-    flightNo: 'AI303',
-    duration: '1h 20m',
-    fare: 3800,
-    tag: 'Quick Hop',
-    image: 'https://images.unsplash.com/photo-1600100397608-f010e4250000?auto=format&fit=crop&w=600&q=80'
-  },
-  {
-    code: 'BOM-BLR',
-    from: 'BOM',
-    to: 'BLR',
-    fromCity: 'Mumbai',
-    toCity: 'Bengaluru',
-    flightNo: 'AI404',
-    duration: '1h 45m',
-    fare: 4800,
-    tag: 'Business Nonstop',
-    image: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?auto=format&fit=crop&w=600&q=80'
-  }
-];
-
-onMounted(async () => {
-  try {
-    await flightStore.fetchAirports();
-  } catch {
-    // The store exposes the load error to the form so the user can retry.
-  }
-});
-
-function loadAirports() {
-  flightStore.fetchAirports().catch(() => {});
-}
-
-function handleSearch() {
-  validationError.value = '';
-
-  if (form.value.from === form.value.to) {
-    validationError.value = 'Departure and arrival airports cannot be identical.';
-    return;
-  }
-
-  flightStore.setSearchParams({
-    from: form.value.from,
+async function handleSearch() {
+  const params = {
     to: form.value.to,
-    date: form.value.date,
-    passengers: form.value.passengers,
-    travelClass: form.value.travelClass
-  });
-
-  router.push({
-    path: '/flights',
-    query: {
-      from: form.value.from,
-      to: form.value.to,
-      date: form.value.date,
-      passengers: form.value.passengers,
-      travelClass: form.value.travelClass
-    }
-  });
+    status: form.value.status
+  };
+  validationError.value = '';
+  flightStore.setSearchParams(params);
+  router.push({ path: '/flights', query: params });
 }
 
-function quickBook(route) {
-  form.value.from = route.from;
-  form.value.to = route.to;
-  handleSearch();
+function viewFlight(flight) {
+  router.push(`/flights/${flight.id}`);
 }
 </script>
 

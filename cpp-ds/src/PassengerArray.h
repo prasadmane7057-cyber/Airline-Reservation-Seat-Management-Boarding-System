@@ -32,6 +32,7 @@ public:
     bool updatePassenger(const std::string &pnr, const std::string &field, const std::string &newValue);
     bool deletePassenger(const std::string &pnr);
     bool getPassengerByPNR(const std::string &pnr, Passenger &passenger) const;
+    bool getPassengerAt(int index, Passenger &passenger) const;
     void searchPassenger(const std::string &key);
     int getCount() const;
 };

@@ -1,29 +1,35 @@
-const { bookingSelect, flattenBooking } = require('../lib/query');
+const { enrichBookings } = require('./bookingController');
 
 async function getDashboardStats(req, res, next) {
   try {
     const client = req.supabase;
     const [
-      { count: totalFlights, error: flightsError },
-      { count: totalPassengers, error: passengersError },
+      { data: flights, count: totalFlights, error: flightsError },
+      { data: passengers, count: totalPassengers, error: passengersError },
       { data: bookings, error: bookingsError },
-      { data: flights, error: seatsError },
-      { data: boarding, error: boardingError }
+      { data: seats, error: seatsError }
     ] = await Promise.all([
-      client.from('flights').select('id', { count: 'exact', head: true }).not('departure_time', 'is', null),
-      client.from('users').select('id', { count: 'exact', head: true }).eq('role', 'passenger'),
-      client.from('bookings').select(bookingSelect()).order('booking_date', { ascending: false }),
-      client.from('flights').select('total_seats, available_seats').not('departure_time', 'is', null),
-      client.from('boarding').select('boarding_status')
+      client.from('flights')
+        .select('id, flight_number, destination, status, created_at', { count: 'exact' }),
+      client.from('passengers')
+        .select('id', { count: 'exact', head: true }),
+      client.from('bookings')
+        .select('*')
+        .order('booking_date', { ascending: false })
+        .limit(100),
+      client.from('seats')
+        .select('seat_status')
     ]);
-    for (const error of [flightsError, passengersError, bookingsError, seatsError, boardingError]) {
+    for (const error of [flightsError, passengersError, bookingsError, seatsError]) {
       if (error) throw error;
     }
 
-    const confirmed = bookings.filter(booking => booking.booking_status === 'CONFIRMED');
-    const cancelled = bookings.filter(booking => booking.booking_status === 'CANCELLED');
-    const totalSeats = flights.reduce((sum, flight) => sum + Number(flight.total_seats || 0), 0);
-    const availableSeats = flights.reduce((sum, flight) => sum + Number(flight.available_seats || 0), 0);
+    const enrichedBookings = await enrichBookings(client, bookings || []);
+    const confirmed = enrichedBookings.filter(booking => booking.booking_status === 'CONFIRMED');
+    const cancelled = enrichedBookings.filter(booking => booking.booking_status === 'CANCELLED');
+    const totalSeats = (seats || []).length;
+    const availableSeats = (seats || []).filter(seat => seat.seat_status === 'AVAILABLE').length;
+    const bookedSeats = (seats || []).filter(seat => seat.seat_status === 'BOOKED').length;
     const classCounts = new Map();
     confirmed.forEach(booking => {
       classCounts.set(booking.travel_class, (classCounts.get(booking.travel_class) || 0) + 1);
@@ -32,20 +38,21 @@ async function getDashboardStats(req, res, next) {
     return res.json({
       success: true,
       stats: {
-        totalFlights: totalFlights || 0,
-        totalPassengers: totalPassengers || 0,
-        totalBookings: bookings.length,
+        totalFlights: totalFlights || (flights || []).length,
+        totalPassengers: totalPassengers || (passengers || []).length,
+        totalBookings: enrichedBookings.length,
         confirmedBookings: confirmed.length,
         cancelledBookings: cancelled.length,
-        totalRevenue: confirmed.reduce((sum, booking) => sum + Number(booking.total_fare || 0), 0),
+        confirmedFareValue: confirmed.reduce((sum, booking) => sum + Number(booking.fare), 0),
         availableSeats,
-        boardedPassengers: boarding.filter(row => row.boarding_status === 'BOARDED').length,
-        occupancyRate: totalSeats
-          ? Math.max(0, Math.min(100, Math.round(((totalSeats - availableSeats) / totalSeats) * 100)))
+        boardedPassengers: enrichedBookings.filter(booking => booking.booking_status === 'BOARDED').length,
+        seatOccupancyRate: totalSeats
+          ? Math.round((bookedSeats / totalSeats) * 100)
           : 0,
         classDistribution: [...classCounts].map(([travel_class, count]) => ({ travel_class, count })),
-        recentBookings: bookings.slice(0, 6).map(flattenBooking)
-      }
+        recentBookings: enrichedBookings.slice(0, 6)
+      },
+      flights: flights || []
     });
   } catch (err) {
     next(err);

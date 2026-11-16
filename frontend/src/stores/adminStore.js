@@ -1,13 +1,14 @@
 import { defineStore } from 'pinia';
-import { adminApi, flightApi, airportApi, bookingApi, boardingApi, passengerApi } from '../services/api';
+import { adminApi, flightApi, bookingApi, boardingApi, passengerApi } from '../services/api';
 
 export const useAdminStore = defineStore('admin', {
   state: () => ({
     stats: null,
     flights: [],
-    airports: [],
     bookings: [],
     passengers: [],
+    operationsLoading: false,
+    operationsError: null,
     boardingManifest: [],
     selectedFlightForBoarding: null,
     loading: false,
@@ -15,8 +16,34 @@ export const useAdminStore = defineStore('admin', {
   }),
 
   actions: {
+    async fetchOperationalData() {
+      this.operationsLoading = true;
+      this.operationsError = null;
+      try {
+        const [statsResponse, bookingsResponse, passengersResponse] = await Promise.all([
+          adminApi.getDashboardStats(),
+          bookingApi.getAllBookings(),
+          passengerApi.getPassengers()
+        ]);
+        this.stats = statsResponse.stats || null;
+        this.bookings = Array.isArray(bookingsResponse.bookings) ? bookingsResponse.bookings : [];
+        this.passengers = Array.isArray(passengersResponse.passengers) ? passengersResponse.passengers : [];
+        return {
+          stats: this.stats,
+          bookings: this.bookings,
+          passengers: this.passengers
+        };
+      } catch (err) {
+        this.operationsError = err.message || 'Unable to load operational admin data.';
+        throw err;
+      } finally {
+        this.operationsLoading = false;
+      }
+    },
+
     async fetchDashboardStats() {
       this.loading = true;
+      this.error = null;
       try {
         const res = await adminApi.getDashboardStats();
         this.stats = res.stats;
@@ -30,6 +57,7 @@ export const useAdminStore = defineStore('admin', {
 
     async fetchAdminFlights(params = {}) {
       this.loading = true;
+      this.error = null;
       try {
         const res = await flightApi.getFlights(params);
         this.flights = res.flights || [];
@@ -58,35 +86,9 @@ export const useAdminStore = defineStore('admin', {
       return res;
     },
 
-    async fetchAirports() {
-      try {
-        const res = await airportApi.getAirports();
-        this.airports = res.airports || [];
-      } catch (err) {
-        this.error = err.message;
-      }
-    },
-
-    async createAirport(data) {
-      const res = await airportApi.createAirport(data);
-      await this.fetchAirports();
-      return res;
-    },
-
-    async updateAirport(id, data) {
-      const res = await airportApi.updateAirport(id, data);
-      await this.fetchAirports();
-      return res;
-    },
-
-    async deleteAirport(id) {
-      const res = await airportApi.deleteAirport(id);
-      await this.fetchAirports();
-      return res;
-    },
-
     async fetchAllBookings(params = {}) {
       this.loading = true;
+      this.error = null;
       try {
         const res = await bookingApi.getAllBookings(params);
         this.bookings = res.bookings || [];
@@ -111,6 +113,7 @@ export const useAdminStore = defineStore('admin', {
 
     async fetchPassengers() {
       this.loading = true;
+      this.error = null;
       try {
         const res = await passengerApi.getPassengers();
         this.passengers = res.passengers || [];
@@ -129,6 +132,7 @@ export const useAdminStore = defineStore('admin', {
 
     async fetchBoardingManifest(flightId) {
       this.loading = true;
+      this.error = null;
       try {
         const res = await boardingApi.getBoardingByFlight(flightId);
         this.boardingManifest = res.manifest || [];

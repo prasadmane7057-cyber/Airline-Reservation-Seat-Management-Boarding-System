@@ -4,8 +4,11 @@
   "description": "Airline Reservation, Seat Management & Boarding System Backend",
   "main": "src/server.js",
   "scripts": {
+    "build:native": "node scripts/build-native.js",
+    "test": "npm run build:native && node --test",
     "start": "node src/server.js",
-    "dev": "node src/server.js"
+    "dev": "node src/server.js",
+    "test:cpp-demo": "npm run build:native && node --test test/cppDemo.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

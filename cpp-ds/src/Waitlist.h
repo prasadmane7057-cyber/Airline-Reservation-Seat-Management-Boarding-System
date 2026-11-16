@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <queue>
 #include <string>
+#include <vector>
 
 class Waitlist {
 private:
@@ -17,6 +18,7 @@ public:
     bool cancelBooking(const std::string &pnr, PassengerArray &bookedPassengers, SeatMap2D &seatMap);
     bool empty() const;
     std::size_t size() const;
+    std::vector<Passenger> snapshot() const;
     void display() const;
 };
 

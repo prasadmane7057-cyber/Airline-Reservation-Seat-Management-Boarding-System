@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { bookingApi } from '../services/api';
+import { bookingApi, passengerApi } from '../services/api';
 
 export const useBookingStore = defineStore('booking', {
   state: () => ({
@@ -7,14 +7,13 @@ export const useBookingStore = defineStore('booking', {
       flight: null,
       travelClass: 'Economy',
       seats: [],
-      passengers: [], // [{ fullName, age, gender, passportId, seatNumber, email, phone }]
+      passengers: [], // [{ fullName, seatNumber, email, phone }]
       fare: {
         baseFare: 0,
         taxAmount: 0,
-        discountAmount: 500,
+        discountAmount: 0,
         totalFare: 0
       },
-      paymentMethod: 'Credit Card'
     },
     currentBooking: null,
     myBookings: [],
@@ -29,9 +28,6 @@ export const useBookingStore = defineStore('booking', {
       this.draft.seats = [];
       this.draft.passengers = Array.from({ length: passengerCount }, () => ({
         fullName: '',
-        age: '',
-        gender: 'Male',
-        passportId: '',
         seatNumber: '',
         phone: '',
         email: ''
@@ -57,37 +53,49 @@ export const useBookingStore = defineStore('booking', {
     calculateFare() {
       if (!this.draft.flight) return;
 
-      let baseUnitPrice = this.draft.flight.economy_fare;
-      if (this.draft.travelClass === 'Business') {
-        baseUnitPrice = this.draft.flight.business_fare;
-      } else if (this.draft.travelClass === 'First Class') {
-        baseUnitPrice = this.draft.flight.first_class_fare;
+      const fareByClass = {
+        Economy: 5000,
+        Business: 10000,
+        'First Class': 20000
+      };
+      const baseUnitPrice = fareByClass[this.draft.travelClass];
+      if (baseUnitPrice === undefined) {
+        throw new Error('A supported travel class is required to calculate the academic fare.');
       }
 
       const count = Math.max(1, this.draft.seats.length || this.draft.passengers.length || 1);
       const totalBase = Math.round(baseUnitPrice * count * 100) / 100;
-      const tax = Math.round(totalBase * 0.18 * 100) / 100;
-      const discount = 500;
-      const total = Math.round((totalBase + tax - discount) * 100) / 100;
 
       this.draft.fare = {
         baseFare: totalBase,
-        taxAmount: tax,
-        discountAmount: discount,
-        totalFare: total
+        taxAmount: 0,
+        discountAmount: 0,
+        totalFare: totalBase
       };
     },
 
-    async confirmBooking(paymentMethod = 'Credit Card') {
+    async confirmBooking() {
       this.loading = true;
       this.error = null;
       try {
+        if (this.draft.passengers.length !== 1 || this.draft.seats.length !== 1) {
+          throw new Error('The current reservation API supports one passenger and one seat per booking.');
+        }
+        const seat = this.draft.seats[0];
+        if (!seat.id) throw new Error('The selected seat is not backed by a database seat record.');
+        const passenger = this.draft.passengers[0];
+        const { passenger: profile } = await passengerApi.getMine();
+        if (!profile?.id) throw new Error('A passenger profile is not linked to this account.');
+        await passengerApi.update(profile.id, {
+          fullName: passenger.fullName,
+          email: passenger.email,
+          phone: passenger.phone || ''
+        });
         const payload = {
           flightId: this.draft.flight.id,
+          passengerId: profile.id,
+          seatId: seat.id,
           travelClass: this.draft.travelClass,
-          passengers: this.draft.passengers,
-          paymentMethod: paymentMethod,
-          customDiscount: this.draft.fare.discountAmount
         };
 
         const res = await bookingApi.createBooking(payload);

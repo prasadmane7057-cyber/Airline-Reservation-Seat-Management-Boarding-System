@@ -3,29 +3,30 @@
     <div class="container-narrow">
       <div v-if="loading" class="card text-center py-48">
         <div class="spinner"></div>
-        <p>Loading confirmed booking details & generating ticket...</p>
+        <p>Loading reservation details...</p>
+      </div>
+
+      <div v-else-if="errorMessage" class="card text-center py-48" role="alert">
+        {{ errorMessage }}
       </div>
 
       <div v-else-if="booking" class="confirmation-container">
-        <!-- Success Banner -->
         <div class="success-banner card">
-          <div class="success-icon">✓</div>
-          <h1 class="success-title">Booking Confirmed!</h1>
+          <div class="success-icon">{{ booking.booking_status === 'CONFIRMED' ? '✓' : 'i' }}</div>
+          <h1 class="success-title">Reservation {{ booking.booking_status }}</h1>
           <p class="success-subtitle">
-            Your flight has been reserved and ticket issued. Your PNR is 
+            Payment has not been processed. PNR:
             <span class="pnr-highlight">{{ booking.pnr }}</span>
           </p>
         </div>
 
-        <!-- Printable E-Ticket View -->
         <div class="ticket-card card ticket-print-view" id="printableTicket">
-          <!-- Ticket Header -->
           <div class="ticket-header">
             <div class="ticket-brand">
               <span class="logo-icon">✈</span>
               <div>
-                <div class="airline-name">SkyWings Airlines</div>
-                <div class="ticket-doc-type">ELECTRONIC TICKET & RECEIPT</div>
+                <div class="airline-name">Airline Reservation Project</div>
+                <div class="ticket-doc-type">RESERVATION RECORD</div>
               </div>
             </div>
 
@@ -35,84 +36,46 @@
             </div>
           </div>
 
-          <!-- Route & Schedule Row -->
           <div class="ticket-route-grid">
             <div class="ticket-point">
-              <span class="t-label">FROM</span>
-              <span class="t-city">{{ booking.from_city }} ({{ booking.from_code }})</span>
-              <span class="t-airport">{{ booking.from_name }}</span>
-              <span class="t-time">{{ formatTime(booking.departure_time) }}</span>
-              <span class="t-date">{{ formatDate(booking.departure_time) }}</span>
+              <span class="t-label">FLIGHT</span>
+              <span class="t-city">{{ booking.flight_number || 'Unavailable' }}</span>
+              <span class="t-airport">Destination: {{ booking.destination || 'Unavailable' }}</span>
             </div>
 
             <div class="ticket-flight-center">
-              <span class="t-flight-no">Flight {{ booking.flight_number }}</span>
-              <div class="t-line">✈ ➔</div>
+              <span class="t-flight-no">PNR {{ booking.pnr }}</span>
+              <div class="t-line">Reservation</div>
               <span class="t-class badge" :class="'badge-' + (booking.travel_class ? booking.travel_class.toLowerCase().replace(' ', '') : 'economy')">
                 {{ booking.travel_class }}
               </span>
             </div>
 
             <div class="ticket-point text-right">
-              <span class="t-label">TO</span>
-              <span class="t-city">{{ booking.to_city }} ({{ booking.to_code }})</span>
-              <span class="t-airport">{{ booking.to_name }}</span>
-              <span class="t-time">{{ formatTime(booking.arrival_time) }}</span>
-              <span class="t-date">{{ formatDate(booking.arrival_time) }}</span>
+              <span class="t-label">SEAT</span>
+              <span class="t-city">{{ booking.seat_number || 'Unavailable' }}</span>
+              <span class="t-airport">Status: {{ booking.booking_status }}</span>
             </div>
           </div>
 
-          <!-- Passenger & Seat Table -->
           <div class="passenger-table-section">
-            <h4 class="section-title-sm">PASSENGER DETAILS & SEAT ALLOCATIONS</h4>
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Passenger Name</th>
-                  <th>Age / Gender</th>
-                  <th>Passport / ID</th>
-                  <th>Seat Number</th>
-                  <th>Class</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="p in booking.passengers" :key="p.id">
-                  <td><strong>{{ p.full_name }}</strong></td>
-                  <td>{{ p.age }} yrs / {{ p.gender }}</td>
-                  <td>{{ p.passport_id || 'N/A' }}</td>
-                  <td><span class="seat-badge-pill">{{ p.seat_number }}</span></td>
-                  <td>{{ p.travel_class }}</td>
-                  <td><span class="badge badge-confirmed">Confirmed</span></td>
-                </tr>
-              </tbody>
-            </table>
+            <h4 class="section-title-sm">PASSENGER</h4>
+            <p><strong>{{ booking.passenger_name || booking.passenger?.full_name || 'Unavailable' }}</strong></p>
+            <p>{{ booking.passenger_email || booking.passenger?.email || '' }}</p>
           </div>
 
-          <!-- Payment Summary Footer -->
           <div class="ticket-footer-grid">
-            <div class="payment-meta">
-              <div><strong>Payment Status:</strong> <span class="badge badge-confirmed">{{ booking.payment_status }}</span></div>
-              <div><strong>Transaction ID:</strong> {{ booking.transaction_id || 'TXN-SIMULATED-SUCCESS' }}</div>
-              <div><strong>Payment Method:</strong> {{ booking.payment_method || 'Credit Card' }}</div>
-            </div>
-
-            <div class="fare-total-box">
-              <div class="fare-row"><span>Base Fare:</span> <span>₹{{ (booking.base_fare || 0).toLocaleString() }}</span></div>
-              <div class="fare-row"><span>Taxes & Fees:</span> <span>₹{{ (booking.tax_amount || 0).toLocaleString() }}</span></div>
-              <div class="fare-row"><span>Discount:</span> <span>- ₹{{ (booking.discount_amount || 0).toLocaleString() }}</span></div>
-              <div class="fare-row total-row"><span>Total Paid:</span> <span class="total-cost">₹{{ (booking.total_fare || 0).toLocaleString() }}</span></div>
-            </div>
+            <p><strong>Payment:</strong> Not processed; no payment provider is configured.</p>
+            <p><strong>Fare:</strong> ₹{{ Number(booking.fare || 0).toLocaleString() }} (recorded reservation fare, not a receipt)</p>
           </div>
         </div>
 
-        <!-- Action Buttons (Hidden during Print) -->
         <div class="confirmation-actions no-print">
           <button @click="printTicket" class="btn btn-outline btn-lg">
-            🖨️ Print / Download Ticket
+            🖨️ Print Reservation Record
           </button>
-          <router-link :to="'/boarding-pass?pnr=' + booking.pnr" class="btn btn-primary btn-lg">
-            📱 View Boarding Pass
+          <router-link v-if="['CONFIRMED', 'BOARDED'].includes(booking.booking_status)" :to="'/boarding-pass?pnr=' + booking.pnr" class="btn btn-primary btn-lg">
+            View Check-In Status
           </router-link>
           <router-link to="/my-bookings" class="btn btn-secondary btn-lg">
             Go to My Bookings ➔
@@ -133,13 +96,14 @@ const bookingStore = useBookingStore();
 
 const booking = ref(null);
 const loading = ref(true);
+const errorMessage = ref('');
 
 onMounted(async () => {
   const pnr = route.params.pnr;
   try {
     booking.value = await bookingStore.fetchBookingDetails(pnr);
   } catch (err) {
-    console.error(err);
+    errorMessage.value = err.message || 'Could not load this reservation.';
   } finally {
     loading.value = false;
   }
@@ -149,17 +113,6 @@ function printTicket() {
   window.print();
 }
 
-function formatTime(dateTimeStr) {
-  if (!dateTimeStr) return '';
-  const d = new Date(dateTimeStr);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-}
-
-function formatDate(dateTimeStr) {
-  if (!dateTimeStr) return '';
-  const d = new Date(dateTimeStr);
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-}
 </script>
 
 <style scoped>

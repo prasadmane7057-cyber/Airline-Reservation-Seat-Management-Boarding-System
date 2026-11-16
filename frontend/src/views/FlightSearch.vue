@@ -1,113 +1,42 @@
 <template>
   <div class="search-page page-wrapper">
     <div class="container">
-      <!-- Search Filter Bar -->
       <div class="search-bar-card card">
         <form @submit.prevent="executeSearch" class="search-bar-grid">
           <div class="form-group mb-0">
-            <label class="form-label">From</label>
-            <select v-model="filters.from" class="form-select">
-              <option value="">All Origins</option>
-              <option v-for="apt in flightStore.airports" :key="apt.id" :value="apt.airport_code">
-                {{ apt.city }} ({{ apt.airport_code }})
-              </option>
-            </select>
+            <label class="form-label" for="destination-filter">Destination</label>
+            <input id="destination-filter" v-model.trim="filters.to" class="form-input" placeholder="Exact destination (optional)" />
           </div>
 
           <div class="form-group mb-0">
-            <label class="form-label">To</label>
-            <select v-model="filters.to" class="form-select">
-              <option value="">All Destinations</option>
-              <option v-for="apt in flightStore.airports" :key="apt.id" :value="apt.airport_code">
-                {{ apt.city }} ({{ apt.airport_code }})
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group mb-0">
-            <label class="form-label">Date</label>
-            <input type="date" v-model="filters.date" class="form-input" />
-          </div>
-
-          <div class="form-group mb-0">
-            <label class="form-label">Class</label>
-            <select v-model="filters.travelClass" class="form-select">
-              <option value="Economy">Economy</option>
-              <option value="Business">Business</option>
-              <option value="First Class">First Class</option>
-            </select>
-          </div>
-
-          <div class="form-group mb-0">
-            <label class="form-label">Sort By</label>
-            <select v-model="filters.sortBy" class="form-select" @change="executeSearch">
-              <option value="departure">Departure Time</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-            </select>
+            <label class="form-label" for="status-filter">Status</label>
+            <input id="status-filter" v-model.trim="filters.status" class="form-input" placeholder="Exact status (optional)" />
           </div>
 
           <div class="search-action-cell">
-            <button type="submit" class="btn btn-primary btn-full search-action-btn">
-              Filter Flights
-            </button>
+            <button type="submit" class="btn btn-primary btn-full search-action-btn">Search Flights</button>
           </div>
         </form>
       </div>
 
-      <div v-if="flightStore.airportError" class="empty-state card" role="alert">
-        <p>Airport options could not be loaded: {{ flightStore.airportError }}</p>
-        <button @click="loadAirports" class="btn btn-outline btn-sm mt-16">
-          Retry airport loading
-        </button>
-      </div>
-
-      <!-- Main Content Layout -->
       <div class="results-layout">
-        <!-- Sidebar Filters -->
         <aside class="filter-sidebar card">
-          <h3 class="sidebar-title">Refine Results</h3>
-
-          <div class="filter-block">
-            <label class="filter-label">Max Price: ₹{{ maxPriceFilter.toLocaleString() }}</label>
-            <input 
-              type="range" 
-              v-model.number="maxPriceFilter" 
-              min="3000" 
-              max="30000" 
-              step="500" 
-              class="range-slider" 
-              @change="executeSearch"
-            />
-            <div class="range-labels">
-              <span>₹3,000</span>
-              <span>₹30,000</span>
-            </div>
-          </div>
-
-          <div class="filter-block">
-            <label class="filter-label">Flight Status</label>
-            <div class="checkbox-group">
-              <label class="checkbox-item">
-                <input type="radio" value="" v-model="filters.status" @change="executeSearch" />
-                <span>All Statuses</span>
-              </label>
-              <label class="checkbox-item">
-                <input type="radio" value="SCHEDULED" v-model="filters.status" @change="executeSearch" />
-                <span>Scheduled</span>
-              </label>
-            </div>
-          </div>
+          <h3 class="sidebar-title">Academic base fares</h3>
+          <p>These project rates are not flight-specific and are not a payment quote.</p>
+          <label class="form-label" for="travel-class">Travel class</label>
+          <select id="travel-class" v-model="filters.travelClass" class="form-select">
+            <option value="Economy">Economy — ₹5,000</option>
+            <option value="Business">Business — ₹10,000</option>
+            <option value="First Class">First Class — ₹20,000</option>
+          </select>
+          <p class="mt-16">Schedule, origin, aircraft, and availability are not present in the current flight schema.</p>
         </aside>
 
-        <!-- Flights List -->
         <section class="results-content">
           <div v-if="flightStore.error" class="empty-state card" role="alert">
             <h3>Could not load flights</h3>
             <p>{{ flightStore.error }}</p>
-            <button @click="executeSearch" class="btn btn-outline btn-sm mt-16">
-              Retry
-            </button>
+            <button @click="executeSearch" class="btn btn-outline btn-sm mt-16">Retry</button>
           </div>
 
           <div class="results-header">
@@ -119,101 +48,62 @@
 
           <div v-if="flightStore.loading" class="loading-state card">
             <div class="spinner"></div>
-            <p>Scanning flight schedules & seat maps...</p>
+            <p>Loading flight records...</p>
           </div>
 
           <div v-else-if="flights.length === 0 && !flightStore.error" class="empty-state card">
             <div class="empty-icon">✈️</div>
             <h3>No flights found matching your criteria</h3>
-            <p>Try changing the departure airport, destination, or date filter.</p>
-            <button @click="resetFilters" class="btn btn-outline btn-sm mt-16">
-              Reset Filters
-            </button>
+            <p>Try changing the destination or status filter.</p>
+            <button @click="resetFilters" class="btn btn-outline btn-sm mt-16">Reset Filters</button>
           </div>
 
           <div v-else class="flight-cards-list">
             <div class="flight-card card" v-for="flight in flights" :key="flight.id">
               <div class="flight-card-main">
-                <!-- Flight Header -->
                 <div class="flight-top">
                   <div class="airline-brand">
                     <span class="flight-icon">✈</span>
                     <div>
                       <span class="flight-no">{{ flight.flight_number }}</span>
-                      <span class="aircraft-name">{{ flight.aircraft_model || 'Boeing 737' }}</span>
+                      <span class="aircraft-name">Flight ID: {{ flight.id }}</span>
                     </div>
                   </div>
-                  <span class="badge" :class="'badge-' + flight.status.toLowerCase()">
-                    {{ flight.status }}
+                  <span class="badge" :class="'badge-' + String(flight.status || 'unknown').toLowerCase()">
+                    {{ flight.status || 'Unknown status' }}
                   </span>
                 </div>
 
-                <!-- Schedule Row -->
                 <div class="flight-schedule">
                   <div class="time-block">
-                    <div class="time-val">{{ formatTime(flight.departure_time) }}</div>
-                    <div class="airport-code">{{ flight.from_code }}</div>
-                    <div class="city-name">{{ flight.from_city }}</div>
+                    <div class="time-val">Destination</div>
+                    <div class="airport-code">{{ flight.destination }}</div>
                   </div>
 
                   <div class="duration-path">
-                    <span class="duration-text">{{ flight.duration }}</span>
                     <div class="flight-line">
                       <span class="line-dot start"></span>
                       <span class="line-plane">✈</span>
                       <span class="line-dot end"></span>
                     </div>
-                    <span class="stop-text">Non-stop</span>
+                    <span class="stop-text">No schedule data</span>
                   </div>
 
                   <div class="time-block right-align">
-                    <div class="time-val">{{ formatTime(flight.arrival_time) }}</div>
-                    <div class="airport-code">{{ flight.to_code }}</div>
-                    <div class="city-name">{{ flight.to_city }}</div>
+                    <div class="time-val">Status</div>
+                    <div class="airport-code">{{ flight.status || 'Unknown' }}</div>
                   </div>
                 </div>
 
-                <!-- Date & Seats Row -->
                 <div class="flight-sub-info">
-                  <span class="date-chip">📅 {{ formatDate(flight.departure_time) }}</span>
-                  <span class="seats-chip">
-                    💺 <strong>{{ flight.available_seats }}</strong> seats available
-                  </span>
+                  <span class="date-chip">No departure date in current schema</span>
+                  <span class="seats-chip">Seat inventory must be configured separately</span>
                 </div>
               </div>
 
-              <!-- Price & Booking Action -->
               <div class="flight-card-action">
-                <div class="class-pricing-tabs">
-                  <div 
-                    class="fare-choice" 
-                    :class="{ selected: filters.travelClass === 'Economy' }"
-                    @click="filters.travelClass = 'Economy'"
-                  >
-                    <span class="class-label">Economy</span>
-                    <span class="class-price">₹{{ flight.economy_fare.toLocaleString() }}</span>
-                  </div>
-                  <div 
-                    class="fare-choice" 
-                    :class="{ selected: filters.travelClass === 'Business' }"
-                    @click="filters.travelClass = 'Business'"
-                  >
-                    <span class="class-label">Business</span>
-                    <span class="class-price">₹{{ flight.business_fare.toLocaleString() }}</span>
-                  </div>
-                  <div 
-                    class="fare-choice" 
-                    :class="{ selected: filters.travelClass === 'First Class' }"
-                    @click="filters.travelClass = 'First Class'"
-                  >
-                    <span class="class-label">First Class</span>
-                    <span class="class-price">₹{{ flight.first_class_fare.toLocaleString() }}</span>
-                  </div>
-                </div>
-
-                <button @click="selectFlight(flight)" class="btn btn-gold btn-full select-btn">
-                  Select Flight ➔
-                </button>
+                <p>Academic base fare: {{ selectedFare }}</p>
+                <button @click="selectFlight(flight)" class="btn btn-gold btn-full select-btn">View Flight ➔</button>
               </div>
             </div>
           </div>
@@ -234,85 +124,45 @@ const router = useRouter();
 const flightStore = useFlightStore();
 const bookingStore = useBookingStore();
 
-const maxPriceFilter = ref(30000);
-
 const filters = ref({
-  from: route.query.from || '',
   to: route.query.to || '',
-  date: route.query.date || '',
   travelClass: route.query.travelClass || 'Economy',
-  sortBy: 'departure',
-  status: 'SCHEDULED'
+  status: route.query.status || ''
 });
 
 const flights = computed(() => flightStore.flights);
+const selectedFare = computed(() => ({
+  Economy: '₹5,000 (not charged)',
+  Business: '₹10,000 (not charged)',
+  'First Class': '₹20,000 (not charged)'
+}[filters.value.travelClass]));
 
-onMounted(async () => {
-  try {
-    await flightStore.fetchAirports();
-  } catch {
-    // Airport errors are shown in the shared flight-store error state.
-  }
-  await executeSearch();
-});
+onMounted(() => executeSearch());
 
 async function executeSearch() {
+  const params = { to: filters.value.to, status: filters.value.status };
+  flightStore.setSearchParams(params);
   try {
-    await flightStore.searchFlights({
-      from: filters.value.from,
-      to: filters.value.to,
-      date: filters.value.date,
-      travelClass: filters.value.travelClass,
-      sortBy: filters.value.sortBy,
-      status: filters.value.status,
-      maxPrice: maxPriceFilter.value
-    });
+    await flightStore.searchFlights(params);
   } catch {
-    // The shared store error is rendered above the flight results.
-  }
-}
-
-async function loadAirports() {
-  try {
-    await flightStore.fetchAirports();
-  } catch {
-    // The shared airport error is rendered above the flight results.
+    // The store exposes the error in the results area.
   }
 }
 
 function resetFilters() {
-  filters.value.from = '';
   filters.value.to = '';
-  filters.value.date = '';
   filters.value.travelClass = 'Economy';
-  filters.value.status = 'SCHEDULED';
-  maxPriceFilter.value = 30000;
+  filters.value.status = '';
   executeSearch();
 }
 
 function selectFlight(flight) {
   flightStore.setSelectedFlight(flight);
-  const passengerCount = parseInt(route.query.passengers, 10) || 1;
-  bookingStore.initBooking(flight, filters.value.travelClass, passengerCount);
+  bookingStore.initBooking(flight, filters.value.travelClass, 1);
   router.push({
     path: `/flights/${flight.id}`,
-    query: {
-      travelClass: filters.value.travelClass,
-      passengers: passengerCount
-    }
+    query: { travelClass: filters.value.travelClass }
   });
-}
-
-function formatTime(dateTimeStr) {
-  if (!dateTimeStr) return '';
-  const d = new Date(dateTimeStr);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-}
-
-function formatDate(dateTimeStr) {
-  if (!dateTimeStr) return '';
-  const d = new Date(dateTimeStr);
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 </script>
 

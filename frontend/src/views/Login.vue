@@ -8,21 +8,13 @@
           <p class="auth-subtitle">Sign in to manage your flight reservations and boarding passes.</p>
         </div>
 
-        <!-- Quick Demo Fill Helper -->
         <div class="demo-helpers">
-          <span class="demo-label">One-Click Demo Login:</span>
-          <div class="demo-btn-group">
-            <button type="button" @click="fillDemo('passenger')" class="btn btn-outline btn-sm">
-              👤 Demo Passenger
-            </button>
-            <button type="button" @click="fillDemo('admin')" class="btn btn-outline btn-sm">
-              ⚡ Admin Portal
-            </button>
-          </div>
+          <span class="demo-label">Account access</span>
+          <p class="account-note">Use an account registered for this application; demo credentials are not provided. Admin pages require an authenticated account with the admin role.</p>
         </div>
 
         <div v-if="route.query.redirect" class="booking-login-notice" role="status">
-          Sign in is required to continue your booking. After signing in, you will return to seat selection.
+          Sign in is required to continue. Admin routes additionally require the admin role.
         </div>
 
         <div v-if="errorMessage" class="error-banner">
@@ -36,7 +28,7 @@
               type="email" 
               v-model="form.email" 
               class="form-input" 
-              placeholder="e.g. passenger@airline.com" 
+              placeholder="name@example.com"
               required 
             />
           </div>
@@ -82,16 +74,6 @@ const form = ref({
 
 const loading = ref(false);
 const errorMessage = ref('');
-
-function fillDemo(type) {
-  if (type === 'admin') {
-    form.value.email = 'admin@airline.com';
-    form.value.password = 'admin123';
-  } else {
-    form.value.email = 'passenger@airline.com';
-    form.value.password = 'pass123';
-  }
-}
 
 async function handleLogin() {
   errorMessage.value = '';
@@ -167,10 +149,11 @@ async function handleLogin() {
   margin-bottom: 8px;
 }
 
-.demo-btn-group {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
+.account-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 .booking-login-notice {

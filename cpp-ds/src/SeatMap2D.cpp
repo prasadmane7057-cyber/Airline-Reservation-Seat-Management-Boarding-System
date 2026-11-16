@@ -37,6 +37,11 @@ int SeatMap2D::getSeatStatus(int row, int col) {
     return seatMap[row][col];
 }
 
+int SeatMap2D::getSeatStatusSnapshot(int row, int col) const {
+    if (row < 0 || row >= MAX_ROWS || col < 0 || col >= MAX_COLS) return -1;
+    return seatMap[row][col];
+}
+
 void SeatMap2D::updateOccupiedList(int row, int col, int status) {
     // remove any existing entry for this seat
     occupiedList.erase(

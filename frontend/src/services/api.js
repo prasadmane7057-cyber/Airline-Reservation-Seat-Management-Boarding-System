@@ -62,14 +62,6 @@ export const flightApi = {
   deleteFlight: (id) => apiClient.delete(`/flights/${id}`)
 };
 
-// Airport Service
-export const airportApi = {
-  getAirports: () => apiClient.get('/airports'),
-  createAirport: (data) => apiClient.post('/airports', data),
-  updateAirport: (id, data) => apiClient.put(`/airports/${id}`, data),
-  deleteAirport: (id) => apiClient.delete(`/airports/${id}`)
-};
-
 // Seat Service
 export const seatApi = {
   getSeatsByFlight: (flightId) => apiClient.get(`/seats/flight/${flightId}`),
@@ -102,12 +94,22 @@ export const paymentApi = {
 // Passenger Service
 export const passengerApi = {
   getPassengers: () => apiClient.get('/passengers'),
+  getMine: () => apiClient.get('/passengers/me'),
+  getById: (id) => apiClient.get(`/passengers/${id}`),
+  create: (data) => apiClient.post('/passengers', data),
+  update: (id, data) => apiClient.put(`/passengers/${id}`, data),
+  delete: (id) => apiClient.delete(`/passengers/${id}`),
   updateStatus: (id, data) => apiClient.put(`/passengers/${id}/status`, data)
 };
 
 // Admin Service
 export const adminApi = {
   getDashboardStats: () => apiClient.get('/admin/dashboard')
+};
+
+// Native academic demo service
+export const academicApi = {
+  getCppDemo: () => apiClient.get('/academic/cpp-demo')
 };
 
 export default apiClient;

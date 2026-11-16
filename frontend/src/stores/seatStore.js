@@ -18,25 +18,28 @@ export const useSeatStore = defineStore('seat', {
     
     selectedSeatNumbers: (state) => state.selectedSeats.map(s => s.seat_number),
     
-    // Group seats by row for aircraft matrix rendering
     seatRows: (state) => {
-      const rowsMap = {};
+      const rowsMap = new Map();
       state.seats.forEach(seat => {
-        if (!rowsMap[seat.row_number]) {
-          rowsMap[seat.row_number] = {
-            rowNumber: seat.row_number,
-            seatClass: seat.seat_class,
-            leftCol: [],  // A, B, C
-            rightCol: []  // D, E, F
-          };
+        const rowNumber = seat.row_number;
+        const key = Number.isSafeInteger(rowNumber) ? rowNumber : 'other';
+        if (!rowsMap.has(key)) {
+          rowsMap.set(key, { rowNumber, seats: [] });
         }
-        if (['A', 'B', 'C'].includes(seat.column_letter)) {
-          rowsMap[seat.row_number].leftCol.push(seat);
-        } else {
-          rowsMap[seat.row_number].rightCol.push(seat);
-        }
+        rowsMap.get(key).seats.push(seat);
       });
-      return Object.values(rowsMap).sort((a, b) => a.rowNumber - b.rowNumber);
+      return [...rowsMap.values()]
+        .map(row => ({
+          ...row,
+          seats: row.seats.sort((left, right) =>
+            left.seat_number.localeCompare(right.seat_number, undefined, { numeric: true })
+          )
+        }))
+        .sort((left, right) => {
+          if (left.rowNumber === null) return 1;
+          if (right.rowNumber === null) return -1;
+          return left.rowNumber - right.rowNumber;
+        });
     }
   },
 
@@ -46,7 +49,16 @@ export const useSeatStore = defineStore('seat', {
       this.error = null;
       try {
         const res = await seatApi.getSeatsByFlight(flightId);
-        this.seats = res.seats || [];
+        this.seats = (res.seats || []).map(seat => {
+          const match = /^(\d+)([A-Z]{1,2})$/.exec(seat.seat_number);
+          return {
+            ...seat,
+            row_number: match ? Number(match[1]) : null,
+            column_letter: match ? match[2] : null,
+            is_occupied: seat.seat_status === 'BOOKED',
+            is_blocked: seat.seat_status === 'BLOCKED'
+          };
+        });
       } catch (err) {
         this.error = err.message;
         throw err;
@@ -65,7 +77,7 @@ export const useSeatStore = defineStore('seat', {
     },
 
     toggleSeat(seat) {
-      if (seat.is_occupied || seat.is_blocked) {
+      if (seat.seat_status !== 'AVAILABLE' || seat.is_occupied || seat.is_blocked) {
         return { success: false, message: 'This seat is already occupied or blocked.' };
       }
 

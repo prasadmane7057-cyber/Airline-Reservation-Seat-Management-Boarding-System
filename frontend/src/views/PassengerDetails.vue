@@ -13,7 +13,7 @@
           <span class="step-sep">➔</span>
           <span class="step active">3. Passenger Info</span>
           <span class="step-sep">➔</span>
-          <span class="step">4. Payment</span>
+          <span class="step">4. Reservation</span>
         </div>
       </div>
 
@@ -29,7 +29,7 @@
             ⚠️ {{ validationError }}
           </div>
 
-          <form @submit.prevent="proceedToPayment">
+          <form @submit.prevent="confirmReservation">
             <div 
               v-for="(passenger, index) in passengerList" 
               :key="index" 
@@ -55,42 +55,19 @@
                     required 
                   />
                 </div>
-
                 <div class="form-group">
-                  <label class="form-label">Age *</label>
-                  <input 
-                    type="number" 
-                    v-model.number="passenger.age" 
-                    min="1" 
-                    max="110" 
-                    class="form-input" 
-                    placeholder="e.g. 29" 
-                    required 
+                  <label class="form-label">Email *</label>
+                  <input
+                    type="email"
+                    v-model="passenger.email"
+                    class="form-input"
+                    placeholder="passenger@example.com"
+                    required
                   />
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Gender *</label>
-                  <select v-model="passenger.gender" class="form-select" required>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
                 </div>
               </div>
 
               <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Passport / Govt ID Number *</label>
-                  <input 
-                    type="text" 
-                    v-model="passenger.passportId" 
-                    class="form-input" 
-                    placeholder="e.g. Z9823412 or Aadhaar/PAN" 
-                    required 
-                  />
-                </div>
-
                 <div class="form-group">
                   <label class="form-label">Contact Phone</label>
                   <input 
@@ -100,22 +77,13 @@
                     placeholder="+91-9876543210" 
                   />
                 </div>
-
-                <div class="form-group">
-                  <label class="form-label">Email for E-Ticket</label>
-                  <input 
-                    type="email" 
-                    v-model="passenger.email" 
-                    class="form-input" 
-                    placeholder="passenger@example.com" 
-                  />
-                </div>
               </div>
             </div>
 
             <div class="form-submit-row">
-              <button type="submit" class="btn btn-gold btn-lg proceed-payment-btn">
-                Proceed to Payment (₹{{ bookingStore.draft.fare.totalFare.toLocaleString() }}) ➔
+              <button type="submit" class="btn btn-gold btn-lg proceed-payment-btn" :disabled="bookingStore.loading">
+                <span v-if="bookingStore.loading">Creating reservation...</span>
+                <span v-else>Create reservation (no payment)</span>
               </button>
             </div>
           </form>
@@ -128,16 +96,7 @@
 
             <div v-if="flight" class="flight-route-box">
               <div class="route-flight-no">Flight {{ flight.flight_number }}</div>
-              <div class="route-city-row">
-                <span>{{ flight.from_city }} ({{ flight.from_code }})</span>
-                <span>➔</span>
-                <span>{{ flight.to_city }} ({{ flight.to_code }})</span>
-              </div>
-              <div class="route-time-row">
-                <span>{{ formatTime(flight.departure_time) }}</span>
-                <span>•</span>
-                <span>{{ formatDate(flight.departure_time) }}</span>
-              </div>
+              <div>Destination: {{ flight.destination || 'Not available in the current flight schema' }}</div>
             </div>
 
             <div class="summary-section">
@@ -157,27 +116,14 @@
               <span class="section-sub">Fare Breakdown</span>
               <div class="fare-rows">
                 <div class="fare-row">
-                  <span>Base Fare:</span>
+                  <span>Academic base fare:</span>
                   <span>₹{{ bookingStore.draft.fare.baseFare.toLocaleString() }}</span>
                 </div>
-                <div class="fare-row">
-                  <span>Aviation Taxes (18%):</span>
-                  <span>₹{{ bookingStore.draft.fare.taxAmount.toLocaleString() }}</span>
-                </div>
-                <div class="fare-row green-text">
-                  <span>Academic Promo Discount:</span>
-                  <span>- ₹{{ bookingStore.draft.fare.discountAmount.toLocaleString() }}</span>
-                </div>
-                <div class="fare-row total-fare-row">
-                  <span>Total Amount:</span>
-                  <span class="grand-total">₹{{ bookingStore.draft.fare.totalFare.toLocaleString() }}</span>
-                </div>
+                <div class="fare-row total-fare-row"><span>Payment:</span><span class="grand-total">Not configured</span></div>
               </div>
             </div>
 
-            <div class="security-note">
-              🔒 256-bit SSL Transaction Security Simulation
-            </div>
+            <div class="security-note">No card or banking details are collected. This action creates a reservation only.</div>
           </div>
         </aside>
       </div>
@@ -212,42 +158,38 @@ onMounted(() => {
     const prev = existingPax[idx] || {};
     return {
       fullName: prev.fullName || (idx === 0 && authStore.user ? authStore.user.name : ''),
-      age: prev.age || (idx === 0 ? 29 : 25),
-      gender: prev.gender || 'Male',
-      passportId: prev.passportId || (idx === 0 ? 'Z9823412' : `ID-${Math.floor(100000 + Math.random() * 900000)}`),
       seatNumber: seat.seat_number,
-      phone: prev.phone || (idx === 0 && authStore.user ? authStore.user.phone : '+91-9876543210'),
-      email: prev.email || (idx === 0 && authStore.user ? authStore.user.email : 'passenger@airline.com')
+      phone: prev.phone || (idx === 0 && authStore.user ? authStore.user.phone : ''),
+      email: prev.email || (idx === 0 && authStore.user ? authStore.user.email : '')
     };
   });
 });
 
-function proceedToPayment() {
+async function confirmReservation() {
   validationError.value = '';
+
+  if (passengerList.value.length !== 1) {
+    validationError.value = 'The current reservation schema supports one passenger per booking. Book each traveler separately.';
+    return;
+  }
 
   for (let i = 0; i < passengerList.value.length; i++) {
     const p = passengerList.value[i];
-    if (!p.fullName.trim() || !p.passportId.trim() || !p.age) {
+    if (!p.fullName.trim() || !p.email.trim()) {
       validationError.value = `Please complete all required fields for Passenger ${i + 1}.`;
       return;
     }
   }
 
   bookingStore.setPassengers(passengerList.value);
-  router.push('/payment');
+  try {
+    const result = await bookingStore.confirmBooking();
+    router.push(`/booking-confirmation/${encodeURIComponent(result.booking.pnr)}`);
+  } catch (err) {
+    validationError.value = err.message || 'Could not create the reservation.';
+  }
 }
 
-function formatTime(dateTimeStr) {
-  if (!dateTimeStr) return '';
-  const d = new Date(dateTimeStr);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-}
-
-function formatDate(dateTimeStr) {
-  if (!dateTimeStr) return '';
-  const d = new Date(dateTimeStr);
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-}
 </script>
 
 <style scoped>

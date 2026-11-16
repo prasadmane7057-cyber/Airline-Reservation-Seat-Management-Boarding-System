@@ -2,7 +2,11 @@
   <div class="admin-dashboard-view">
     <div v-if="loading" class="card text-center py-48">
       <div class="spinner"></div>
-      <p>Calculating database metrics and revenue statistics...</p>
+      <p>Loading metrics from configured flight and reservation tables...</p>
+    </div>
+
+    <div v-else-if="adminStore.error" class="card text-center py-48" role="alert">
+      Could not load dashboard data: {{ adminStore.error }}
     </div>
 
     <div v-else-if="stats" class="dashboard-grid-container">
@@ -20,7 +24,7 @@
           <div class="kpi-icon green-grad">👥</div>
           <div class="kpi-data">
             <span class="kpi-num">{{ stats.totalPassengers }}</span>
-            <span class="kpi-lbl">Passengers</span>
+            <span class="kpi-lbl">Passenger Profiles</span>
           </div>
         </div>
 
@@ -28,15 +32,15 @@
           <div class="kpi-icon gold-grad">📑</div>
           <div class="kpi-data">
             <span class="kpi-num">{{ stats.totalBookings }}</span>
-            <span class="kpi-lbl">Total Bookings</span>
+            <span class="kpi-lbl">Recent Bookings (max 100)</span>
           </div>
         </div>
 
         <div class="kpi-card card">
           <div class="kpi-icon emerald-grad">💰</div>
           <div class="kpi-data">
-            <span class="kpi-num">₹{{ stats.totalRevenue.toLocaleString() }}</span>
-            <span class="kpi-lbl">Net Revenue</span>
+            <span class="kpi-num">₹{{ stats.confirmedFareValue.toLocaleString() }}</span>
+            <span class="kpi-lbl">Recent Fare Value (not revenue)</span>
           </div>
         </div>
 
@@ -52,15 +56,15 @@
           <div class="kpi-icon teal-grad">🚪</div>
           <div class="kpi-data">
             <span class="kpi-num">{{ stats.boardedPassengers }}</span>
-            <span class="kpi-lbl">Boarded Pax</span>
+            <span class="kpi-lbl">Boarded (recent records)</span>
           </div>
         </div>
 
         <div class="kpi-card card">
           <div class="kpi-icon orange-grad">📊</div>
           <div class="kpi-data">
-            <span class="kpi-num">{{ stats.occupancyRate }}%</span>
-            <span class="kpi-lbl">Cabin Occupancy</span>
+            <span class="kpi-num">{{ stats.seatOccupancyRate }}%</span>
+            <span class="kpi-lbl">Booked Seats / Inventory</span>
           </div>
         </div>
 
@@ -68,7 +72,7 @@
           <div class="kpi-icon red-grad">🔄</div>
           <div class="kpi-data">
             <span class="kpi-num">{{ stats.cancelledBookings }}</span>
-            <span class="kpi-lbl">Cancelled / Refunded</span>
+            <span class="kpi-lbl">Cancelled (recent records)</span>
           </div>
         </div>
       </div>
@@ -77,7 +81,7 @@
       <div class="analytics-row">
         <!-- Class Distribution Breakdown -->
         <div class="card class-breakdown-card">
-          <h3 class="card-title">Bookings Distribution by Travel Class</h3>
+          <h3 class="card-title">Recent Confirmed Bookings by Class</h3>
           <div class="class-bars-list">
             <div 
               v-for="item in stats.classDistribution" 
@@ -101,15 +105,15 @@
 
         <!-- Occupancy Gauge Card -->
         <div class="card occupancy-gauge-card">
-          <h3 class="card-title">Live Aircraft Load Factor</h3>
+          <h3 class="card-title">Seat Inventory Occupancy</h3>
           <div class="gauge-center">
             <div class="radial-ring">
-              <span class="ring-val">{{ stats.occupancyRate }}%</span>
-              <span class="ring-sub">LOAD FACTOR</span>
+              <span class="ring-val">{{ stats.seatOccupancyRate }}%</span>
+              <span class="ring-sub">BOOKED SEATS</span>
             </div>
           </div>
           <p class="gauge-desc">
-            Computed from total assigned seats vs total aircraft capacities in active flights.
+            Computed from booked seat records divided by configured seat inventory; no aircraft capacity is assumed.
           </p>
         </div>
       </div>
@@ -130,7 +134,7 @@
                 <th>PNR</th>
                 <th>Passenger</th>
                 <th>Flight</th>
-                <th>Route</th>
+                <th>Destination</th>
                 <th>Class</th>
                 <th>Fare</th>
                 <th>Booking Date</th>
@@ -142,9 +146,9 @@
                 <td><strong class="text-blue">{{ b.pnr }}</strong></td>
                 <td>{{ b.passenger_name }}</td>
                 <td><strong>{{ b.flight_number }}</strong></td>
-                <td>{{ b.from_code }} ➔ {{ b.to_code }}</td>
+                <td>{{ b.destination || 'Unavailable' }}</td>
                 <td><span class="badge" :class="'badge-' + b.travel_class.toLowerCase().replace(' ', '')">{{ b.travel_class }}</span></td>
-                <td><strong>₹{{ (b.total_fare || 0).toLocaleString() }}</strong></td>
+                <td><strong>₹{{ Number(b.fare).toLocaleString() }}</strong></td>
                 <td>{{ formatDateTime(b.booking_date) }}</td>
                 <td><span class="badge" :class="'badge-' + b.booking_status.toLowerCase()">{{ b.booking_status }}</span></td>
               </tr>

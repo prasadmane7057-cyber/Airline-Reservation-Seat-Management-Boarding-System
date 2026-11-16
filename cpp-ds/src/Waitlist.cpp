@@ -80,6 +80,16 @@ bool Waitlist::cancelBooking(const string &pnr, PassengerArray &bookedPassengers
 bool Waitlist::empty() const { return passengers.empty(); }
 size_t Waitlist::size() const { return passengers.size(); }
 
+vector<Passenger> Waitlist::snapshot() const {
+    vector<Passenger> records;
+    queue<Passenger> remaining = passengers;
+    while (!remaining.empty()) {
+        records.push_back(remaining.front());
+        remaining.pop();
+    }
+    return records;
+}
+
 void Waitlist::display() const {
     if (passengers.empty()) {
         cout << "Waitlist is empty.\n";

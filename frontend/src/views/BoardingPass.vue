@@ -3,13 +3,13 @@
     <div class="container-narrow">
       <div class="pass-top-bar no-print">
         <div>
-          <h1 class="page-title">Digital Boarding Pass</h1>
-          <p class="page-subtitle">Present this digital boarding pass at airport security and departure gate.</p>
+          <h1 class="page-title">Booking and Check-In Status</h1>
+          <p class="page-subtitle">This project does not issue airline boarding passes or gate assignments.</p>
         </div>
 
         <div class="pass-actions">
           <button @click="printPass" class="btn btn-outline">
-            🖨️ Print Pass
+            🖨️ Print Status
           </button>
         </div>
       </div>
@@ -23,19 +23,19 @@
               type="text" 
               v-model="inputPnr" 
               class="form-input" 
-              placeholder="e.g. SK7M41 or AI8K92" 
+              placeholder="Enter your PNR"
               required 
             />
           </div>
           <button type="submit" class="btn btn-primary search-pnr-btn">
-            Retrieve Boarding Pass
+            Find Booking
           </button>
         </form>
       </div>
 
       <div v-if="loading" class="card text-center py-48">
         <div class="spinner"></div>
-        <p>Loading digital boarding pass...</p>
+        <p>Loading booking and check-in status...</p>
       </div>
 
       <div v-else-if="errorMessage" class="error-banner card no-print">
@@ -50,7 +50,7 @@
         >
           <div class="checkin-info">
             <h3>Web Check-in is Open!</h3>
-            <p>Confirm your attendance and generate your authorized gate boarding barcode.</p>
+            <p>Check in a confirmed booking. Airport gate and schedule details are not available.</p>
           </div>
           <button @click="performSelfCheckIn" class="btn btn-gold btn-lg" :disabled="checkingIn">
             <span v-if="checkingIn">Checking in...</span>
@@ -61,7 +61,7 @@
         <!-- Boarding Pass Card Visual -->
         <div 
           v-for="pass in passes" 
-          :key="pass.boarding_id" 
+          :key="pass.booking_id"
           class="boarding-pass-card"
         >
           <!-- Main Body -->
@@ -70,8 +70,8 @@
               <div class="pass-airline">
                 <span class="pass-icon">✈</span>
                 <div>
-                  <span class="airline-bold">SkyWings Airlines</span>
-                  <span class="pass-doc-title">BOARDING PASS</span>
+                  <span class="airline-bold">Airline Reservation Project</span>
+                    <span class="pass-doc-title">BOOKING STATUS</span>
                 </div>
               </div>
 
@@ -81,7 +81,6 @@
               </div>
             </div>
 
-            <!-- Passenger & Route -->
             <div class="pass-pax-row">
               <div class="pax-data-col">
                 <span class="data-label">PASSENGER NAME</span>
@@ -99,42 +98,34 @@
 
             <div class="pass-airports-row">
               <div class="airport-block">
-                <span class="apt-code">{{ pass.from_code }}</span>
-                <span class="apt-city">{{ pass.from_city }}</span>
+                <span class="apt-code">{{ pass.flight_number }}</span>
+                <span class="apt-city">Flight</span>
               </div>
               <div class="flight-mid-route">
-                <span>NONSTOP</span>
-                <span class="plane-sym">✈ ➔</span>
+                <span>DESTINATION</span>
+                <span class="plane-sym">{{ pass.destination || 'Unavailable' }}</span>
               </div>
               <div class="airport-block right">
-                <span class="apt-code">{{ pass.to_code }}</span>
-                <span class="apt-city">{{ pass.to_city }}</span>
+                <span class="apt-code">{{ pass.flight_status || 'Unavailable' }}</span>
+                <span class="apt-city">Flight status</span>
               </div>
             </div>
 
-            <!-- Gate & Times -->
             <div class="pass-boarding-meta">
               <div class="meta-box">
-                <span class="meta-label">GATE</span>
-                <span class="meta-val gate-val">{{ pass.gate || 'Gate 3B' }}</span>
-              </div>
-              <div class="meta-box">
-                <span class="meta-label">BOARDING TIME</span>
-                <span class="meta-val highlight-val">{{ formatTime(pass.boarding_time) }}</span>
-              </div>
-              <div class="meta-box">
-                <span class="meta-label">DEPARTURE</span>
-                <span class="meta-val">{{ formatTime(pass.departure_time) }}</span>
-              </div>
-              <div class="meta-box">
                 <span class="meta-label">SEAT</span>
-                <span class="meta-val seat-highlight">{{ pass.seat_number }}</span>
+                <span class="meta-val seat-highlight">{{ pass.seat_number || 'Unavailable' }}</span>
               </div>
               <div class="meta-box">
-                <span class="meta-label">GROUP</span>
-                <span class="meta-val">{{ pass.boarding_group || 'Group 2' }}</span>
+                <span class="meta-label">BOOKING STATUS</span>
+                <span class="meta-val">{{ pass.booking_status }}</span>
+              </div>
+              <div class="meta-box">
+                <span class="meta-label">CHECK-IN</span>
+                <span class="meta-val">{{ pass.check_in_status }}</span>
               </div>
             </div>
+            <p class="status-banner-bottom">Gate and boarding time are not available in the connected schema.</p>
 
             <div class="status-banner-bottom">
               <span>BOARDING STATUS:</span>
@@ -147,7 +138,7 @@
           <!-- Perforated Stub / QR Barcode Visual -->
           <div class="pass-stub">
             <div class="stub-header">
-              <span class="stub-brand">SkyWings</span>
+              <span class="stub-brand">Reservation</span>
               <span class="stub-seat">{{ pass.seat_number }}</span>
             </div>
 
@@ -158,20 +149,10 @@
 
             <div class="stub-flight-row">
               <div><strong>{{ pass.flight_number }}</strong></div>
-              <div>{{ pass.from_code }} ➔ {{ pass.to_code }}</div>
+              <div>{{ pass.destination || 'Destination unavailable' }}</div>
             </div>
 
-            <!-- Academic Demonstration QR Pattern -->
-            <div class="qr-container">
-              <div class="qr-graphic">
-                <div class="qr-corner top-left"></div>
-                <div class="qr-corner top-right"></div>
-                <div class="qr-corner bottom-left"></div>
-                <div class="qr-matrix-dots"></div>
-                <div class="qr-plane-center">✈</div>
-              </div>
-              <span class="qr-caption">ENC: {{ pass.pnr }} • {{ pass.seat_number }}</span>
-            </div>
+            <div class="qr-caption">Reservation record only — not a scannable boarding pass.</div>
           </div>
         </div>
       </div>
@@ -183,12 +164,10 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { boardingApi } from '../services/api';
-import { useBookingStore } from '../stores/bookingStore';
 
 const route = useRoute();
-const bookingStore = useBookingStore();
 
-const inputPnr = ref(route.query.pnr || 'SK7M41');
+const inputPnr = ref(route.query.pnr || '');
 const passes = ref([]);
 const selectedPass = ref(null);
 const loading = ref(false);
@@ -199,17 +178,6 @@ onMounted(async () => {
   if (route.query.pnr) {
     inputPnr.value = route.query.pnr;
     await fetchPassByPnr();
-  } else {
-    // Attempt to load from user's latest booking
-    try {
-      const userBookings = await bookingStore.fetchUserBookings();
-      if (userBookings.length > 0) {
-        inputPnr.value = userBookings[0].pnr;
-        await fetchPassByPnr();
-      }
-    } catch {
-      // ignore
-    }
   }
 });
 
@@ -217,9 +185,11 @@ async function fetchPassByPnr() {
   if (!inputPnr.value) return;
   loading.value = true;
   errorMessage.value = '';
+  selectedPass.value = null;
+  passes.value = [];
   try {
     const res = await boardingApi.getBoardingPass(inputPnr.value.toUpperCase().trim());
-    passes.value = res.boardingPasses || [];
+    passes.value = res.boardingPass ? [res.boardingPass] : [];
     if (passes.value.length > 0) {
       selectedPass.value = passes.value[0];
     }
@@ -234,9 +204,9 @@ async function fetchPassByPnr() {
 async function performSelfCheckIn() {
   checkingIn.value = true;
   try {
-    await boardingApi.selfCheckIn({ pnr: inputPnr.value });
+    await boardingApi.selfCheckIn({ pnr: inputPnr.value.trim().toUpperCase() });
     await fetchPassByPnr();
-    alert('Web check-in complete! Your boarding status is now CHECKED_IN.');
+    alert('Check-in complete.');
   } catch (err) {
     alert(err.message || 'Check-in failed.');
   } finally {
@@ -248,11 +218,6 @@ function printPass() {
   window.print();
 }
 
-function formatTime(str) {
-  if (!str) return '';
-  const d = new Date(str);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-}
 </script>
 
 <style scoped>

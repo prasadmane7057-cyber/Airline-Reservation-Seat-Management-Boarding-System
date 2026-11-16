@@ -15,13 +15,16 @@
         <p>Loading booking records...</p>
       </div>
 
+      <div v-else-if="errorMessage" class="card text-center py-48" role="alert">
+        {{ errorMessage }}
+      </div>
+
       <div v-else-if="booking" class="details-stack">
-        <!-- Status & Flight Card -->
         <div class="card header-card">
           <div class="header-card-top">
             <div>
               <span class="flight-no-tag">Flight {{ booking.flight_number }}</span>
-              <span class="airline-text">{{ booking.airline || 'SkyWings Airlines' }}</span>
+              <span class="airline-text">Destination: {{ booking.destination || 'Unavailable' }}</span>
             </div>
             <span class="badge" :class="'badge-' + booking.booking_status.toLowerCase()">
               {{ booking.booking_status }}
@@ -30,85 +33,51 @@
 
           <div class="route-details-grid">
             <div>
-              <div class="point-city">{{ booking.from_city }} ({{ booking.from_code }})</div>
-              <div class="point-name">{{ booking.from_name }}</div>
-              <div class="point-time">{{ formatTime(booking.departure_time) }}</div>
-              <div class="point-date">{{ formatDate(booking.departure_time) }}</div>
+              <div class="point-city">{{ booking.passenger?.full_name || 'Passenger' }}</div>
+              <div class="point-name">{{ booking.passenger?.email }}</div>
             </div>
 
             <div class="route-mid-box">
-              <span class="dur">{{ booking.duration || '2h 15m' }}</span>
-              <div class="line">✈ ➔</div>
-              <span class="badge badge-economy">{{ booking.travel_class }}</span>
+              <span>Seat</span>
+              <div class="line">{{ booking.seat?.seat_number || 'Unavailable' }}</div>
+              <span>{{ booking.travel_class }}</span>
             </div>
 
             <div class="text-right">
-              <div class="point-city">{{ booking.to_city }} ({{ booking.to_code }})</div>
-              <div class="point-name">{{ booking.to_name }}</div>
-              <div class="point-time">{{ formatTime(booking.arrival_time) }}</div>
-              <div class="point-date">{{ formatDate(booking.arrival_time) }}</div>
+              <div class="point-city">Flight status</div>
+              <div class="point-name">{{ booking.flight?.status || 'Unavailable' }}</div>
             </div>
           </div>
         </div>
 
-        <!-- Passengers Card -->
         <div class="card passengers-card">
-          <h3 class="card-title">Passengers & Seat Assignments</h3>
-          <div class="passenger-list">
-            <div 
-              v-for="p in booking.passengers" 
-              :key="p.id" 
-              class="passenger-item-row"
-            >
-              <div class="pax-identity">
-                <span class="pax-avatar">{{ p.full_name ? p.full_name.charAt(0) : 'P' }}</span>
-                <div>
-                  <div class="pax-name">{{ p.full_name }}</div>
-                  <div class="pax-meta">{{ p.age }} yrs • {{ p.gender }} • ID: {{ p.passport_id || 'N/A' }}</div>
-                </div>
-              </div>
-
-              <div class="pax-seat-badge">
-                <span class="seat-label">Assigned Seat</span>
-                <span class="seat-val">{{ p.seat_number }}</span>
-              </div>
-
-              <div class="pax-boarding-status">
-                <span class="badge" :class="'badge-' + (p.boarding_status ? p.boarding_status.toLowerCase() : 'scheduled')">
-                  {{ p.boarding_status || 'NOT_CHECKED_IN' }}
-                </span>
-              </div>
-            </div>
-          </div>
+          <h3 class="card-title">Booking record</h3>
+          <p>Passenger: {{ booking.passenger?.full_name || 'Unavailable' }}</p>
+          <p>Seat: {{ booking.seat?.seat_number || 'Unavailable' }}</p>
+          <p>Booked on: {{ formatDateTime(booking.booking_date) }}</p>
+          <p v-if="booking.checked_in_at">Checked in: {{ formatDateTime(booking.checked_in_at) }}</p>
         </div>
 
-        <!-- Payment & Receipt Card -->
         <div class="card payment-card">
-          <h3 class="card-title">Payment & Fare Breakdown</h3>
+          <h3 class="card-title">Fare and payment</h3>
           <div class="payment-grid">
             <div class="payment-info-left">
-              <div><strong>Payment Status:</strong> <span class="badge badge-paid">{{ booking.payment_status }}</span></div>
-              <div><strong>Transaction ID:</strong> {{ booking.transaction_id || 'TXN-908234' }}</div>
-              <div><strong>Payment Method:</strong> {{ booking.payment_method || 'Credit Card' }}</div>
-              <div><strong>Booked On:</strong> {{ formatDateTime(booking.booking_date) }}</div>
+              <div><strong>Payment:</strong> Not processed; no provider is configured.</div>
+              <div><strong>Reservation status:</strong> {{ booking.booking_status }}</div>
             </div>
 
             <div class="payment-fares-right">
-              <div class="fare-line"><span>Base Fare:</span> <span>₹{{ (booking.base_fare || 0).toLocaleString() }}</span></div>
-              <div class="fare-line"><span>Aviation Taxes (18%):</span> <span>₹{{ (booking.tax_amount || 0).toLocaleString() }}</span></div>
-              <div class="fare-line green-txt"><span>Discount Applied:</span> <span>- ₹{{ (booking.discount_amount || 0).toLocaleString() }}</span></div>
-              <div class="fare-line grand-total-line"><span>Total Fare Paid:</span> <span class="cost">₹{{ (booking.total_fare || 0).toLocaleString() }}</span></div>
+              <div class="fare-line grand-total-line"><span>Recorded fare (not a receipt):</span> <span class="cost">₹{{ Number(booking.fare).toLocaleString() }}</span></div>
             </div>
           </div>
         </div>
 
-        <!-- Actions -->
         <div class="details-bottom-actions">
           <router-link :to="'/booking-confirmation/' + booking.pnr" class="btn btn-outline btn-lg">
-            🖨️ View / Print E-Ticket
+            View Reservation Record
           </router-link>
           <router-link :to="'/boarding-pass?pnr=' + booking.pnr" class="btn btn-primary btn-lg">
-            📱 Web Check-in & Boarding Pass
+            Check-In Status
           </router-link>
           <button 
             v-if="booking.booking_status === 'CONFIRMED'"
@@ -125,22 +94,22 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { useBookingStore } from '../stores/bookingStore';
 
 const route = useRoute();
-const router = useRouter();
 const bookingStore = useBookingStore();
 
 const booking = ref(null);
 const loading = ref(true);
+const errorMessage = ref('');
 
 onMounted(async () => {
   const idOrPnr = route.params.id;
   try {
     booking.value = await bookingStore.fetchBookingDetails(idOrPnr);
   } catch (err) {
-    console.error(err);
+    errorMessage.value = err.message || 'Could not load this booking.';
   } finally {
     loading.value = false;
   }
@@ -151,24 +120,11 @@ async function handleCancel() {
     try {
       await bookingStore.cancelBooking(booking.value.id);
       booking.value.booking_status = 'CANCELLED';
-      booking.value.payment_status = 'REFUNDED';
-      alert('Booking cancelled and seats released.');
+      alert('Booking cancelled and the seat released. No payment or refund was processed.');
     } catch (err) {
       alert(err.message || 'Failed to cancel.');
     }
   }
-}
-
-function formatTime(str) {
-  if (!str) return '';
-  const d = new Date(str);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-}
-
-function formatDate(str) {
-  if (!str) return '';
-  const d = new Date(str);
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatDateTime(str) {
