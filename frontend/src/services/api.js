@@ -91,6 +91,14 @@ export const paymentApi = {
   processPayment: (data) => apiClient.post('/payments', data)
 };
 
+// Airport Service
+export const airportApi = {
+  getAirports: () => apiClient.get('/airports'),
+  createAirport: (data) => apiClient.post('/airports', data),
+  updateAirport: (id, data) => apiClient.put(`/airports/${id}`, data),
+  deleteAirport: (id) => apiClient.delete(`/airports/${id}`)
+};
+
 // Passenger Service
 export const passengerApi = {
   getPassengers: () => apiClient.get('/passengers'),

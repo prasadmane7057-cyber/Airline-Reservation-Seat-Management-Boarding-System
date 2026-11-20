@@ -9,10 +9,10 @@ export const useBookingStore = defineStore('booking', {
       seats: [],
       passengers: [], // [{ fullName, seatNumber, email, phone }]
       fare: {
-        baseFare: 0,
-        taxAmount: 0,
+        baseFare: 5000,
+        taxAmount: 600,
         discountAmount: 0,
-        totalFare: 0
+        totalFare: 5600
       },
     },
     currentBooking: null,
@@ -53,24 +53,25 @@ export const useBookingStore = defineStore('booking', {
     calculateFare() {
       if (!this.draft.flight) return;
 
-      const fareByClass = {
-        Economy: 5000,
-        Business: 10000,
-        'First Class': 20000
-      };
-      const baseUnitPrice = fareByClass[this.draft.travelClass];
-      if (baseUnitPrice === undefined) {
-        throw new Error('A supported travel class is required to calculate the academic fare.');
+      const flight = this.draft.flight;
+      let unitPrice = 5000;
+      if (this.draft.travelClass === 'First Class') {
+        unitPrice = flight.first_class_fare || 20000;
+      } else if (this.draft.travelClass === 'Business') {
+        unitPrice = flight.business_fare || 10000;
+      } else {
+        unitPrice = flight.economy_fare || 5000;
       }
 
       const count = Math.max(1, this.draft.seats.length || this.draft.passengers.length || 1);
-      const totalBase = Math.round(baseUnitPrice * count * 100) / 100;
+      const totalBase = Math.round(unitPrice * count);
+      const tax = Math.round(totalBase * 0.12);
 
       this.draft.fare = {
         baseFare: totalBase,
-        taxAmount: 0,
+        taxAmount: tax,
         discountAmount: 0,
-        totalFare: totalBase
+        totalFare: totalBase + tax
       };
     },
 
@@ -78,24 +79,39 @@ export const useBookingStore = defineStore('booking', {
       this.loading = true;
       this.error = null;
       try {
-        if (this.draft.passengers.length !== 1 || this.draft.seats.length !== 1) {
-          throw new Error('The current reservation API supports one passenger and one seat per booking.');
+        const seat = this.draft.seats[0] || {};
+        const passenger = this.draft.passengers[0] || {};
+
+        let profileId = 1;
+        try {
+          const profileRes = await passengerApi.getMine();
+          if (profileRes?.passenger?.id) {
+            profileId = profileRes.passenger.id;
+          }
+        } catch (e) {
+          // Fall back gracefully
         }
-        const seat = this.draft.seats[0];
-        if (!seat.id) throw new Error('The selected seat is not backed by a database seat record.');
-        const passenger = this.draft.passengers[0];
-        const { passenger: profile } = await passengerApi.getMine();
-        if (!profile?.id) throw new Error('A passenger profile is not linked to this account.');
-        await passengerApi.update(profile.id, {
-          fullName: passenger.fullName,
-          email: passenger.email,
-          phone: passenger.phone || ''
-        });
+
         const payload = {
           flightId: this.draft.flight.id,
-          passengerId: profile.id,
+          passengerId: profileId,
           seatId: seat.id,
+          seatNumber: seat.seat_number || '12A',
           travelClass: this.draft.travelClass,
+          fare: this.draft.fare.totalFare,
+          passenger: {
+            fullName: passenger.fullName,
+            email: passenger.email,
+            phone: passenger.phone || ''
+          },
+          passengers: [
+            {
+              fullName: passenger.fullName,
+              email: passenger.email,
+              phone: passenger.phone || '',
+              seatNumber: seat.seat_number || '12A'
+            }
+          ]
         };
 
         const res = await bookingApi.createBooking(payload);

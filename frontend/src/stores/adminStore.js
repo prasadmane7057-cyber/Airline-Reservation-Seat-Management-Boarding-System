@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { adminApi, flightApi, bookingApi, boardingApi, passengerApi } from '../services/api';
+import { adminApi, flightApi, bookingApi, boardingApi, passengerApi, airportApi } from '../services/api';
 
 export const useAdminStore = defineStore('admin', {
   state: () => ({
@@ -7,6 +7,7 @@ export const useAdminStore = defineStore('admin', {
     flights: [],
     bookings: [],
     passengers: [],
+    airports: [],
     operationsLoading: false,
     operationsError: null,
     boardingManifest: [],
@@ -127,6 +128,25 @@ export const useAdminStore = defineStore('admin', {
     async togglePassengerStatus(id, newStatus) {
       const res = await passengerApi.updateStatus(id, { status: newStatus });
       await this.fetchPassengers();
+      return res;
+    },
+
+    async fetchAirports() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const res = await airportApi.getAirports();
+        this.airports = res.airports || [];
+      } catch (err) {
+        this.error = err.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async createAirport(data) {
+      const res = await airportApi.createAirport(data);
+      await this.fetchAirports();
       return res;
     },
 

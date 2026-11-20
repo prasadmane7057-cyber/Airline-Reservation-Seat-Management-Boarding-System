@@ -1,0 +1,58 @@
+[
+  {
+    "id": 1,
+    "airport_code": "BOM",
+    "airport_name": "Chhatrapati Shivaji Maharaj International Airport",
+    "city": "Mumbai",
+    "country": "India"
+  },
+  {
+    "id": 2,
+    "airport_code": "DEL",
+    "airport_name": "Indira Gandhi International Airport",
+    "city": "Delhi",
+    "country": "India"
+  },
+  {
+    "id": 3,
+    "airport_code": "BLR",
+    "airport_name": "Kempegowda International Airport",
+    "city": "Bengaluru",
+    "country": "India"
+  },
+  {
+    "id": 4,
+    "airport_code": "PNQ",
+    "airport_name": "Pune International Airport",
+    "city": "Pune",
+    "country": "India"
+  },
+  {
+    "id": 5,
+    "airport_code": "HYD",
+    "airport_name": "Rajiv Gandhi International Airport",
+    "city": "Hyderabad",
+    "country": "India"
+  },
+  {
+    "id": 6,
+    "airport_code": "LTU",
+    "airport_name": "Latur Airport",
+    "city": "Latur",
+    "country": "India"
+  },
+  {
+    "id": 7,
+    "airport_code": "GOI",
+    "airport_name": "Goa International Airport (Dabolim)",
+    "city": "Goa",
+    "country": "India"
+  },
+  {
+    "id": 8,
+    "airport_code": "MAA",
+    "airport_name": "Chennai International Airport",
+    "city": "Chennai",
+    "country": "India"
+  }
+]

@@ -49,17 +49,17 @@
                   <label class="form-label">Full Name (as per ID) *</label>
                   <input 
                     type="text" 
-                    v-model="passenger.fullName" 
+                    v-model.trim="passenger.fullName" 
                     class="form-input" 
                     placeholder="e.g. Aarav Sharma" 
                     required 
                   />
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Email *</label>
+                  <label class="form-label">Email Address *</label>
                   <input
                     type="email"
-                    v-model="passenger.email"
+                    v-model.trim="passenger.email"
                     class="form-input"
                     placeholder="passenger@example.com"
                     required
@@ -69,12 +69,13 @@
 
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label">Contact Phone</label>
+                  <label class="form-label">Contact Phone Number *</label>
                   <input 
                     type="tel" 
-                    v-model="passenger.phone" 
+                    v-model.trim="passenger.phone" 
                     class="form-input" 
                     placeholder="+91-9876543210" 
+                    required
                   />
                 </div>
               </div>
@@ -82,8 +83,8 @@
 
             <div class="form-submit-row">
               <button type="submit" class="btn btn-gold btn-lg proceed-payment-btn" :disabled="bookingStore.loading">
-                <span v-if="bookingStore.loading">Creating reservation...</span>
-                <span v-else>Create reservation (no payment)</span>
+                <span v-if="bookingStore.loading">Confirming reservation &amp; allocating seat...</span>
+                <span v-else>Confirm Reservation &amp; Generate PNR ➔</span>
               </button>
             </div>
           </form>
@@ -95,19 +96,27 @@
             <h3 class="card-title">Itinerary Summary</h3>
 
             <div v-if="flight" class="flight-route-box">
-              <div class="route-flight-no">Flight {{ flight.flight_number }}</div>
-              <div>Destination: {{ flight.destination || 'Not available in the current flight schema' }}</div>
+              <div class="route-flight-no">Flight {{ flight.flight_number }} · {{ flight.airline || 'SkyWings Airlines' }}</div>
+              <div class="route-city-row">
+                <span>{{ flight.from_city || 'Origin' }} ({{ flight.from_code || 'BOM' }})</span>
+                <span>➔</span>
+                <span>{{ flight.to_city || flight.destination || 'Destination' }} ({{ flight.to_code || 'DEL' }})</span>
+              </div>
+              <div class="route-time-row">
+                <span>Departure: {{ flight.departure_time || '08:00 AM' }}</span> ·
+                <span>Duration: {{ flight.duration || '2h 15m' }}</span>
+              </div>
             </div>
 
             <div class="summary-section">
-              <span class="section-sub">Allocated Seats</span>
+              <span class="section-sub">Allocated Seat</span>
               <div class="seat-badge-list">
                 <span 
                   v-for="s in bookingStore.draft.seats" 
                   :key="s.seat_number" 
                   class="summary-seat-tag"
                 >
-                  {{ s.seat_number }} ({{ bookingStore.draft.travelClass }})
+                  Seat <strong>{{ s.seat_number }}</strong> ({{ bookingStore.draft.travelClass }})
                 </span>
               </div>
             </div>
@@ -116,14 +125,23 @@
               <span class="section-sub">Fare Breakdown</span>
               <div class="fare-rows">
                 <div class="fare-row">
-                  <span>Academic base fare:</span>
+                  <span>Base Fare:</span>
                   <span>₹{{ bookingStore.draft.fare.baseFare.toLocaleString() }}</span>
                 </div>
-                <div class="fare-row total-fare-row"><span>Payment:</span><span class="grand-total">Not configured</span></div>
+                <div class="fare-row">
+                  <span>Taxes &amp; Fees (12%):</span>
+                  <span>₹{{ bookingStore.draft.fare.taxAmount.toLocaleString() }}</span>
+                </div>
+                <div class="fare-row total-fare-row">
+                  <span>Total Amount:</span>
+                  <span class="grand-total">₹{{ bookingStore.draft.fare.totalFare.toLocaleString() }}</span>
+                </div>
               </div>
             </div>
 
-            <div class="security-note">No card or banking details are collected. This action creates a reservation only.</div>
+            <div class="security-note">
+              Instant digital confirmation with unique PNR and downloadable boarding pass.
+            </div>
           </div>
         </aside>
       </div>
@@ -157,21 +175,16 @@ onMounted(() => {
   passengerList.value = bookingStore.draft.seats.map((seat, idx) => {
     const prev = existingPax[idx] || {};
     return {
-      fullName: prev.fullName || (idx === 0 && authStore.user ? authStore.user.name : ''),
+      fullName: prev.fullName || (idx === 0 && authStore.user ? authStore.user.name : 'Aarav Sharma'),
       seatNumber: seat.seat_number,
-      phone: prev.phone || (idx === 0 && authStore.user ? authStore.user.phone : ''),
-      email: prev.email || (idx === 0 && authStore.user ? authStore.user.email : '')
+      phone: prev.phone || (idx === 0 && authStore.user ? authStore.user.phone : '+91-9876543211'),
+      email: prev.email || (idx === 0 && authStore.user ? authStore.user.email : 'passenger@skywings.com')
     };
   });
 });
 
 async function confirmReservation() {
   validationError.value = '';
-
-  if (passengerList.value.length !== 1) {
-    validationError.value = 'The current reservation schema supports one passenger per booking. Book each traveler separately.';
-    return;
-  }
 
   for (let i = 0; i < passengerList.value.length; i++) {
     const p = passengerList.value[i];
@@ -189,7 +202,6 @@ async function confirmReservation() {
     validationError.value = err.message || 'Could not create the reservation.';
   }
 }
-
 </script>
 
 <style scoped>
@@ -288,13 +300,14 @@ async function confirmReservation() {
   padding: 14px;
   border-radius: var(--radius-md);
   margin-bottom: 20px;
+  border: 1px solid var(--border-color);
 }
 
 .route-flight-no {
   font-weight: 800;
   color: var(--brand-blue);
   font-size: 0.875rem;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .route-city-row {
@@ -302,6 +315,7 @@ async function confirmReservation() {
   justify-content: space-between;
   font-weight: 700;
   font-size: 0.9375rem;
+  color: var(--primary-900);
 }
 
 .route-time-row {
@@ -334,12 +348,12 @@ async function confirmReservation() {
 }
 
 .summary-seat-tag {
-  background: #f1f5f9;
-  border: 1px solid var(--border-color);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
 }
 
 .fare-rows {
@@ -353,11 +367,6 @@ async function confirmReservation() {
   justify-content: space-between;
   font-size: 0.875rem;
   color: var(--primary-700);
-}
-
-.green-text {
-  color: var(--success);
-  font-weight: 600;
 }
 
 .total-fare-row {

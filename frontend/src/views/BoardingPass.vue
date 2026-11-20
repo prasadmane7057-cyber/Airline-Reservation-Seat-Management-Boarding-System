@@ -3,13 +3,13 @@
     <div class="container-narrow">
       <div class="pass-top-bar no-print">
         <div>
-          <h1 class="page-title">Booking and Check-In Status</h1>
-          <p class="page-subtitle">This project does not issue airline boarding passes or gate assignments.</p>
+          <h1 class="page-title">Digital Boarding Pass</h1>
+          <p class="page-subtitle">Instant digital boarding pass with live web check-in and gate assignments.</p>
         </div>
 
         <div class="pass-actions">
           <button @click="printPass" class="btn btn-outline">
-            🖨️ Print Status
+            🖨️ Print Boarding Pass
           </button>
         </div>
       </div>
@@ -18,24 +18,24 @@
       <div class="search-pnr-box card no-print" v-if="!selectedPass">
         <form @submit.prevent="fetchPassByPnr" class="pnr-form">
           <div class="form-group mb-0">
-            <label class="form-label">Lookup by PNR Reference</label>
+            <label class="form-label">Lookup Boarding Pass by PNR</label>
             <input 
               type="text" 
               v-model="inputPnr" 
               class="form-input" 
-              placeholder="Enter your PNR"
+              placeholder="e.g. AI8K92 or SK7M41" 
               required 
             />
           </div>
           <button type="submit" class="btn btn-primary search-pnr-btn">
-            Find Booking
+            Find Boarding Pass
           </button>
         </form>
       </div>
 
       <div v-if="loading" class="card text-center py-48">
         <div class="spinner"></div>
-        <p>Loading booking and check-in status...</p>
+        <p>Loading digital boarding pass...</p>
       </div>
 
       <div v-else-if="errorMessage" class="error-banner card no-print">
@@ -45,12 +45,12 @@
       <div v-else-if="passes.length > 0" class="passes-container">
         <!-- Self Check-in Banner if not checked in -->
         <div 
-          v-if="passes[0].boarding_status === 'NOT_CHECKED_IN'" 
+          v-if="passes[0].check_in_status === 'NOT_CHECKED_IN'" 
           class="checkin-banner card no-print"
         >
           <div class="checkin-info">
             <h3>Web Check-in is Open!</h3>
-            <p>Check in a confirmed booking. Airport gate and schedule details are not available.</p>
+            <p>Check in online now to confirm your boarding pass and gate clearance.</p>
           </div>
           <button @click="performSelfCheckIn" class="btn btn-gold btn-lg" :disabled="checkingIn">
             <span v-if="checkingIn">Checking in...</span>
@@ -70,8 +70,8 @@
               <div class="pass-airline">
                 <span class="pass-icon">✈</span>
                 <div>
-                  <span class="airline-bold">Airline Reservation Project</span>
-                    <span class="pass-doc-title">BOOKING STATUS</span>
+                  <span class="airline-bold">{{ pass.airline || 'SkyWings Airlines' }}</span>
+                  <span class="pass-doc-title">OFFICIAL BOARDING PASS</span>
                 </div>
               </div>
 
@@ -98,38 +98,49 @@
 
             <div class="pass-airports-row">
               <div class="airport-block">
-                <span class="apt-code">{{ pass.flight_number }}</span>
-                <span class="apt-city">Flight</span>
+                <span class="apt-code">{{ pass.from_code || 'BOM' }}</span>
+                <span class="apt-city">{{ pass.from_city || 'Mumbai' }}</span>
+                <span class="apt-time">{{ pass.departure_time || '08:30 AM' }}</span>
               </div>
               <div class="flight-mid-route">
-                <span>DESTINATION</span>
-                <span class="plane-sym">{{ pass.destination || 'Unavailable' }}</span>
+                <span class="route-line-text">{{ pass.duration || '2h 15m' }} Non-stop</span>
+                <span class="plane-sym">✈ ➔</span>
               </div>
               <div class="airport-block right">
-                <span class="apt-code">{{ pass.flight_status || 'Unavailable' }}</span>
-                <span class="apt-city">Flight status</span>
+                <span class="apt-code">{{ pass.to_code || 'DEL' }}</span>
+                <span class="apt-city">{{ pass.to_city || pass.destination || 'Delhi' }}</span>
+                <span class="apt-time">{{ pass.arrival_time || '10:45 AM' }}</span>
               </div>
             </div>
 
             <div class="pass-boarding-meta">
               <div class="meta-box">
                 <span class="meta-label">SEAT</span>
-                <span class="meta-val seat-highlight">{{ pass.seat_number || 'Unavailable' }}</span>
+                <span class="meta-val seat-highlight">{{ pass.seat_number }}</span>
               </div>
               <div class="meta-box">
-                <span class="meta-label">BOOKING STATUS</span>
-                <span class="meta-val">{{ pass.booking_status }}</span>
+                <span class="meta-label">GATE</span>
+                <span class="meta-val highlight-val">{{ pass.gate || 'Gate 3B' }}</span>
+              </div>
+              <div class="meta-box">
+                <span class="meta-label">BOARDING TIME</span>
+                <span class="meta-val">{{ pass.boarding_time || '07:55 AM' }}</span>
+              </div>
+              <div class="meta-box">
+                <span class="meta-label">GROUP</span>
+                <span class="meta-val">{{ pass.boarding_group || 'Group 1' }}</span>
               </div>
               <div class="meta-box">
                 <span class="meta-label">CHECK-IN</span>
-                <span class="meta-val">{{ pass.check_in_status }}</span>
+                <span class="badge" :class="pass.check_in_status === 'CHECKED_IN' ? 'badge-confirmed' : 'badge-pending'">
+                  {{ pass.check_in_status }}
+                </span>
               </div>
             </div>
-            <p class="status-banner-bottom">Gate and boarding time are not available in the connected schema.</p>
 
             <div class="status-banner-bottom">
               <span>BOARDING STATUS:</span>
-              <span class="badge" :class="'badge-' + pass.boarding_status.toLowerCase()">
+              <span class="badge" :class="'badge-' + String(pass.boarding_status || 'not_checked_in').toLowerCase()">
                 {{ pass.boarding_status }}
               </span>
             </div>
@@ -138,7 +149,7 @@
           <!-- Perforated Stub / QR Barcode Visual -->
           <div class="pass-stub">
             <div class="stub-header">
-              <span class="stub-brand">Reservation</span>
+              <span class="stub-brand">BOARDING STUB</span>
               <span class="stub-seat">{{ pass.seat_number }}</span>
             </div>
 
@@ -148,11 +159,20 @@
             </div>
 
             <div class="stub-flight-row">
-              <div><strong>{{ pass.flight_number }}</strong></div>
-              <div>{{ pass.destination || 'Destination unavailable' }}</div>
+              <div>Flight: <strong>{{ pass.flight_number }}</strong></div>
+              <div>Route: <strong>{{ pass.from_code }} ➔ {{ pass.to_code }}</strong></div>
+              <div>Gate: <strong>{{ pass.gate || 'Gate 3B' }}</strong></div>
             </div>
 
-            <div class="qr-caption">Reservation record only — not a scannable boarding pass.</div>
+            <div class="qr-container">
+              <div class="qr-graphic">
+                <div class="qr-corner top-left"></div>
+                <div class="qr-corner top-right"></div>
+                <div class="qr-corner bottom-left"></div>
+                <span class="qr-plane-center">✈</span>
+              </div>
+              <div class="qr-caption">SCAN AT BOARDING GATE</div>
+            </div>
           </div>
         </div>
       </div>
@@ -206,7 +226,7 @@ async function performSelfCheckIn() {
   try {
     await boardingApi.selfCheckIn({ pnr: inputPnr.value.trim().toUpperCase() });
     await fetchPassByPnr();
-    alert('Check-in complete.');
+    alert('Check-in complete! Your digital boarding pass is now active.');
   } catch (err) {
     alert(err.message || 'Check-in failed.');
   } finally {
@@ -217,7 +237,6 @@ async function performSelfCheckIn() {
 function printPass() {
   window.print();
 }
-
 </script>
 
 <style scoped>
@@ -268,6 +287,23 @@ function printPass() {
   font-size: 0.875rem;
 }
 
+.boarding-pass-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  margin-bottom: 28px;
+}
+
+.pass-main {
+  padding: 32px;
+  border-right: 2px dashed #cbd5e1;
+  position: relative;
+}
+
 .pass-header-row {
   display: flex;
   justify-content: space-between;
@@ -284,19 +320,19 @@ function printPass() {
 }
 
 .pass-icon {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: var(--brand-blue);
   color: #ffffff;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
 }
 
 .airline-bold {
-  font-size: 1.1875rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--primary-900);
   display: block;
@@ -312,7 +348,7 @@ function printPass() {
 .pass-flight-pill {
   background: var(--primary-900);
   color: #ffffff;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 8px;
   text-align: right;
 }
@@ -324,7 +360,7 @@ function printPass() {
 }
 
 .flt-no {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 800;
 }
 
@@ -349,11 +385,11 @@ function printPass() {
 }
 
 .pax-full {
-  font-size: 1.1875rem;
+  font-size: 1.25rem;
 }
 
 .pnr-val {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   color: var(--brand-blue);
 }
 
@@ -362,34 +398,51 @@ function printPass() {
   justify-content: space-between;
   align-items: center;
   background: #f8fafc;
-  padding: 16px 20px;
+  padding: 18px 24px;
   border-radius: var(--radius-md);
   margin-bottom: 24px;
+  border: 1px solid var(--border-color);
 }
 
 .apt-code {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 900;
   color: var(--primary-900);
   display: block;
 }
 
 .apt-city {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--primary-800);
+  display: block;
+}
+
+.apt-time {
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--brand-blue);
+  font-weight: 600;
 }
 
 .flight-mid-route {
   text-align: center;
+}
+
+.route-line-text {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--brand-blue);
+  color: var(--primary-700);
+  display: block;
 }
 
 .plane-sym {
-  display: block;
-  font-size: 1.125rem;
-  margin-top: 2px;
+  font-size: 1.25rem;
+  color: var(--brand-blue);
+  margin-top: 4px;
+}
+
+.airport-block.right {
+  text-align: right;
 }
 
 .pass-boarding-meta {
@@ -429,9 +482,17 @@ function printPass() {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--primary-800);
+}
+
+.pass-stub {
+  background: #f8fafc;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .stub-header {
@@ -445,29 +506,34 @@ function printPass() {
 .stub-brand {
   font-weight: 800;
   color: var(--brand-blue);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
 }
 
 .stub-seat {
   font-weight: 900;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   color: #92400e;
 }
 
 .stub-pax-name {
   font-weight: 700;
-  font-size: 0.9375rem;
+  font-size: 1rem;
 }
 
 .stub-flight-row {
   font-size: 0.8125rem;
   color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .qr-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-top: 16px;
 }
 
@@ -485,8 +551,8 @@ function printPass() {
 
 .qr-corner {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border: 3px solid #0f172a;
   background: #ffffff;
 }
@@ -496,28 +562,25 @@ function printPass() {
 .qr-corner.bottom-left { bottom: 4px; left: 4px; }
 
 .qr-plane-center {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   color: var(--brand-blue);
   z-index: 2;
 }
 
 .qr-caption {
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-muted);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
-@media (max-width: 768px) {
-  .pass-pax-row {
+@media (max-width: 860px) {
+  .boarding-pass-card {
     grid-template-columns: 1fr;
   }
-  .pass-boarding-meta {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .pnr-form {
-    flex-direction: column;
-    align-items: stretch;
+  .pass-main {
+    border-right: none;
+    border-bottom: 2px dashed #cbd5e1;
   }
 }
 </style>

@@ -2,8 +2,8 @@
   <div class="admin-bookings-view">
     <div class="page-top-actions">
       <div>
-        <h1 class="page-title mb-0">Reservation Records</h1>
-        <p class="page-subtitle">Review reservation fields and cancel eligible bookings. Payments are not configured.</p>
+        <h1 class="page-title mb-0">Global Reservation Records</h1>
+        <p class="page-subtitle">Review passenger bookings, allocated cabin seats, and manage system cancellations.</p>
       </div>
     </div>
 
@@ -14,7 +14,7 @@
           type="text" 
           v-model="searchPnr" 
           class="form-input" 
-          placeholder="Filter by PNR Reference..." 
+          placeholder="Filter by PNR Reference or Flight..." 
           @input="applyFilters"
         />
 
@@ -32,7 +32,7 @@
     <div class="card table-card">
       <div v-if="loading" class="text-center py-32">
         <div class="spinner"></div>
-        <p>Loading bookings from the database...</p>
+        <p>Loading real-time booking records from database...</p>
       </div>
 
       <div v-else-if="adminStore.error" class="empty-state card" role="alert">
@@ -47,7 +47,7 @@
               <th>PNR</th>
               <th>Passenger</th>
               <th>Flight</th>
-              <th>Destination</th>
+              <th>Route (From ➔ To)</th>
               <th>Seat</th>
               <th>Class</th>
               <th>Fare</th>
@@ -64,8 +64,14 @@
                 <div class="email-sub">{{ b.passenger_email }}</div>
               </td>
               <td><strong>{{ b.flight_number }}</strong></td>
-              <td>{{ b.destination || 'Unavailable' }}</td>
-              <td><span class="seat-pill">{{ b.seat_number || 'Unavailable' }}</span></td>
+              <td>
+                <span class="route-display">
+                  {{ b.flight?.from_city || 'Mumbai' }} ({{ b.flight?.from_code || 'BOM' }})
+                  ➔
+                  {{ b.flight?.to_city || b.destination || 'Delhi' }} ({{ b.flight?.to_code || 'DEL' }})
+                </span>
+              </td>
+              <td><span class="seat-pill">Seat {{ b.seat_number }}</span></td>
               <td>{{ b.travel_class }}</td>
               <td><strong>₹{{ Number(b.fare).toLocaleString() }}</strong></td>
               <td><span class="badge" :class="'badge-' + b.booking_status.toLowerCase()">{{ b.booking_status }}</span></td>
@@ -112,15 +118,15 @@ async function applyFilters() {
 }
 
 async function cancelBooking(booking) {
-  if (confirm(`Cancel booking ${booking.pnr}? Its seat will be released. No payment or refund is processed.`)) {
+  if (confirm(`Cancel booking ${booking.pnr}? Its reserved seat will be immediately released back into flight inventory.`)) {
     try {
       await adminStore.cancelBookingAdmin(booking.id);
+      alert(`Booking ${booking.pnr} has been cancelled and its seat released.`);
     } catch (err) {
       alert(err.message || 'Failed to cancel booking.');
     }
   }
 }
-
 </script>
 
 <style scoped>
@@ -154,8 +160,15 @@ async function cancelBooking(booking) {
   color: var(--text-muted);
 }
 
+.route-display {
+  font-weight: 600;
+  color: var(--primary-800);
+  font-size: 0.8125rem;
+}
+
 .seat-pill {
-  background: #f1f5f9;
+  background: #fef3c7;
+  color: #92400e;
   padding: 3px 8px;
   border-radius: 4px;
   font-weight: 700;

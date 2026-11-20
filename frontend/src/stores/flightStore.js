@@ -6,6 +6,7 @@ export const useFlightStore = defineStore('flight', {
     flights: [],
     selectedFlight: null,
     searchParams: {
+      from: '',
       to: '',
       status: ''
     },
@@ -23,7 +24,7 @@ export const useFlightStore = defineStore('flight', {
           ...customParams
         };
         const params = {};
-        for (const key of ['to', 'status']) {
+        for (const key of ['from', 'to', 'status']) {
           if (typeof requested[key] === 'string' && requested[key].trim()) {
             params[key] = requested[key].trim();
           }
@@ -57,6 +58,7 @@ export const useFlightStore = defineStore('flight', {
 
     setSearchParams(params) {
       this.searchParams = {
+        from: typeof params.from === 'string' ? params.from : this.searchParams.from,
         to: typeof params.to === 'string' ? params.to : this.searchParams.to,
         status: typeof params.status === 'string' ? params.status : this.searchParams.status
       };

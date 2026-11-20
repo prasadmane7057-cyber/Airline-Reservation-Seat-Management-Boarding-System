@@ -4,7 +4,7 @@
       <div class="page-header-row">
         <div>
           <h1 class="page-title">My Flight Reservations</h1>
-          <p class="page-subtitle">View your reservation records and cancel eligible bookings.</p>
+          <p class="page-subtitle">View your confirmed reservation records, download boarding passes, or manage cancellations.</p>
         </div>
         <router-link to="/flights" class="btn btn-gold">
           + Book Another Flight
@@ -60,7 +60,7 @@
               <tr>
                 <th>PNR</th>
                 <th>Flight No</th>
-                <th>Destination</th>
+                <th>Route (From ➔ To)</th>
                 <th>Seat</th>
                 <th>Class</th>
                 <th>Fare</th>
@@ -73,8 +73,14 @@
               <tr v-for="b in filteredBookings" :key="b.id">
                 <td><strong class="pnr-link">{{ b.pnr }}</strong></td>
                 <td><strong>{{ b.flight_number }}</strong></td>
-                <td>{{ b.destination || 'Unavailable' }}</td>
-                <td><span class="seat-badge">{{ b.seat_number || 'Unavailable' }}</span></td>
+                <td>
+                  <span class="route-link">
+                    {{ b.flight?.from_city || 'Mumbai' }} ({{ b.flight?.from_code || 'BOM' }})
+                    ➔
+                    {{ b.flight?.to_city || b.destination || 'Delhi' }} ({{ b.flight?.to_code || 'DEL' }})
+                  </span>
+                </td>
+                <td><span class="seat-badge">{{ b.seat_number }}</span></td>
                 <td>{{ b.travel_class }}</td>
                 <td><strong>₹{{ Number(b.fare).toLocaleString() }}</strong></td>
                 <td>{{ formatDateTime(b.booking_date) }}</td>
@@ -86,10 +92,10 @@
                 <td>
                   <div class="action-buttons">
                     <router-link :to="'/booking-details/' + b.id" class="btn btn-outline btn-sm">
-                      View
+                      Details
                     </router-link>
-                    <router-link :to="'/booking-confirmation/' + b.pnr" class="btn btn-outline btn-sm" title="Reservation record">
-                      Record
+                    <router-link :to="'/boarding-pass?pnr=' + b.pnr" class="btn btn-primary btn-sm" title="Digital Boarding Pass">
+                      Pass
                     </router-link>
                     <button 
                       v-if="b.booking_status === 'CONFIRMED'"
@@ -119,11 +125,12 @@
               Are you sure you want to cancel booking reference <strong>{{ bookingToCancel.pnr }}</strong>?
             </p>
             <div class="cancel-summary-box">
-              <div><strong>Flight:</strong> {{ bookingToCancel.flight_number }} — {{ bookingToCancel.destination }}</div>
-              <div><strong>Seat to release:</strong> {{ bookingToCancel.seat_number }}</div>
+              <div><strong>Flight:</strong> {{ bookingToCancel.flight_number }} — {{ bookingToCancel.flight?.from_city || 'Origin' }} to {{ bookingToCancel.flight?.to_city || bookingToCancel.destination }}</div>
+              <div><strong>Seat to release:</strong> Seat {{ bookingToCancel.seat_number }}</div>
+              <div><strong>Refund Amount:</strong> ₹{{ Number(bookingToCancel.fare).toLocaleString() }}</div>
             </div>
             <p class="cancel-notice">
-              Cancelling releases the seat for another reservation. No payment or refund is processed by this project.
+              Cancelling immediately releases your reserved seat back into live inventory for other passengers.
             </p>
           </div>
 
@@ -132,7 +139,7 @@
               Keep Booking
             </button>
             <button @click="confirmCancellation" class="btn btn-danger" :disabled="cancelling">
-              <span v-if="cancelling">Processing Cancellation...</span>
+              <span v-if="cancelling">Releasing Seat...</span>
               <span v-else>Confirm Cancellation</span>
             </button>
           </div>
@@ -187,6 +194,7 @@ async function confirmCancellation() {
     await bookingStore.cancelBooking(bookingToCancel.value.id);
     showCancelModal.value = false;
     bookingToCancel.value = null;
+    alert('Booking cancelled successfully! Your seat has been released back into available inventory.');
   } catch (err) {
     alert(err.message || 'Failed to cancel booking.');
   } finally {
@@ -243,11 +251,17 @@ function formatDateTime(str) {
   letter-spacing: 0.05em;
 }
 
+.route-link {
+  font-weight: 600;
+  color: var(--primary-800);
+}
+
 .seat-badge {
-  background: #f1f5f9;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 700;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 800;
   font-size: 0.8125rem;
 }
 
@@ -258,13 +272,14 @@ function formatDateTime(str) {
 
 .cancel-summary-box {
   background: #f8fafc;
-  padding: 14px;
+  padding: 16px;
   border-radius: var(--radius-md);
   margin: 16px 0;
   font-size: 0.875rem;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  border: 1px solid var(--border-color);
 }
 
 .cancel-notice {

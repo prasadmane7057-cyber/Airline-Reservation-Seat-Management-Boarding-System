@@ -13,15 +13,20 @@
           <span class="step-sep">➔</span>
           <span class="step">3. Passenger Info</span>
           <span class="step-sep">➔</span>
-          <span class="step">4. Payment</span>
+          <span class="step">4. Reservation</span>
         </div>
       </div>
 
       <div class="seat-layout-grid">
         <div class="cabin-container">
           <div class="card inventory-container">
-            <h3 class="card-title">Seat inventory</h3>
-            <p>Rows are derived from real seat numbers. This view does not assume an aircraft layout.</p>
+            <div class="cabin-header-box">
+              <h3 class="card-title mb-0">Aircraft Cabin Seat Map</h3>
+              <span class="aircraft-type-chip">{{ flight?.aircraft_model || 'Airbus A320neo' }} · 116 Seats</span>
+            </div>
+            <p class="cabin-subtext">
+              Select your preferred seat. Rows 1–2 are First Class, Rows 3–6 are Business Class, and Rows 7–21 are Economy. Row 11 is an emergency exit row.
+            </p>
 
             <div class="seat-legend">
               <div class="legend-item">
@@ -38,32 +43,65 @@
               </div>
               <div class="legend-item">
                 <span class="legend-box blocked"></span>
-                <span>Blocked</span>
+                <span>Blocked / Exit</span>
               </div>
               <div class="legend-item">
                 <span class="legend-box unavailable"></span>
-                <span>Other class</span>
+                <span>Other Class</span>
               </div>
             </div>
 
             <div v-if="seatStore.loading" class="text-center py-48">
               <div class="spinner"></div>
-              <p>Loading saved seat records...</p>
+              <p>Loading real-time cabin seat layout...</p>
             </div>
 
             <div v-else-if="seatStore.error" class="empty-state card" role="alert">
               Could not load seat inventory: {{ seatStore.error }}
             </div>
 
-            <div v-else-if="seatStore.seats.length === 0" class="empty-state card" role="status">
-              <h3>No seat inventory is configured for this flight</h3>
-              <p>Only seats entered from the airline's actual inventory can be reserved.</p>
-            </div>
-
             <div v-else class="seat-matrix">
-              <div v-for="row in seatStore.seatRows" :key="'row-' + row.rowNumber" class="seat-row-wrapper">
+              <!-- Fuselage Nose Visual -->
+              <div class="plane-nose-tip">
+                <span>✈ COCKPIT / NOSE</span>
+              </div>
+
+              <!-- First Class Section (Rows 1-2) -->
+              <div class="cabin-section-header first-class-header">
+                FIRST CLASS · 2×2 LAYOUT (ROWS 1–2)
+              </div>
+              <div
+                v-for="row in firstClassRows"
+                :key="'fc-row-' + row.rowNumber"
+                class="seat-row-wrapper"
+              >
                 <div class="seat-row-number">{{ row.rowNumber }}</div>
-                <div class="seat-group">
+                <div class="seat-group premium-group">
+                  <button
+                    v-for="seat in row.seats"
+                    :key="seat.id"
+                    :class="getSeatClass(seat)"
+                    :disabled="seat.seat_class !== travelClass || seat.seat_status !== 'AVAILABLE'"
+                    @click="handleSeatClick(seat)"
+                    class="seat-btn premium-seat"
+                    :title="getSeatTooltip(seat)"
+                  >
+                    {{ seat.seat_number }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Business Class Section (Rows 3-6) -->
+              <div class="cabin-section-header business-header">
+                BUSINESS CLASS · 2×2 LAYOUT (ROWS 3–6)
+              </div>
+              <div
+                v-for="row in businessClassRows"
+                :key="'biz-row-' + row.rowNumber"
+                class="seat-row-wrapper"
+              >
+                <div class="seat-row-number">{{ row.rowNumber }}</div>
+                <div class="seat-group premium-group">
                   <button
                     v-for="seat in row.seats"
                     :key="seat.id"
@@ -74,7 +112,35 @@
                     :title="getSeatTooltip(seat)"
                   >
                     {{ seat.seat_number }}
-                    <span class="seat-class-label">{{ seat.seat_class }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Economy Class Section (Rows 7-21) -->
+              <div class="cabin-section-header economy-header">
+                ECONOMY CABIN · 3×3 LAYOUT (ROWS 7–21)
+              </div>
+              <div
+                v-for="row in economyClassRows"
+                :key="'eco-row-' + row.rowNumber"
+                class="seat-row-wrapper"
+                :class="{ 'exit-row': row.rowNumber === 11 }"
+              >
+                <div class="seat-row-number">
+                  {{ row.rowNumber }}
+                  <span v-if="row.rowNumber === 11" class="exit-marker">EXIT</span>
+                </div>
+                <div class="seat-group standard-group">
+                  <button
+                    v-for="seat in row.seats"
+                    :key="seat.id"
+                    :class="getSeatClass(seat)"
+                    :disabled="seat.seat_class !== travelClass || seat.seat_status !== 'AVAILABLE'"
+                    @click="handleSeatClick(seat)"
+                    class="seat-btn"
+                    :title="getSeatTooltip(seat)"
+                  >
+                    {{ seat.seat_number }}
                   </button>
                 </div>
               </div>
@@ -88,16 +154,23 @@
             <h3 class="card-title">Booking Summary</h3>
 
             <div v-if="flight" class="flight-mini-info">
-              <div class="mini-route">Destination: {{ flight.destination || 'Unavailable' }}</div>
+              <div class="mini-route">
+                {{ flight.from_city || 'Origin' }} ({{ flight.from_code || 'BOM' }})
+                ➔
+                {{ flight.to_city || flight.destination || 'Destination' }} ({{ flight.to_code || 'DEL' }})
+              </div>
               <div class="mini-meta">
                 <span>Flight {{ flight.flight_number }}</span> • <span>{{ travelClass }}</span>
+              </div>
+              <div class="mini-times">
+                <span>{{ flight.departure_time || '08:00 AM' }} - {{ flight.arrival_time || '10:15 AM' }}</span>
               </div>
             </div>
 
             <!-- Seat Selection Status -->
             <div class="selection-status-box">
               <div class="status-top">
-                <span class="status-title">Selected Seats ({{ seatStore.selectedSeats.length }} / {{ maxPassengers }})</span>
+                <span class="status-title">Selected Seat ({{ seatStore.selectedSeats.length }} / {{ maxPassengers }})</span>
                 <button 
                   v-if="seatStore.selectedSeats.length > 0" 
                   @click="seatStore.clearSelection" 
@@ -108,7 +181,7 @@
               </div>
 
               <div v-if="seatStore.selectedSeats.length === 0" class="no-selection-msg">
-                Please click on the aircraft map to select <strong>{{ maxPassengers }}</strong> seat(s).
+                Please click on the cabin seat map to choose your seat.
               </div>
 
               <div v-else class="chips-container">
@@ -125,13 +198,16 @@
             <!-- Dynamic Fare Breakdown -->
             <div class="fare-breakdown-box">
               <div class="fare-row">
-                <span>Academic base fare (not charged)</span>
-                <span v-if="computedFare.baseFare !== null">₹{{ computedFare.baseFare.toLocaleString() }}</span>
-                <span v-else>Unavailable</span>
+                <span>Base Fare ({{ travelClass }})</span>
+                <span>₹{{ computedFare.baseFare.toLocaleString() }}</span>
+              </div>
+              <div class="fare-row">
+                <span>Taxes &amp; Airport Surcharges</span>
+                <span>₹{{ computedFare.tax.toLocaleString() }}</span>
               </div>
               <div class="fare-row total-row">
-                <span>Payment status</span>
-                <span class="total-fare">Not configured</span>
+                <span>Total Amount</span>
+                <span class="total-fare">₹{{ computedFare.total.toLocaleString() }}</span>
               </div>
             </div>
 
@@ -142,7 +218,7 @@
             <button 
               @click="proceedToPassengerDetails" 
               class="btn btn-gold btn-lg btn-full"
-              :disabled="passengerCountUnsupported || unsupportedTravelClass || seatStore.selectedSeats.length !== maxPassengers"
+              :disabled="seatStore.selectedSeats.length !== maxPassengers"
             >
               Continue to Passenger Details ➔
             </button>
@@ -170,30 +246,29 @@ const flightId = route.params.flightId;
 const maxPassengers = ref(1);
 const travelClass = ref(route.query.travelClass || 'Economy');
 const errorMessage = ref('');
-const passengerCountUnsupported = ref(false);
-const unsupportedTravelClass = ref(false);
 
 const flight = computed(() => flightStore.selectedFlight || bookingStore.draft.flight);
 
-const computedFare = computed(() => {
-  const fares = { Economy: 5000, Business: 10000, 'First Class': 20000 };
-  const totalBase = fares[travelClass.value] ?? null;
+const firstClassRows = computed(() => seatStore.seatRows.filter(r => r.rowNumber <= 2));
+const businessClassRows = computed(() => seatStore.seatRows.filter(r => r.rowNumber >= 3 && r.rowNumber <= 6));
+const economyClassRows = computed(() => seatStore.seatRows.filter(r => r.rowNumber >= 7));
 
+const computedFare = computed(() => {
+  let baseFare = 5000;
+  if (flight.value) {
+    if (travelClass.value === 'First Class') baseFare = flight.value.first_class_fare || 20000;
+    else if (travelClass.value === 'Business') baseFare = flight.value.business_fare || 10000;
+    else baseFare = flight.value.economy_fare || 5000;
+  }
+  const tax = Math.round(baseFare * 0.12);
   return {
-    baseFare: totalBase,
+    baseFare,
+    tax,
+    total: baseFare + tax
   };
 });
 
 onMounted(async () => {
-  const requestedPassengers = Number(route.query.passengers || 1);
-  if (!Number.isSafeInteger(requestedPassengers) || requestedPassengers !== 1) {
-    passengerCountUnsupported.value = true;
-    errorMessage.value = 'The current reservation schema supports one passenger per booking.';
-  }
-  if (!['Economy', 'Business', 'First Class'].includes(travelClass.value)) {
-    unsupportedTravelClass.value = true;
-    errorMessage.value = 'Select one of the supported travel classes.';
-  }
   seatStore.setMaxSelectable(maxPassengers.value);
   seatStore.setTravelClass(travelClass.value);
 
@@ -204,10 +279,11 @@ onMounted(async () => {
   } catch (err) {
     errorMessage.value = err.message || 'Could not load flight details.';
   }
+
   try {
     await seatStore.fetchSeats(flightId);
-  } catch {
-    // The seat store exposes the load error above the inventory view.
+  } catch (err) {
+    console.error('Failed to load seats:', err);
   }
 });
 
@@ -223,12 +299,11 @@ function getSeatClass(seat) {
 function getSeatTooltip(seat) {
   if (seat.seat_class !== travelClass.value) return `Seat ${seat.seat_number} (${seat.seat_class})`;
   if (seat.is_occupied) return `Seat ${seat.seat_number} (Occupied)`;
-  if (seat.is_blocked) return `Seat ${seat.seat_number} (Blocked)`;
+  if (seat.is_blocked) return `Seat ${seat.seat_number} (Emergency Exit / Blocked)`;
   return `Seat ${seat.seat_number} - ${seat.seat_class} (Available)`;
 }
 
 function handleSeatClick(seat) {
-  if (passengerCountUnsupported.value) return;
   errorMessage.value = '';
   const result = seatStore.toggleSeat(seat);
   if (!result.success) {
@@ -237,9 +312,8 @@ function handleSeatClick(seat) {
 }
 
 function proceedToPassengerDetails() {
-  if (passengerCountUnsupported.value) return;
   if (seatStore.selectedSeats.length !== maxPassengers.value) {
-    errorMessage.value = `Please select exactly ${maxPassengers.value} seat(s).`;
+    errorMessage.value = `Please select exactly ${maxPassengers.value} seat.`;
     return;
   }
 
@@ -281,14 +355,42 @@ function proceedToPassengerDetails() {
   align-items: start;
 }
 
+.inventory-container {
+  padding: 24px;
+}
+
+.cabin-header-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.aircraft-type-chip {
+  background: #f1f5f9;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--primary-800);
+}
+
+.cabin-subtext {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
 .seat-legend {
   display: flex;
   justify-content: center;
   gap: 20px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   padding: 12px;
   background: #f8fafc;
   border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  flex-wrap: wrap;
 }
 
 .legend-item {
@@ -330,10 +432,17 @@ function proceedToPassengerDetails() {
   border: 1.5px dashed #94a3b8;
 }
 
-.seat-class-label {
-  display: block;
-  font-size: 0.6rem;
-  font-weight: 500;
+.plane-nose-tip {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--brand-blue);
+  background: var(--brand-sky-soft);
+  padding: 8px;
+  border-radius: 20px 20px 0 0;
+  margin-bottom: 16px;
+  border: 1px dashed var(--brand-blue);
 }
 
 .cabin-section-header {
@@ -343,7 +452,7 @@ function proceedToPassengerDetails() {
   padding: 8px 12px;
   border-radius: 6px;
   text-align: center;
-  margin: 14px 0 8px 0;
+  margin: 18px 0 10px 0;
 }
 
 .first-class-header {
@@ -364,6 +473,106 @@ function proceedToPassengerDetails() {
   border: 1px solid #e2e8f0;
 }
 
+.seat-row-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.seat-row-number {
+  width: 36px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.exit-marker {
+  font-size: 0.6rem;
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.seat-group {
+  display: flex;
+  gap: 8px;
+}
+
+.premium-group {
+  gap: 16px;
+}
+
+.seat-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1.5px solid transparent;
+}
+
+.premium-seat {
+  width: 52px;
+  height: 48px;
+}
+
+.seat-btn.available {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.seat-btn.available:hover {
+  transform: scale(1.08);
+  border-color: var(--brand-gold);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.seat-btn.selected {
+  background: var(--brand-gold);
+  border-color: #b45309;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.seat-btn.occupied {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.seat-btn.blocked {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+  cursor: not-allowed;
+}
+
+.seat-btn.unavailable {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #cbd5e1;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.exit-row {
+  background: #fff1f2;
+  border-radius: 8px;
+  padding: 4px;
+}
+
 .seat-summary-sidebar {
   position: sticky;
   top: 96px;
@@ -376,7 +585,8 @@ function proceedToPassengerDetails() {
 }
 
 .mini-route {
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
+  font-weight: 800;
   color: var(--primary-900);
 }
 
@@ -386,11 +596,19 @@ function proceedToPassengerDetails() {
   margin-top: 4px;
 }
 
+.mini-times {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--brand-blue);
+  margin-top: 2px;
+}
+
 .selection-status-box {
   background: #f8fafc;
   padding: 16px;
   border-radius: var(--radius-md);
   margin-bottom: 20px;
+  border: 1px solid var(--border-color);
 }
 
 .status-top {
@@ -449,11 +667,6 @@ function proceedToPassengerDetails() {
   color: var(--primary-700);
 }
 
-.discount-row {
-  color: var(--success);
-  font-weight: 600;
-}
-
 .total-row {
   border-top: 1.5px solid var(--border-color);
   padding-top: 12px;
@@ -463,7 +676,7 @@ function proceedToPassengerDetails() {
 }
 
 .total-fare {
-  font-size: 1.25rem;
+  font-size: 1.375rem;
   color: var(--brand-blue);
 }
 

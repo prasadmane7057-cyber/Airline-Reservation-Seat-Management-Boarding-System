@@ -7,12 +7,12 @@ const {
   updateBoardingStatus,
   selfCheckIn
 } = require('../controllers/boardingController');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { authenticateToken, optionalAuth, requireAdmin } = require('../middleware/auth');
 
 router.get('/flight/:flightId', authenticateToken, requireAdmin, getBoardingByFlight);
-router.get('/pass/:identifier', authenticateToken, getBoardingPass);
+router.get('/pass/:identifier', optionalAuth, getBoardingPass);
 router.post('/verify', authenticateToken, requireAdmin, verifyBoarding);
 router.put('/:id/status', authenticateToken, requireAdmin, updateBoardingStatus);
-router.post('/checkin', authenticateToken, selfCheckIn);
+router.post('/checkin', optionalAuth, selfCheckIn);
 
 module.exports = router;

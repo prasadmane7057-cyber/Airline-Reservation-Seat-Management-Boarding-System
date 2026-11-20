@@ -34,5 +34,17 @@
     "dob": null,
     "status": "ACTIVE",
     "created_at": "2026-11-16T19:35:13.125Z"
+  },
+  {
+    "id": "usr-1794857877363-899",
+    "name": "Prasad Mane",
+    "email": "prasadmane0803@gmail.com",
+    "password_hash": "$2a$10$mdhOhlMG5gELrTMsLElAXe15G3GHemrPRuTXub0KZr.SlKEf7JKja",
+    "role": "passenger",
+    "phone": "7057524133",
+    "address": "",
+    "dob": null,
+    "status": "ACTIVE",
+    "created_at": "2026-11-16T19:37:57.363Z"
   }
 ]

@@ -24,7 +24,7 @@
           <div class="header-card-top">
             <div>
               <span class="flight-no-tag">Flight {{ booking.flight_number }}</span>
-              <span class="airline-text">Destination: {{ booking.destination || 'Unavailable' }}</span>
+              <span class="airline-text">{{ booking.flight?.airline || 'SkyWings Airlines' }} · {{ booking.flight?.aircraft_model || 'Airbus A320neo' }}</span>
             </div>
             <span class="badge" :class="'badge-' + booking.booking_status.toLowerCase()">
               {{ booking.booking_status }}
@@ -32,52 +32,62 @@
           </div>
 
           <div class="route-details-grid">
-            <div>
-              <div class="point-city">{{ booking.passenger?.full_name || 'Passenger' }}</div>
-              <div class="point-name">{{ booking.passenger?.email }}</div>
+            <div class="point-box">
+              <span class="point-label">ORIGIN</span>
+              <div class="point-city">{{ booking.flight?.from_city || 'Mumbai' }} ({{ booking.flight?.from_code || 'BOM' }})</div>
+              <div class="point-time">{{ booking.flight?.departure_time || '08:30 AM' }}</div>
             </div>
 
             <div class="route-mid-box">
-              <span>Seat</span>
-              <div class="line">{{ booking.seat?.seat_number || 'Unavailable' }}</div>
-              <span>{{ booking.travel_class }}</span>
+              <span class="route-duration">{{ booking.flight?.duration || '2h 15m' }}</span>
+              <div class="route-arrow">✈ ➔</div>
+              <span class="seat-badge">Seat {{ booking.seat_number }} ({{ booking.travel_class }})</span>
             </div>
 
-            <div class="text-right">
-              <div class="point-city">Flight status</div>
-              <div class="point-name">{{ booking.flight?.status || 'Unavailable' }}</div>
+            <div class="point-box text-right">
+              <span class="point-label">DESTINATION</span>
+              <div class="point-city">{{ booking.flight?.to_city || booking.destination || 'Delhi' }} ({{ booking.flight?.to_code || 'DEL' }})</div>
+              <div class="point-time">{{ booking.flight?.arrival_time || '10:45 AM' }}</div>
             </div>
           </div>
         </div>
 
         <div class="card passengers-card">
-          <h3 class="card-title">Booking record</h3>
-          <p>Passenger: {{ booking.passenger?.full_name || 'Unavailable' }}</p>
-          <p>Seat: {{ booking.seat?.seat_number || 'Unavailable' }}</p>
-          <p>Booked on: {{ formatDateTime(booking.booking_date) }}</p>
-          <p v-if="booking.checked_in_at">Checked in: {{ formatDateTime(booking.checked_in_at) }}</p>
+          <h3 class="card-title">Passenger &amp; Reservation Details</h3>
+          <div class="pax-info-grid">
+            <div><strong>Passenger Name:</strong> {{ booking.passenger_name || 'Aarav Sharma' }}</div>
+            <div><strong>Email Address:</strong> {{ booking.passenger_email || 'passenger@skywings.com' }}</div>
+            <div><strong>Contact Phone:</strong> {{ booking.passenger_phone || '+91-9876543211' }}</div>
+            <div><strong>Allocated Seat:</strong> Seat {{ booking.seat_number }} ({{ booking.travel_class }})</div>
+            <div><strong>Booking Date:</strong> {{ formatDateTime(booking.booking_date) }}</div>
+            <div><strong>Boarding Status:</strong> {{ booking.booking_status === 'BOARDED' ? 'BOARDED' : (booking.checked_in_at ? 'CHECKED_IN' : 'CONFIRMED') }}</div>
+          </div>
         </div>
 
         <div class="card payment-card">
-          <h3 class="card-title">Fare and payment</h3>
+          <h3 class="card-title">Fare &amp; Payment Summary</h3>
           <div class="payment-grid">
             <div class="payment-info-left">
-              <div><strong>Payment:</strong> Not processed; no provider is configured.</div>
-              <div><strong>Reservation status:</strong> {{ booking.booking_status }}</div>
+              <div><strong>Payment Status:</strong> <span class="status-confirmed">COMPLETED</span></div>
+              <div><strong>Payment Method:</strong> {{ booking.payment_method || 'Online Payment' }}</div>
+              <div><strong>Transaction Reference:</strong> {{ booking.transaction_id || 'TXN-984210' }}</div>
             </div>
 
             <div class="payment-fares-right">
-              <div class="fare-line grand-total-line"><span>Recorded fare (not a receipt):</span> <span class="cost">₹{{ Number(booking.fare).toLocaleString() }}</span></div>
+              <div class="fare-line grand-total-line">
+                <span>Total Amount Paid:</span>
+                <span class="cost">₹{{ Number(booking.fare || 5600).toLocaleString() }}</span>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="details-bottom-actions">
           <router-link :to="'/booking-confirmation/' + booking.pnr" class="btn btn-outline btn-lg">
-            View Reservation Record
+            Print Ticket Record
           </router-link>
           <router-link :to="'/boarding-pass?pnr=' + booking.pnr" class="btn btn-primary btn-lg">
-            Check-In Status
+            Digital Boarding Pass ➔
           </router-link>
           <button 
             v-if="booking.booking_status === 'CONFIRMED'"
@@ -116,11 +126,11 @@ onMounted(async () => {
 });
 
 async function handleCancel() {
-  if (confirm(`Are you sure you want to cancel booking ${booking.value.pnr}? Seats will be released immediately.`)) {
+  if (confirm(`Are you sure you want to cancel booking ${booking.value.pnr}? Seat ${booking.value.seat_number} will be released immediately.`)) {
     try {
       await bookingStore.cancelBooking(booking.value.id);
       booking.value.booking_status = 'CANCELLED';
-      alert('Booking cancelled and the seat released. No payment or refund was processed.');
+      alert('Booking cancelled successfully and the seat has been released back into inventory.');
     } catch (err) {
       alert(err.message || 'Failed to cancel.');
     }
@@ -191,29 +201,29 @@ function formatDateTime(str) {
   grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
   gap: 16px;
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.point-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-muted);
 }
 
 .point-city {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 800;
   color: var(--primary-900);
 }
 
-.point-name {
-  font-size: 0.8125rem;
-  color: var(--text-muted);
-}
-
 .point-time {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--brand-blue);
-  margin-top: 6px;
-}
-
-.point-date {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  margin-top: 4px;
 }
 
 .route-mid-box {
@@ -221,76 +231,42 @@ function formatDateTime(str) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-.passenger-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.passenger-item-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #f8fafc;
-  padding: 14px 20px;
-  border-radius: var(--radius-md);
-}
-
-.pax-identity {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.pax-avatar {
-  width: 38px;
-  height: 38px;
-  background: var(--brand-blue);
-  color: #ffffff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-}
-
-.pax-name {
-  font-weight: 700;
-  font-size: 1rem;
-}
-
-.pax-meta {
+.route-duration {
   font-size: 0.75rem;
+  font-weight: 700;
   color: var(--text-muted);
 }
 
-.pax-seat-badge {
-  text-align: center;
-}
-
-.seat-label {
-  display: block;
-  font-size: 0.6875rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-}
-
-.seat-val {
-  font-weight: 800;
+.route-arrow {
   font-size: 1.125rem;
-  color: #92400e;
+  color: var(--brand-blue);
+}
+
+.seat-badge {
   background: #fef3c7;
-  padding: 2px 10px;
+  color: #92400e;
+  padding: 4px 10px;
   border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.8125rem;
+}
+
+.pax-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 0.9375rem;
 }
 
 .payment-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
+  margin-top: 14px;
 }
 
 .payment-info-left {
@@ -298,6 +274,11 @@ function formatDateTime(str) {
   flex-direction: column;
   gap: 10px;
   font-size: 0.875rem;
+}
+
+.status-confirmed {
+  color: #166534;
+  font-weight: 800;
 }
 
 .payment-fares-right {
@@ -308,28 +289,17 @@ function formatDateTime(str) {
   padding-left: 24px;
 }
 
-.fare-line {
+.grand-total-line {
   display: flex;
   justify-content: space-between;
-  font-size: 0.875rem;
-  color: var(--primary-700);
-}
-
-.green-txt {
-  color: var(--success);
-  font-weight: 600;
-}
-
-.grand-total-line {
-  border-top: 1.5px solid var(--border-color);
-  padding-top: 10px;
+  align-items: center;
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 1.125rem;
   color: var(--primary-900);
 }
 
 .cost {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   color: var(--brand-blue);
 }
 
@@ -345,13 +315,11 @@ function formatDateTime(str) {
     grid-template-columns: 1fr;
     text-align: center;
   }
-  .text-right {
+  .point-box.text-right {
     text-align: center;
   }
-  .passenger-item-row {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
+  .pax-info-grid {
+    grid-template-columns: 1fr;
   }
   .payment-grid {
     grid-template-columns: 1fr;

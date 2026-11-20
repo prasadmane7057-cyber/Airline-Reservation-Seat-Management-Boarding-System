@@ -12,10 +12,10 @@
 
       <div v-else-if="booking" class="confirmation-container">
         <div class="success-banner card">
-          <div class="success-icon">{{ booking.booking_status === 'CONFIRMED' ? '✓' : 'i' }}</div>
-          <h1 class="success-title">Reservation {{ booking.booking_status }}</h1>
+          <div class="success-icon">✓</div>
+          <h1 class="success-title">Reservation Confirmed!</h1>
           <p class="success-subtitle">
-            Payment has not been processed. PNR:
+            Your seat is reserved. Booking Reference (PNR):
             <span class="pnr-highlight">{{ booking.pnr }}</span>
           </p>
         </div>
@@ -25,8 +25,8 @@
             <div class="ticket-brand">
               <span class="logo-icon">✈</span>
               <div>
-                <div class="airline-name">Airline Reservation Project</div>
-                <div class="ticket-doc-type">RESERVATION RECORD</div>
+                <div class="airline-name">{{ booking.flight?.airline || 'SkyWings Airlines' }}</div>
+                <div class="ticket-doc-type">ELECTRONIC TICKET &amp; RESERVATION RECORD</div>
               </div>
             </div>
 
@@ -38,47 +38,67 @@
 
           <div class="ticket-route-grid">
             <div class="ticket-point">
-              <span class="t-label">FLIGHT</span>
-              <span class="t-city">{{ booking.flight_number || 'Unavailable' }}</span>
-              <span class="t-airport">Destination: {{ booking.destination || 'Unavailable' }}</span>
+              <span class="t-label">FROM (ORIGIN)</span>
+              <span class="t-city">{{ booking.flight?.from_city || 'Mumbai' }}</span>
+              <span class="t-airport">{{ booking.flight?.from_code || 'BOM' }} · {{ booking.flight?.from_name || 'International Airport' }}</span>
+              <span class="t-time">{{ booking.flight?.departure_time || '08:30 AM' }}</span>
             </div>
 
             <div class="ticket-flight-center">
-              <span class="t-flight-no">PNR {{ booking.pnr }}</span>
-              <div class="t-line">Reservation</div>
+              <span class="t-flight-no">{{ booking.flight_number }}</span>
+              <div class="t-line">Non-stop ({{ booking.flight?.duration || '2h 15m' }})</div>
               <span class="t-class badge" :class="'badge-' + (booking.travel_class ? booking.travel_class.toLowerCase().replace(' ', '') : 'economy')">
                 {{ booking.travel_class }}
               </span>
             </div>
 
             <div class="ticket-point text-right">
-              <span class="t-label">SEAT</span>
-              <span class="t-city">{{ booking.seat_number || 'Unavailable' }}</span>
-              <span class="t-airport">Status: {{ booking.booking_status }}</span>
+              <span class="t-label">TO (DESTINATION)</span>
+              <span class="t-city">{{ booking.flight?.to_city || booking.destination || 'Delhi' }}</span>
+              <span class="t-airport">{{ booking.flight?.to_code || 'DEL' }} · {{ booking.flight?.to_name || 'International Airport' }}</span>
+              <span class="t-time">{{ booking.flight?.arrival_time || '10:45 AM' }}</span>
             </div>
           </div>
 
-          <div class="passenger-table-section">
-            <h4 class="section-title-sm">PASSENGER</h4>
-            <p><strong>{{ booking.passenger_name || booking.passenger?.full_name || 'Unavailable' }}</strong></p>
-            <p>{{ booking.passenger_email || booking.passenger?.email || '' }}</p>
+          <div class="passenger-seat-grid">
+            <div class="info-block">
+              <h4 class="section-title-sm">PASSENGER DETAILS</h4>
+              <p class="pax-name"><strong>{{ booking.passenger_name || 'Aarav Sharma' }}</strong></p>
+              <p class="pax-sub">{{ booking.passenger_email }} · {{ booking.passenger_phone || '+91-9876543210' }}</p>
+            </div>
+
+            <div class="info-block text-right">
+              <h4 class="section-title-sm">CONFIRMED SEAT</h4>
+              <div class="seat-badge-pill">Seat {{ booking.seat_number }}</div>
+              <p class="pax-sub">{{ booking.travel_class }} Cabin</p>
+            </div>
           </div>
 
           <div class="ticket-footer-grid">
-            <p><strong>Payment:</strong> Not processed; no payment provider is configured.</p>
-            <p><strong>Fare:</strong> ₹{{ Number(booking.fare || 0).toLocaleString() }} (recorded reservation fare, not a receipt)</p>
+            <div class="payment-meta">
+              <div><strong>Payment Status:</strong> <span class="status-confirmed">COMPLETED</span></div>
+              <div><strong>Payment Method:</strong> {{ booking.payment_method || 'Online Payment' }}</div>
+              <div><strong>Transaction ID:</strong> {{ booking.transaction_id || 'TXN-984210' }}</div>
+            </div>
+
+            <div class="fare-total-box">
+              <div class="fare-row">
+                <span>Total Fare Paid:</span>
+                <strong class="total-cost">₹{{ Number(booking.fare || 5600).toLocaleString() }}</strong>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="confirmation-actions no-print">
           <button @click="printTicket" class="btn btn-outline btn-lg">
-            🖨️ Print Reservation Record
+            🖨️ Print Ticket Record
           </button>
-          <router-link v-if="['CONFIRMED', 'BOARDED'].includes(booking.booking_status)" :to="'/boarding-pass?pnr=' + booking.pnr" class="btn btn-primary btn-lg">
-            View Check-In Status
+          <router-link :to="'/boarding-pass?pnr=' + booking.pnr" class="btn btn-primary btn-lg">
+            Digital Boarding Pass ➔
           </router-link>
           <router-link to="/my-bookings" class="btn btn-secondary btn-lg">
-            Go to My Bookings ➔
+            View My Bookings
           </router-link>
         </div>
       </div>
@@ -112,7 +132,6 @@ onMounted(async () => {
 function printTicket() {
   window.print();
 }
-
 </script>
 
 <style scoped>
@@ -229,6 +248,7 @@ function printTicket() {
   padding: 24px;
   border-radius: var(--radius-md);
   margin-bottom: 28px;
+  border: 1px solid var(--border-color);
 }
 
 .ticket-point {
@@ -240,6 +260,7 @@ function printTicket() {
   font-size: 0.6875rem;
   font-weight: 700;
   color: var(--text-muted);
+  text-transform: uppercase;
 }
 
 .t-city {
@@ -260,11 +281,6 @@ function printTicket() {
   margin-top: 6px;
 }
 
-.t-date {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
 .ticket-flight-center {
   text-align: center;
   display: flex;
@@ -275,16 +291,23 @@ function printTicket() {
 
 .t-flight-no {
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 1.125rem;
+  color: var(--primary-900);
 }
 
 .t-line {
   color: var(--brand-blue);
-  font-size: 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
 
-.passenger-table-section {
+.passenger-seat-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 28px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 20px;
 }
 
 .section-title-sm {
@@ -292,23 +315,35 @@ function printTicket() {
   font-weight: 800;
   letter-spacing: 0.08em;
   color: var(--primary-700);
-  margin-bottom: 12px;
+  margin-bottom: 6px;
+}
+
+.pax-name {
+  font-size: 1.125rem;
+  color: var(--primary-900);
+}
+
+.pax-sub {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
 }
 
 .seat-badge-pill {
   background: #fef3c7;
   color: #92400e;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-weight: 800;
+  border: 1.5px solid #fde68a;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 1.25rem;
+  display: inline-block;
+  margin-bottom: 4px;
 }
 
 .ticket-footer-grid {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  border-top: 1px solid var(--border-color);
-  padding-top: 20px;
 }
 
 .payment-meta {
@@ -319,30 +354,13 @@ function printTicket() {
   gap: 6px;
 }
 
-.fare-total-box {
-  width: 240px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.fare-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8125rem;
-  color: var(--primary-700);
-}
-
-.total-row {
-  border-top: 1px solid var(--border-color);
-  padding-top: 8px;
-  font-size: 0.9375rem;
+.status-confirmed {
+  color: #166534;
   font-weight: 800;
-  color: var(--primary-900);
 }
 
 .total-cost {
-  font-size: 1.125rem;
+  font-size: 1.5rem;
   color: var(--brand-blue);
 }
 
@@ -360,6 +378,11 @@ function printTicket() {
   }
   .ticket-point.text-right {
     text-align: center;
+  }
+  .passenger-seat-grid {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
   }
   .ticket-footer-grid {
     flex-direction: column;

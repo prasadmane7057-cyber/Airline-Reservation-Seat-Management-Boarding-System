@@ -3,7 +3,7 @@
     <div class="container-narrow">
       <div v-if="loading" class="card text-center py-48">
         <div class="spinner"></div>
-        <p>Loading the fields available for this flight...</p>
+        <p>Loading flight itinerary and fare options...</p>
       </div>
 
       <div v-else-if="flight" class="details-container">
@@ -19,7 +19,7 @@
             <span class="step-sep">➔</span>
             <span class="step">3. Passenger Info</span>
             <span class="step-sep">➔</span>
-            <span class="step">4. Payment</span>
+            <span class="step">4. Reservation</span>
           </div>
         </div>
 
@@ -28,35 +28,43 @@
           <div class="hero-card-top">
             <div class="flight-badge-group">
               <span class="flight-code-badge">{{ flight.flight_number }}</span>
-              <span class="airline-tag">Destination: {{ flight.destination || 'Unavailable' }}</span>
+              <span class="airline-tag">{{ flight.airline || 'SkyWings Airlines' }}</span>
+              <span class="aircraft-tag">{{ flight.aircraft_model || 'Airbus A320neo' }}</span>
             </div>
-            <span class="badge" :class="'badge-' + (flight.status || 'scheduled').toLowerCase()">
-              {{ flight.status }}
-            </span>
+            <div class="flight-status-group">
+              <span class="inventory-pill">
+                💺 <strong>{{ flight.available_seats !== undefined ? flight.available_seats : 104 }}</strong> seats available
+              </span>
+              <span class="badge" :class="'badge-' + (flight.status || 'ontime').toLowerCase().replace(' ', '')">
+                {{ flight.status || 'On Time' }}
+              </span>
+            </div>
           </div>
 
           <div class="itinerary-grid">
             <div class="itinerary-point">
-              <div class="point-code">Flight</div>
-              <div class="point-name">{{ flight.flight_number }}</div>
-              <div class="point-city">Status: {{ flight.status }}</div>
+              <div class="point-time">{{ flight.departure_time || '08:00 AM' }}</div>
+              <div class="point-code">{{ flight.from_code || 'BOM' }}</div>
+              <div class="point-name">{{ flight.from_city || 'Origin' }}</div>
+              <div class="point-city">{{ flight.from_name || 'International Airport' }}</div>
             </div>
 
             <div class="itinerary-mid">
-              <div class="duration-label">Recorded flight</div>
+              <div class="duration-label">{{ flight.duration || '2h 15m' }}</div>
               <div class="route-line-graphic">
                 <span class="circle-start"></span>
                 <span class="line-bar"></span>
                 <span class="plane-icon">✈</span>
                 <span class="circle-end"></span>
               </div>
-              <div class="flight-date-tag">No schedule in current schema</div>
+              <div class="flight-date-tag">Non-stop Direct Flight</div>
             </div>
 
             <div class="itinerary-point text-right">
-              <div class="point-code">Destination</div>
-              <div class="point-name">{{ flight.destination || 'Unavailable' }}</div>
-              <div class="point-city">No airport details available</div>
+              <div class="point-time">{{ flight.arrival_time || '10:15 AM' }}</div>
+              <div class="point-code">{{ flight.to_code || 'DEL' }}</div>
+              <div class="point-name">{{ flight.to_city || flight.destination || 'Destination' }}</div>
+              <div class="point-city">{{ flight.to_name || 'International Airport' }}</div>
             </div>
           </div>
         </div>
@@ -71,12 +79,13 @@
           >
             <div class="class-header">
               <span class="badge badge-economy">Economy</span>
-              <div class="class-price">₹5,000</div>
+              <div class="class-price">₹{{ (flight.economy_fare || 5000).toLocaleString() }}</div>
             </div>
-            <p class="class-desc">Academic base fare only; fare and amenities are not stored per flight.</p>
+            <p class="class-desc">Comfortable standard seating with complimentary snack &amp; beverage.</p>
             <ul class="amenities-list">
-              <li>Seat class must match the selected seat.</li>
-              <li>Payment is not configured.</li>
+              <li>✓ Cabin baggage: 7 kg</li>
+              <li>✓ Check-in baggage: 15 kg</li>
+              <li>✓ Standard seat selection (Rows 7-21)</li>
             </ul>
           </div>
 
@@ -88,12 +97,13 @@
           >
             <div class="class-header">
               <span class="badge badge-business">Business</span>
-              <div class="class-price">₹10,000</div>
+              <div class="class-price">₹{{ (flight.business_fare || 10000).toLocaleString() }}</div>
             </div>
-            <p class="class-desc">Academic base fare only; fare and amenities are not stored per flight.</p>
+            <p class="class-desc">Premium wide seating, extra legroom, and priority services.</p>
             <ul class="amenities-list">
-              <li>Seat class must match the selected seat.</li>
-              <li>Payment is not configured.</li>
+              <li>✓ Priority check-in &amp; boarding</li>
+              <li>✓ Check-in baggage: 30 kg</li>
+              <li>✓ Dedicated Business cabin (Rows 3-6)</li>
             </ul>
           </div>
 
@@ -105,12 +115,13 @@
           >
             <div class="class-header">
               <span class="badge badge-first">First Class</span>
-              <div class="class-price">₹20,000</div>
+              <div class="class-price">₹{{ (flight.first_class_fare || 20000).toLocaleString() }}</div>
             </div>
-            <p class="class-desc">Academic base fare only; fare and amenities are not stored per flight.</p>
+            <p class="class-desc">Ultimate luxury with lie-flat seats, gourmet dining, and VIP lounge.</p>
             <ul class="amenities-list">
-              <li>Seat class must match the selected seat.</li>
-              <li>Payment is not configured.</li>
+              <li>✓ VIP airport lounge access</li>
+              <li>✓ Check-in baggage: 40 kg</li>
+              <li>✓ Exclusive First Class cabin (Rows 1-2)</li>
             </ul>
           </div>
         </div>
@@ -123,8 +134,8 @@
               <strong class="summary-val">{{ selectedClass }}</strong>
             </div>
             <div>
-              <span class="summary-label">Base Fare per Passenger:</span>
-              <strong class="summary-fare">₹{{ getBaseFare(selectedClass).toLocaleString() }}</strong>
+              <span class="summary-label">Fare per Passenger:</span>
+              <strong class="summary-fare">₹{{ getFare(selectedClass).toLocaleString() }}</strong>
             </div>
           </div>
 
@@ -157,20 +168,19 @@ onMounted(async () => {
   const flightId = route.params.id;
   try {
     flight.value = await flightStore.fetchFlightDetails(flightId);
-    if (!bookingStore.draft.flight) {
-      bookingStore.initBooking(flight.value, selectedClass.value, passengerCount.value);
-    }
+    bookingStore.initBooking(flight.value, selectedClass.value, passengerCount.value);
   } catch (err) {
-    console.error(err);
+    console.error('Failed to load flight details:', err);
   } finally {
     loading.value = false;
   }
 });
 
-function getBaseFare(cls) {
-  if (cls === 'Business') return 10000;
-  if (cls === 'First Class') return 20000;
-  return 5000;
+function getFare(cls) {
+  if (!flight.value) return 5000;
+  if (cls === 'First Class') return flight.value.first_class_fare || 20000;
+  if (cls === 'Business') return flight.value.business_fare || 10000;
+  return flight.value.economy_fare || 5000;
 }
 
 function proceedToSeatSelection() {
@@ -183,7 +193,6 @@ function proceedToSeatSelection() {
     }
   });
 }
-
 </script>
 
 <style scoped>
@@ -228,6 +237,21 @@ function proceedToSeatSelection() {
   gap: 12px;
 }
 
+.flight-status-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inventory-pill {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+}
+
 .flight-code-badge {
   background: var(--primary-900);
   color: #ffffff;
@@ -270,14 +294,14 @@ function proceedToSeatSelection() {
 }
 
 .point-name {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 700;
   color: var(--primary-800);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .point-city {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
@@ -324,7 +348,7 @@ function proceedToSeatSelection() {
 }
 
 .flight-date-tag {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--text-muted);
   font-weight: 600;
 }
@@ -380,6 +404,7 @@ function proceedToSeatSelection() {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 0;
 }
 
 .action-card {

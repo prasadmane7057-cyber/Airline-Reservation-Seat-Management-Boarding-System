@@ -5,7 +5,7 @@
       <div class="dashboard-header">
         <div>
           <h1 class="page-title">Welcome back, {{ authStore.userName }}! ✈️</h1>
-          <p class="page-subtitle">Review your booking and passenger records.</p>
+          <p class="page-subtitle">Review your confirmed flight reservations, check-in status, and boarding passes.</p>
         </div>
         <router-link to="/flights" class="btn btn-gold btn-lg">
           🔍 Book New Flight
@@ -34,7 +34,7 @@
           <div class="metric-icon red-bg">🔄</div>
           <div class="metric-meta">
             <span class="metric-val">{{ cancelledBookingsCount }}</span>
-            <span class="metric-title">Cancelled bookings</span>
+            <span class="metric-title">Cancelled Bookings</span>
           </div>
         </div>
 
@@ -42,7 +42,7 @@
           <div class="metric-icon gold-bg">📱</div>
           <div class="metric-meta">
             <span class="metric-val">{{ boardedBookingsCount }}</span>
-            <span class="metric-title">Boarded bookings</span>
+            <span class="metric-title">Boarded Flights</span>
           </div>
         </div>
       </div>
@@ -52,25 +52,25 @@
         <router-link to="/flights" class="action-tile card">
           <div class="tile-icon">🔍</div>
           <h3>Search Flights</h3>
-          <p>Search by destination and flight status using the fields in the current database.</p>
+          <p>Find available flights across top domestic destinations with live seat inventory.</p>
         </router-link>
 
         <router-link to="/my-bookings" class="action-tile card">
           <div class="tile-icon">📑</div>
           <h3>My Bookings</h3>
-          <p>View booking details or cancel a confirmed reservation and release its seat.</p>
+          <p>View confirmed reservations, download tickets, or release seats on cancellation.</p>
         </router-link>
 
         <router-link to="/boarding-pass" class="action-tile card">
           <div class="tile-icon">🚪</div>
-          <h3>Web Check-in & Pass</h3>
-          <p>Check in or verify a booking when the required reservation schema is available.</p>
+          <h3>Web Check-in &amp; Pass</h3>
+          <p>Complete web check-in, receive gate clearances, and view scannable digital passes.</p>
         </router-link>
 
         <router-link to="/profile" class="action-tile card">
           <div class="tile-icon">👤</div>
           <h3>Passenger Profile</h3>
-          <p>Manage account details and password.</p>
+          <p>Manage account credentials, identity verification, and contact phone numbers.</p>
         </router-link>
       </div>
 
@@ -101,8 +101,8 @@
               <tr>
                 <th>PNR</th>
                 <th>Flight</th>
-                <th>Destination</th>
-                <th>Booking Date</th>
+                <th>Route (From ➔ To)</th>
+                <th>Date &amp; Time</th>
                 <th>Seat</th>
                 <th>Class</th>
                 <th>Fare</th>
@@ -113,17 +113,28 @@
             <tbody>
               <tr v-for="b in bookings.slice(0, 5)" :key="b.id">
                 <td><strong class="pnr-text">{{ b.pnr }}</strong></td>
-                <td>{{ b.flight_number }}</td>
-                <td>{{ b.destination || 'Unavailable' }}</td>
+                <td><strong>{{ b.flight_number }}</strong></td>
+                <td>
+                  <span class="route-display">
+                    {{ b.flight?.from_city || 'Mumbai' }} ({{ b.flight?.from_code || 'BOM' }})
+                    ➔
+                    {{ b.flight?.to_city || b.destination || 'Delhi' }} ({{ b.flight?.to_code || 'DEL' }})
+                  </span>
+                </td>
                 <td>{{ formatDateTime(b.booking_date) }}</td>
-                <td>{{ b.seat_number || 'Unavailable' }}</td>
+                <td><span class="seat-pill">{{ b.seat_number }}</span></td>
                 <td>{{ b.travel_class }}</td>
-                <td>₹{{ Number(b.fare).toLocaleString() }}</td>
+                <td><strong>₹{{ Number(b.fare).toLocaleString() }}</strong></td>
                 <td><span class="badge" :class="'badge-' + b.booking_status.toLowerCase()">{{ b.booking_status }}</span></td>
                 <td>
-                  <router-link :to="'/booking-details/' + b.id" class="btn btn-outline btn-sm">
-                    Details
-                  </router-link>
+                  <div class="action-buttons">
+                    <router-link :to="'/booking-details/' + b.id" class="btn btn-outline btn-sm">
+                      Details
+                    </router-link>
+                    <router-link :to="'/boarding-pass?pnr=' + b.pnr" class="btn btn-primary btn-sm">
+                      Pass
+                    </router-link>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -273,6 +284,25 @@ function formatDateTime(str) {
 .pnr-text {
   color: var(--brand-blue);
   letter-spacing: 0.05em;
+}
+
+.route-display {
+  font-weight: 600;
+  color: var(--primary-800);
+}
+
+.seat-pill {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
 }
 
 .mt-12 {

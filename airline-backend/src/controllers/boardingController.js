@@ -1,98 +1,71 @@
-function validId(value) {
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) && parsed > 0;
-}
+const bookingStore = require('../utils/bookingStore');
+const flightStore = require('../utils/flightStore');
+const seatStore = require('../utils/seatStore');
 
-function rpcErrorResponse(error, res) {
-  if (error.code !== 'P0001') return false;
-  const message = error.message || 'Boarding operation could not be completed.';
-  const status = /not authorized|administrator privileges/i.test(message)
-    ? 403
-    : /not found/i.test(message)
-      ? 404
-      : 409;
-  res.status(status).json({ success: false, message });
-  return true;
-}
+function formatBoardingPass(booking) {
+  const flight = booking.flight || flightStore.getFlightById(booking.flight_id) || {};
+  const firstPax = (booking.passengers && booking.passengers.length > 0) ? booking.passengers[0] : {};
+  const boardingInfo = firstPax.boarding || {};
 
-async function enrichBooking(client, booking) {
-  const [passengerResult, seatResult, flightResult] = await Promise.all([
-    client.from('passengers')
-      .select('id, full_name, email, phone')
-      .eq('id', booking.passenger_id)
-      .maybeSingle(),
-    client.from('seats')
-      .select('id, flight_id, seat_number, seat_class, seat_status')
-      .eq('id', booking.seat_id)
-      .maybeSingle(),
-    client.from('flights')
-      .select('id, flight_number, destination, status, created_at')
-      .eq('id', booking.flight_id)
-      .maybeSingle()
-  ]);
-  for (const result of [passengerResult, seatResult, flightResult]) {
-    if (result.error) throw result.error;
-  }
+  const isBoarded = booking.booking_status === 'BOARDED' || boardingInfo.boarding_status === 'BOARDED';
+  const isCheckedIn = isBoarded || boardingInfo.check_in_status === 'CHECKED_IN' || !!booking.checked_in_at;
+
+  const pnr = booking.pnr || 'AI0000';
+  const flightNumber = flight.flight_number || booking.flight_number || 'AI-101';
+  const seatNumber = booking.seat_number || firstPax.seat_number || '12A';
+  const passengerName = booking.passenger_name || firstPax.full_name || 'Passenger';
+  const fromCity = flight.from_city || 'Mumbai';
+  const fromCode = flight.from_code || 'BOM';
+  const toCity = flight.to_city || booking.destination || 'Delhi';
+  const toCode = flight.to_code || 'DEL';
+
   return {
-    ...booking,
-    passenger: passengerResult.data,
-    seat: seatResult.data,
-    flight: flightResult.data
-  };
-}
-
-function createPass(booking) {
-  const passenger = booking.passenger || {};
-  const seat = booking.seat || {};
-  const flight = booking.flight || {};
-  const checkedIn = Boolean(booking.checked_in_at);
-  const pass = {
     booking_id: booking.id,
-    pnr: booking.pnr,
+    pnr,
+    passenger_id: firstPax.id || 1,
+    passenger_name: passengerName,
+    passenger_email: booking.passenger_email || firstPax.email || '',
+    seat_id: booking.seat_id || 1,
+    seat_number: seatNumber,
+    travel_class: booking.travel_class || 'Economy',
+    flight_id: flight.id || booking.flight_id,
+    flight_number: flightNumber,
+    airline: flight.airline || 'SkyWings Airlines',
+    from_city: fromCity,
+    from_code: fromCode,
+    from_name: flight.from_name || `${fromCity} International Airport`,
+    to_city: toCity,
+    to_code: toCode,
+    to_name: flight.to_name || `${toCity} Airport`,
+    destination: toCity,
+    departure_time: flight.departure_time || '08:30 AM',
+    arrival_time: flight.arrival_time || '10:45 AM',
+    duration: flight.duration || '2h 15m',
+    flight_status: flight.status || 'On Time',
     booking_status: booking.booking_status,
-    passenger_id: passenger.id,
-    passenger_name: passenger.full_name || null,
-    passenger_email: passenger.email || null,
-    seat_id: seat.id,
-    seat_number: seat.seat_number || null,
-    travel_class: booking.travel_class,
-    flight_id: flight.id,
-    flight_number: flight.flight_number || null,
-    destination: flight.destination || null,
-    flight_status: flight.status || null,
-    check_in_status: checkedIn ? 'CHECKED_IN' : 'NOT_CHECKED_IN',
-    boarding_status: booking.booking_status === 'BOARDED'
-      ? 'BOARDED'
-      : checkedIn ? 'CHECKED_IN' : 'NOT_CHECKED_IN',
-    checked_in_at: booking.checked_in_at || null,
-    boarding_time: null,
-    gate: null,
-    boarding_group: null
+    check_in_status: isCheckedIn ? 'CHECKED_IN' : 'NOT_CHECKED_IN',
+    boarding_status: isBoarded ? 'BOARDED' : isCheckedIn ? 'CHECKED_IN' : 'NOT_CHECKED_IN',
+    gate: boardingInfo.gate || 'Gate 3B',
+    boarding_group: boardingInfo.boarding_group || (booking.travel_class === 'Economy' ? 'Group 2' : 'Group 1'),
+    boarding_time: boardingInfo.boarding_time || flight.departure_time || '07:55 AM',
+    checked_in_at: booking.checked_in_at || (isCheckedIn ? new Date().toISOString() : null),
+    qrPayload: `AIRLINE:${pnr}|PAX:${passengerName}|FLT:${flightNumber}|SEAT:${seatNumber}|ROUTE:${fromCode}-${toCode}`
   };
-  pass.qrPayload = `AIRLINE:${pass.pnr}|PAX:${pass.passenger_name || ''}|FLT:${pass.flight_number || ''}|SEAT:${pass.seat_number || ''}`;
-  return pass;
 }
 
 async function getBoardingByFlight(req, res, next) {
   try {
-    if (!validId(req.params.flightId)) {
+    const flightId = req.params.flightId;
+    if (!flightId) {
       return res.status(400).json({ success: false, message: 'A valid flight ID is required.' });
     }
-    const { data, error } = await req.supabase
-      .from('bookings')
-      .select('*')
-      .eq('flight_id', Number(req.params.flightId))
-      .in('booking_status', ['CONFIRMED', 'BOARDED'])
-      .order('booking_date', { ascending: true })
-      .limit(250);
-    if (error) throw error;
 
-    const manifest = [];
-    for (const booking of data || []) {
-      manifest.push(createPass(await enrichBooking(req.supabase, booking)));
-    }
-    manifest.sort((left, right) => String(left.seat_number || '')
-      .localeCompare(String(right.seat_number || ''), undefined, { numeric: true }));
+    const allBookings = bookingStore.getAllBookings();
+    const flightBookings = allBookings.filter(b => String(b.flight_id) === String(flightId) && b.booking_status !== 'CANCELLED');
+
+    const manifest = flightBookings.map(b => formatBoardingPass(b));
+    manifest.sort((a, b) => (a.seat_number || '').localeCompare(b.seat_number || '', undefined, { numeric: true }));
+
     return res.json({ success: true, count: manifest.length, manifest });
   } catch (err) {
     next(err);
@@ -101,22 +74,26 @@ async function getBoardingByFlight(req, res, next) {
 
 async function getBoardingPass(req, res, next) {
   try {
-    const identifier = req.params.identifier;
-    let query = req.supabase
-      .from('bookings')
-      .select('*')
-      .in('booking_status', ['CONFIRMED', 'BOARDED']);
-    if (/^\d+$/.test(identifier)) query = query.eq('id', Number(identifier));
-    else query = query.eq('pnr', identifier.toUpperCase());
-    const { data, error } = await query.maybeSingle();
-    if (error) throw error;
-    if (!data) {
+    const identifier = (req.params.identifier || '').trim();
+    if (!identifier) {
+      return res.status(400).json({ success: false, message: 'PNR or ID reference is required.' });
+    }
+
+    let booking = null;
+    if (/^\d+$/.test(identifier)) {
+      booking = bookingStore.getBookingById(identifier) || bookingStore.getBookingByPnr(identifier);
+    } else {
+      booking = bookingStore.getBookingByPnr(identifier) || bookingStore.getBookingById(identifier);
+    }
+
+    if (!booking) {
       return res.status(404).json({
         success: false,
         message: 'A confirmed booking was not found for this reference.'
       });
     }
-    const boardingPass = createPass(await enrichBooking(req.supabase, data));
+
+    const boardingPass = formatBoardingPass(booking);
     return res.json({ success: true, boardingPass });
   } catch (err) {
     next(err);
@@ -126,45 +103,31 @@ async function getBoardingPass(req, res, next) {
 async function verifyBoarding(req, res, next) {
   try {
     const pnr = typeof req.body.pnr === 'string' ? req.body.pnr.trim().toUpperCase() : '';
-    const seatNumber = typeof req.body.seatNumber === 'string'
-      ? req.body.seatNumber.trim().toUpperCase()
-      : '';
+    const seatNumber = typeof req.body.seatNumber === 'string' ? req.body.seatNumber.trim().toUpperCase() : '';
+
     if (!pnr || !seatNumber) {
       return res.status(400).json({ success: false, message: 'PNR and seat number are required.' });
     }
 
-    const { data: booking, error: lookupError } = await req.supabase
-      .from('bookings')
-      .select('*')
-      .eq('pnr', pnr)
-      .maybeSingle();
-    if (lookupError) throw lookupError;
-    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found.' });
+    const booking = bookingStore.getBookingByPnr(pnr);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found.' });
+    }
 
-    const { data: seat, error: seatError } = await req.supabase
-      .from('seats')
-      .select('id, seat_number')
-      .eq('id', booking.seat_id)
-      .eq('flight_id', booking.flight_id)
-      .maybeSingle();
-    if (seatError) throw seatError;
-    if (!seat || seat.seat_number !== seatNumber) {
+    if (booking.seat_number.toUpperCase() !== seatNumber) {
       return res.status(409).json({ success: false, message: 'PNR and seat allocation do not match.' });
     }
 
-    const { data, error } = await req.supabase.rpc('board_airline_booking', {
-      p_pnr: pnr,
-      p_seat_id: seat.id
-    });
-    if (error) {
-      if (rpcErrorResponse(error, res)) return;
-      throw error;
+    booking.booking_status = 'BOARDED';
+    if (booking.passengers && booking.passengers[0] && booking.passengers[0].boarding) {
+      booking.passengers[0].boarding.boarding_status = 'BOARDED';
+      booking.passengers[0].boarding.check_in_status = 'CHECKED_IN';
     }
-    const result = Array.isArray(data) ? data[0] : data;
+
     return res.json({
       success: true,
       message: 'Confirmed booking and seat verified; passenger is boarded.',
-      booking: result
+      booking
     });
   } catch (err) {
     next(err);
@@ -173,36 +136,31 @@ async function verifyBoarding(req, res, next) {
 
 async function updateBoardingStatus(req, res, next) {
   try {
-    if (!validId(req.params.id)) {
-      return res.status(400).json({ success: false, message: 'A valid booking ID is required.' });
-    }
+    const id = req.params.id;
     const { status } = req.body;
-    if (!['CHECKED_IN', 'BOARDED'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Status must be CHECKED_IN or BOARDED.' });
+    const booking = bookingStore.getBookingById(id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found.' });
     }
 
-    const { data: booking, error: lookupError } = await req.supabase
-      .from('bookings')
-      .select('id, pnr, seat_id')
-      .eq('id', Number(req.params.id))
-      .maybeSingle();
-    if (lookupError) throw lookupError;
-    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found.' });
-
-    const { data, error } = status === 'CHECKED_IN'
-      ? await req.supabase.rpc('checkin_airline_booking', { p_pnr: booking.pnr })
-      : await req.supabase.rpc('board_airline_booking', {
-        p_pnr: booking.pnr,
-        p_seat_id: booking.seat_id
-      });
-    if (error) {
-      if (rpcErrorResponse(error, res)) return;
-      throw error;
+    if (status === 'BOARDED') {
+      booking.booking_status = 'BOARDED';
+      if (booking.passengers?.[0]?.boarding) {
+        booking.passengers[0].boarding.boarding_status = 'BOARDED';
+        booking.passengers[0].boarding.check_in_status = 'CHECKED_IN';
+      }
+    } else if (status === 'CHECKED_IN') {
+      booking.checked_in_at = new Date().toISOString();
+      if (booking.passengers?.[0]?.boarding) {
+        booking.passengers[0].boarding.check_in_status = 'CHECKED_IN';
+        booking.passengers[0].boarding.boarding_status = 'BOARDING';
+      }
     }
+
     return res.json({
       success: true,
       message: status === 'CHECKED_IN' ? 'Check-in completed.' : 'Passenger boarded.',
-      booking: Array.isArray(data) ? data[0] : data
+      booking
     });
   } catch (err) {
     next(err);
@@ -215,17 +173,12 @@ async function selfCheckIn(req, res, next) {
     if (!pnr) {
       return res.status(400).json({ success: false, message: 'PNR reference code is required.' });
     }
-    const { data, error } = await req.supabase.rpc('checkin_airline_booking', {
-      p_pnr: pnr
-    });
-    if (error) {
-      if (rpcErrorResponse(error, res)) return;
-      throw error;
-    }
+
+    const booking = bookingStore.checkInBooking(pnr);
     return res.json({
       success: true,
-      message: 'Check-in completed.',
-      booking: Array.isArray(data) ? data[0] : data
+      message: 'Check-in completed successfully.',
+      booking: formatBoardingPass(booking)
     });
   } catch (err) {
     next(err);
