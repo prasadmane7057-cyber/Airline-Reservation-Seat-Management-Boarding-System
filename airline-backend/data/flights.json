@@ -18,8 +18,8 @@
     "business_fare": 9500,
     "first_class_fare": 18500,
     "total_seats": 116,
-    "booked_seats": 12,
-    "available_seats": 104,
+    "booked_seats": 16,
+    "available_seats": 100,
     "aircraft_model": "Airbus A320neo"
   },
   {
@@ -87,8 +87,8 @@
     "business_fare": 9500,
     "first_class_fare": 18500,
     "total_seats": 116,
-    "booked_seats": 35,
-    "available_seats": 81,
+    "booked_seats": 37,
+    "available_seats": 79,
     "aircraft_model": "Airbus A320neo"
   },
   {

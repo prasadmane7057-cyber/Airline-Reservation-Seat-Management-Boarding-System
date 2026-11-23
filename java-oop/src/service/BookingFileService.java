@@ -1,12 +1,11 @@
 package service;
 
-import model.Booking;
-import util.BookingFileManager;
-
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
+import model.Booking;
+import util.BookingFileManager;
 
 /**
  * Enterprise File Service for Airline Bookings.

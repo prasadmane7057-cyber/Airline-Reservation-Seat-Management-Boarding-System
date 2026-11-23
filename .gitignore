@@ -1,35 +1,29 @@
 # Dependencies
 node_modules/
-*/node_modules/
-package-lock.json
 
-# Build outputs & binaries
-*.class
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+build/
+dist/
+bin/
+
+# Compiled files
 *.exe
 *.obj
 *.o
-out/
-bin/
-airline-backend/bin/
-dist/
-java-oop/lib/*.jar
-!coa-nasm/out/
-coa-nasm/out/*
-!coa-nasm/out/model/
-coa-nasm/out/model/*
-!coa-nasm/out/model/*.asm
+*.class
 
-# IDE & OS
+# Java
+*.jar
+
+# Logs
+*.log
+
+# IDE
 .vscode/*
-!.vscode/launch.json
+!.vscode/settings.json
 !.vscode/tasks.json
-.idea/
-.DS_Store
-Thumbs.db
-
-# Environment variables & secrets
-.env
-.env.*
-*.local
-.env.local
-

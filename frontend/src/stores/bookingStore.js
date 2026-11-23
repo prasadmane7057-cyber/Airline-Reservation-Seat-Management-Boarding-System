@@ -88,9 +88,9 @@ export const useBookingStore = defineStore('booking', {
           if (profileRes?.passenger?.id) {
             profileId = profileRes.passenger.id;
           }
-        } catch (e) {
-          // Fall back gracefully
-        }
+       } catch {
+  // Fall back gracefully
+}
 
         const payload = {
           flightId: this.draft.flight.id,

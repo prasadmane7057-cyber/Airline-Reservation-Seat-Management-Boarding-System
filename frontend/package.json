@@ -16,9 +16,13 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
     "axios": "^1.20.0",
+    "chart.js": "^4.6.1",
+    "lucide-vue-next": "^1.0.0",
     "pinia": "^4.0.3",
     "vue": "rc",
-    "vue-router": "^5.3.1"
+    "vue-chartjs": "^5.3.7",
+    "vue-router": "^5.3.1",
+    "vue-sonner": "^2.0.9"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
